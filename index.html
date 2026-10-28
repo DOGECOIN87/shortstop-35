@@ -160,6 +160,24 @@
     .mobilebar{display:flex;position:fixed;bottom:0;left:0;right:0;z-index:60;background:#fff;border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom));gap:10px}
     .mobilebar a{flex:1;text-align:center;justify-content:center}
   }
+/* Keep the scene clear on initial load at every viewport. */
+.nav-links a,.logo-sub{white-space:nowrap}
+.stage-title{top:12px;left:12px;max-width:none;padding:8px 38px 8px 12px;border-radius:999px}
+.stage-title .stage-logo{display:inline-block;width:28px;height:28px;margin:0 7px 0 0!important;vertical-align:middle}
+.stage-title .mini-title{display:inline;vertical-align:middle;font-size:13px;font-weight:800}
+.stage-title .eyebrow,.stage-title h1,.stage-title p,.stage-title .row{display:none}
+.hint{display:none}
+.stage{min-height:0;height:calc(100svh - 71px);max-height:none}
+.toolbar{bottom:10px;max-width:calc(100% - 16px);gap:5px}
+.toolgroup{padding:3px;gap:0}.tbtn{font-size:12px;padding:8px 10px}
+@media(max-width:700px){
+  .nav{padding:8px 0}.logo-img{width:38px;height:38px;flex-basis:38px}
+  .logo-badge{font-size:15px;padding:8px}.nav>.btn{display:none}
+  .stage{height:min(calc(100svh - 114px),105vw)}
+  .toolbar{width:calc(100% - 12px);bottom:7px}.toolbar .toolgroup:last-child{display:none}
+  .tbtn{font-size:11px;padding:8px 7px}
+  .infocard{bottom:100px;max-height:30%;overflow:auto}
+}
 </style>
 </head>
 <body>
@@ -225,14 +243,14 @@
     <div class="stage-ui toolbar">
       <div class="toolgroup" role="group" aria-label="Camera views">
         <button class="tbtn on" data-view="overview">Overview</button>
-        <button class="tbtn" data-view="pumps">⛽ Pumps</button>
-        <button class="tbtn" data-view="store">Storefront</button>
-        <button class="tbtn" data-view="road">From I-35</button>
+        <button class="tbtn" data-view="pumps">Pumps</button>
+        <button class="tbtn" data-view="store">Store</button>
+        <button class="tbtn" data-view="road">From the road</button>
       </div>
       <div class="toolgroup" role="group" aria-label="Time of day">
-        <button class="tbtn on" data-time="day">☀️ Day</button>
-        <button class="tbtn" data-time="golden">🌇 Golden</button>
-        <button class="tbtn" data-time="night">🌙 Night</button>
+        <button class="tbtn on" data-time="day">Day</button>
+        <button class="tbtn" data-time="golden">Golden hour</button>
+        <button class="tbtn" data-time="night">Night</button>
       </div>
       <div class="toolgroup">
         <button class="tbtn" id="spinbtn">🔄 Auto-spin: Off</button>
@@ -366,7 +384,7 @@
       var l=document.getElementById('loading3d'); if(l) l.classList.add('done');
       var f=document.getElementById('fallback3d'); if(f) f.classList.add('show');
     }
-  }, 9000);
+  }, 30000);
 </script>
 
 <script type="importmap">
@@ -380,6 +398,7 @@
 import * as THREE from './vendor/three.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
 /* =====================================================================
    Texaco ShortStop — realistic 3D model of the real station
@@ -411,7 +430,7 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87b5e0);
-scene.fog = new THREE.Fog(0x87b5e0, 110, 260);
+scene.fog = new THREE.Fog(0x87b5e0, 180, 400);
 
 const camera = new THREE.PerspectiveCamera(46, 2, 0.1, 600);
 camera.position.set(40, 25, 46);
@@ -563,28 +582,30 @@ const starTex = ctex(256, 256, (x, w, h) => {
   x.strokeStyle = '#d9232e'; x.lineWidth = 10;
   x.beginPath(); x.arc(128, 128, 104, 0, 7); x.stroke();
   x.fillStyle = '#d9232e'; starPath(x, 128, 128, 74); x.fill();
+  x.fillStyle = '#fff'; x.font = '900 72px Arial'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('T',128,132);
 });
-const fasciaTex = ctex(1024, 128, (x, w, h) => {
+// Band is 41.4 m x 0.95 m, so the canvas keeps the same ~44:1 proportion.
+const fasciaTex = ctex(4096, 96, (x, w, h) => {
   x.fillStyle = '#c8102e'; x.fillRect(0, 0, w, h);
-  x.fillStyle = 'rgba(255,255,255,0.10)'; x.fillRect(0, 0, w, 10);
-  x.fillStyle = '#ffffff'; x.font = '900 84px Arial, sans-serif';
+  x.fillStyle = '#ffffff'; x.font = '900 72px Arial, sans-serif';
   x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.fillText('T E X A C O', w / 2, h / 2 + 4);
-  x.fillStyle = '#d9232e'; starPath(x, 56, 64, 30); x.fill();
-  starPath(x, w - 56, 64, 30); x.fill();
-  x.fillStyle = '#ffffff';
-  x.beginPath(); x.arc(56, 64, 34, 0, 7); x.globalAlpha = 0; x.fill(); x.globalAlpha = 1;
+  x.fillText('TEXACO', w / 2 + 60, h / 2 + 4);
+  const cx = w / 2 - 240, cy = h / 2;
+  x.beginPath(); x.arc(cx, cy, 40, 0, Math.PI * 2); x.fill();
+  x.fillStyle = '#c8102e'; starPath(x, cx, cy, 32); x.fill();
+  x.fillStyle = '#ffffff'; x.font = '900 30px Arial'; x.fillText('T', cx, cy + 2);
 });
 const priceTex = ctex(512, 320, (x, w, h) => {
   x.fillStyle = '#101216'; x.fillRect(0, 0, w, h);
   x.strokeStyle = '#3a3f46'; x.lineWidth = 6; x.strokeRect(3, 3, w - 6, h - 6);
-  const rows = [['REGULAR', '3.79', '#f2f2f2'], ['PLUS', '3.99', '#f2f2f2'], ['DIESEL', '5.19', '#39d353']];
+  // No current price data is available.
+  const rows = [['REGULAR', '—', '#f2f2f2'], ['PLUS', '—', '#f2f2f2'], ['DIESEL', '—', '#39d353']];
   rows.forEach((r, i) => {
     const y = 34 + i * 98;
     x.fillStyle = '#9aa3ad'; x.font = '700 30px Arial'; x.textAlign = 'left'; x.fillText(r[0], 26, y + 34);
     x.fillStyle = r[2]; x.font = '900 74px "Courier New", monospace'; x.textAlign = 'right';
     x.fillText(r[1], w - 78, y + 56);
-    x.font = '900 34px "Courier New", monospace'; x.fillText('9/10', w - 14, y + 56);
+
   });
 });
 const carWashTex = ctex(512, 128, (x, w, h) => {
@@ -690,7 +711,7 @@ plane(340, 340, M.grass, 0, -0.05, 0);
   const g = new THREE.ShapeGeometry(s);
   const lotTex = new THREE.TextureLoader().load('./assets/concrete.jpg');
   lotTex.wrapS = lotTex.wrapT = THREE.RepeatWrapping; lotTex.repeat.set(0.09, 0.09);
-  lotTex.colorSpace = THREE.SRGBColorSpace; lotTex.anisotropy = 4;
+  lotTex.colorSpace = THREE.SRGBColorSpace; lotTex.anisotropy = 8;
   const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: lotTex, roughness: 0.96 }));
   m.rotation.x = Math.PI / 2; // shape XY -> world XZ (shape +Y becomes -Z... flip below via scale)
   m.rotation.x = -Math.PI / 2;
@@ -783,97 +804,42 @@ lotLight(-14, -20); lotLight(-14, 16); lotLight(12, -2);
   ab.rotation.x = -Math.PI / 2; ab.position.set(-19.6, 0.021, -17.5); world.add(ab); // accessible bay
 }
 
-/* ================= STORE ================= */
+/* ================= SOURCE STATION + SINGLE ROW OF ISLANDS ================= */
+// The store and canopy meshes below are loaded from the licensed source FBX,
+// converted to glTF and trimmed to the pieces needed for this real layout.
 const storeGroup = new THREE.Group(); world.add(storeGroup);
-{
-  // main block: 15 (E-W) x 27 (N-S) x 5.4 high, flat roof, parapet
-  box(15, 5.4, 27, M.wallWhite, -29, 2.7, -2, storeGroup);
-  box(15.7, 0.5, 27.7, M.roof, -29, 5.55, -2, storeGroup);              // roof slab/parapet cap
-  box(15.4, 0.28, 27.4, M.roof, -29, 5.32, -2, storeGroup);
-  // rooftop HVAC units
-  [[-32, -11], [-26, -4], [-31, 4], [-25, 9]].forEach(([x, z]) => {
-    box(2.2, 1.1, 2.2, M.steel, x, 6.35, z, storeGroup);
-    box(1.6, 0.15, 1.6, M.dark, x, 6.95, z, storeGroup);
-  });
-  // red band across the top of the east wall (wraps corners)
-  box(0.25, 1.05, 27.2, M.red, -21.4, 4.55, -2, storeGroup);
-  box(15.2, 1.05, 0.25, M.red, -29, 4.55, -15.6, storeGroup);
-  box(15.2, 1.05, 0.25, M.red, -29, 4.55, 11.6, storeGroup);
-  // glass storefront (east face): interior box + glass + mullions + doors
-  const interior = new THREE.Mesh(new THREE.BoxGeometry(0.6, 3.6, 22),
-    new THREE.MeshStandardMaterial({ map:interiorTex, emissive:0xffc98a, emissiveMap:interiorTex, emissiveIntensity:0 }));
-  interior.position.set(-22.1, 1.95, -2); storeGroup.add(interior);
-  window.interiorMat = interior.material;
-  const glass = new THREE.Mesh(new THREE.BoxGeometry(0.08, 3.6, 22), glassMat);
-  glass.position.set(-21.55, 1.95, -2); storeGroup.add(glass);
-  for (let i = 0; i <= 8; i++) box(0.14, 3.7, 0.14, M.darkTrim, -21.5, 1.95, -13 + i * 2.75, storeGroup);
-  box(0.14, 0.16, 22, M.darkTrim, -21.5, 3.8, -2, storeGroup);
-  box(0.14, 0.16, 22, M.darkTrim, -21.5, 0.12, -2, storeGroup);
-  // double doors (centre-south section)
-  box(0.1, 3.2, 1.9, M.darkTrim, -21.48, 1.7, 1.5, storeGroup);
-  const doorGlass = new THREE.Mesh(new THREE.BoxGeometry(0.06, 2.9, 1.6), glassMat);
-  doorGlass.position.set(-21.44, 1.7, 1.5); storeGroup.add(doorGlass);
-  // green ATM sign on the glass
-  const atm = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.55),
-    new THREE.MeshStandardMaterial({ color:0x0d7a37, emissive:0x0d7a37, emissiveIntensity:0.25 }));
-  {
-    const c = document.createElement('canvas'); c.width = 256; c.height = 96;
-    const x = c.getContext('2d'); x.fillStyle = '#0d7a37'; x.fillRect(0, 0, 256, 96);
-    x.fillStyle = '#fff'; x.font = '900 62px Arial'; x.textAlign = 'center'; x.fillText('ATM', 128, 68);
-    atm.material.map = new THREE.CanvasTexture(c); atm.material.needsUpdate = true;
-  }
-  atm.position.set(-21.44, 2.9, -7); atm.rotation.y = Math.PI / 2; storeGroup.add(atm);
-  // sidewalk + bollards along the storefront
-  box(2.2, 0.12, 24, M.curb, -20.4, 0.06, -2, storeGroup);
-  for (let i = 0; i < 7; i++) cyl(0.09, 0.09, 0.95, M.red, -19.6, 0.48, -12.5 + i * 3.5, storeGroup, 10);
-  // stacked goods crates near the east wall (uncertain detail from satellite — kept generic)
-  box(1.1, 0.8, 1.6, new THREE.MeshStandardMaterial({ color:0x7a6a52, roughness:0.9 }), -20.6, 0.4, 9.5, storeGroup);
-  box(0.9, 0.6, 1.2, new THREE.MeshStandardMaterial({ color:0x5d7052, roughness:0.9 }), -20.6, 1.1, 9.5, storeGroup);
-  // dumpster enclosure south of the store (uncertain — small, dark roof)
-  const dg = new THREE.Group(); dg.position.set(-29, 0, 17.5); storeGroup.add(dg);
-  box(4.4, 2.2, 0.18, M.dark, 0, 1.1, -1.6, dg); box(4.4, 2.2, 0.18, M.dark, 0, 1.1, 1.6, dg);
-  box(0.18, 2.2, 3.4, M.dark, -2.2, 1.1, 0, dg); box(0.18, 2.2, 3.4, M.dark, 2.2, 1.1, 0, dg);
-  box(4.6, 0.15, 3.6, M.darkTrim, 0, 2.3, 0, dg);
-  box(3.2, 1.9, 2.2, new THREE.MeshStandardMaterial({ color:0x33523b, roughness:0.8 }), 0, 0.95, 0, dg);
-}
-
-/* ================= CANOPY + PUMPS ================= */
 const fuelGroup = new THREE.Group(); world.add(fuelGroup);
-const pumpSpots = [];   // filled by buildFuel, populated by the photoreal pump loader
-{
-  // long thin slab: 14 (E-W) x 42 (N-S), underside at 5.6
-  box(14.6, 0.3, 42.6, M.roof, 0, 6.68, -2, fuelGroup);                 // light canopy roof
-  box(14.75, 0.12, 42.75, M.darkTrim, 0, 6.5, -2, fuelGroup);           // dark top edge trim
-  const fascia = new THREE.Mesh(new THREE.BoxGeometry(14.2, 1.15, 42.2),
-    [M.red, M.red, M.red, M.red, M.red, M.red]);
-  fascia.position.set(0, 5.95, -2); fascia.castShadow = true; fuelGroup.add(fascia);
-  const fasciaTexE = glowMat(fasciaTex);
-  [0.06, -0.06].forEach(() => {});
-  const bandE = new THREE.Mesh(new THREE.PlaneGeometry(41.4, 1.1), fasciaTexE);
-  bandE.position.set(7.12, 5.95, -2); bandE.rotation.y = Math.PI / 2; fuelGroup.add(bandE);
-  const bandW = bandE.clone(); bandW.position.x = -7.12; bandW.rotation.y = -Math.PI / 2; fuelGroup.add(bandW);
-  box(13.8, 0.18, 41.8, M.cream, 0, 5.32, -2, fuelGroup);               // cream underside
-  // recessed light panels in the underside
-  for (let r = 0; r < 8; r++) for (let cix = 0; cix < 2; cix++) {
-    const p = new THREE.Mesh(new THREE.BoxGeometry(2.6, 0.06, 3.4), canopyLightMat);
-    p.position.set(-3.4 + cix * 6.8, 5.22, -20 + r * 5.2); fuelGroup.add(p);
-  }
-  // columns (blue-grey) + pump islands: single row of 4 along the length
-  const islandZ = [-17, -6, 5, 16];
-  islandZ.forEach((z, idx) => {
-    cyl(0.32, 0.36, 5.3, M.column, 0, 2.65, z, fuelGroup, 14);
-    // island pad
-    box(1.7, 0.22, 4.6, M.curb, 0, 0.11, z, fuelGroup);
-    box(1.74, 0.1, 4.64, M.redDark, 0, 0.05, z, fuelGroup);
-    // two photoreal dispensers per island — spots filled in by the pump-model loader below
-    [-1.15, 1.15].forEach(dz => pumpSpots.push({ x: 0, y: 0.22, z: z + dz }));
-    // protective bollards at island ends
-    [-2.5, 2.5].forEach(dz => {
-      cyl(0.08, 0.08, 0.8, M.red, -0.7, 0.4, z + dz, fuelGroup, 8);
-      cyl(0.08, 0.08, 0.8, M.red, 0.7, 0.4, z + dz, fuelGroup, 8);
-    });
-  });
+const pumpSpots = [];
+const canopySpots = [];
+const islandZ = [-17, -6, 5, 16];
+// Source canopy dimensions are 42 x 17.3 m. Its local X axis becomes north–south.
+const fasciaTexE = glowMat(fasciaTex);
+const bandE = new THREE.Mesh(new THREE.PlaneGeometry(41.4, 0.95), fasciaTexE);
+bandE.position.set(8.72, 6.25, -2); bandE.rotation.y = Math.PI / 2; fuelGroup.add(bandE);
+const bandW = bandE.clone(); bandW.position.x = -8.72; bandW.rotation.y = -Math.PI / 2; fuelGroup.add(bandW);
+for (let r = 0; r < 8; r++) for (let cix = 0; cix < 2; cix++) {
+  const panel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, 1.05), canopyLightMat);
+  panel.position.set(-4 + cix * 8, 5.45, -20 + r * 5.2); fuelGroup.add(panel);
 }
+islandZ.forEach((z, idx) => {
+  box(1.7, 0.22, 5.0, M.curb, 0, 0.11, z, fuelGroup);
+  [-1.2, 1.2].forEach((dz, side) => pumpSpots.push({ x:0, y:0.22, z:z+dz, number:idx*4 + side*2 + 1 }));
+  [-2.7, 2.7].forEach(dz => {
+    cyl(0.08, 0.08, 0.9, M.red, -0.72, 0.45, z+dz, fuelGroup, 10);
+    cyl(0.08, 0.08, 0.9, M.red, 0.72, 0.45, z+dz, fuelGroup, 10);
+  });
+  const lamp = new THREE.SpotLight(0xffe8bb, 0, 15, Math.PI/3, 0.8, 1.2);
+  lamp.position.set(0,5.35,z); lamp.target.position.set(0,0,z);
+  lamp.castShadow=true; lamp.shadow.mapSize.set(512,512);
+  fuelGroup.add(lamp, lamp.target); canopySpots.push(lamp);
+});
+// Additional site-specific rooftop equipment and sign on the east storefront.
+[[-30,-10],[-28,-3],[-30,5],[-27,10]].forEach(([x,z]) => {
+  box(1.6,0.8,1.6,M.steel,x,5.4,z,storeGroup);
+});
+const atmTex = ctex(256,96,(x,w,h)=>{x.fillStyle='#087c3a';x.fillRect(0,0,w,h);x.fillStyle='white';x.font='bold 62px Arial';x.textAlign='center';x.fillText('ATM',w/2,68)});
+const atm = new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.48),new THREE.MeshStandardMaterial({map:atmTex,emissive:0x087c3a,emissiveIntensity:0.15}));
+atm.position.set(-25.1,2.9,-7); atm.rotation.y=Math.PI/2; storeGroup.add(atm);
 
 /* ================= TWIN PYLON SIGNS (NE + SE corners) ================= */
 const signGroups = [];
@@ -1089,9 +1055,15 @@ const TIMES = {
   golden: { sky:[0x51628f, 0xe99a5f, 0xf7c489], fog:0xe0a06a, bg:0xe99a5f, sun:1.65, sunPos:[-52,12,20], sunCol:0xffb066, hemi:0.5,  exp:1.02, panel:0.8,  lamp:1.3,  glass:0.5,  head:0.9,  stars:0, sign:0.3, interior:0.55 },
   night:  { sky:[0x02040c, 0x0a1a30, 0x12233e], fog:0x0a1a30, bg:0x0a1a30, sun:0.32, sunPos:[-24,38,-16], sunCol:0x9db8ff, hemi:0.26, exp:0.94, panel:1.7,  lamp:2.4,  glass:1.0,  head:1.8,  stars:1, sign:0.55, interior:1.0 }
 };
-let trafficLightRefs = [];
+let pumpPanelMaterial;
+let canopyUndersideMaterial;
+let activeTime = 'day';
 function applyTime(name) {
   const T = TIMES[name]; if (!T) return;
+  activeTime = name;
+  if (pumpPanelMaterial) pumpPanelMaterial.emissiveIntensity = name === 'night' ? 2 : name === 'golden' ? 0.8 : 0.2;
+  canopySpots.forEach(light => light.intensity = name === 'night' ? 75 : name === 'golden' ? 18 : 0);
+  if (canopyUndersideMaterial) canopyUndersideMaterial.emissiveIntensity = name === 'night' ? 0.45 : 0.2;
   skyMat.uniforms.top.value.setHex(T.sky[0]);
   skyMat.uniforms.mid.value.setHex(T.sky[1]);
   skyMat.uniforms.bot.value.setHex(T.sky[2]);
@@ -1113,17 +1085,22 @@ function applyTime(name) {
 
 /* ================= CAMERA VIEWS ================= */
 const VIEWS = {
-  overview: { pos:[29, 14, 34],  tgt:[-4, 1.5, -2] },
-  pumps:    { pos:[13.5, 2.6, 10], tgt:[0, 1.8, -6] },
-  store:    { pos:[-7.5, 2.4, 7],  tgt:[-29, 2.4, -2] },
+  overview: { pos:[62, 14, 13],  tgt:[-6, 3, -2] },
+  pumps:    { pos:[13.5, 3.3, 10], tgt:[0, 2, -6] },
+  store:    { pos:[-9, 3.4, 8],  tgt:[-26, 2.4, -2] },
   road:     { pos:[31, 2.1, 31],   tgt:[-2, 5, -8] }
 };
+function viewPosition(name) {
+  const view = VIEWS[name], target = new THREE.Vector3(...view.tgt);
+  const factor = name === 'overview' ? Math.max(1, 1.25 / camera.aspect) : 1;
+  return new THREE.Vector3(...view.pos).sub(target).multiplyScalar(factor).add(target);
+}
 let fly = null;
 function flyTo(name) {
   const v = VIEWS[name]; if (!v) return;
   fly = {
     t: 0, dur: 1.5,
-    p0: camera.position.clone(), p1: new THREE.Vector3(...v.pos),
+    p0: camera.position.clone(), p1: viewPosition(name),
     t0: controls.target.clone(), t1: new THREE.Vector3(...v.tgt)
   };
   document.querySelectorAll('[data-view]').forEach(b =>
@@ -1179,28 +1156,6 @@ addHotspot('store', new THREE.Vector3(-21, 6.8, -2));
 addHotspot('car', new THREE.Vector3(2.95, 2.9, -6));
 addHotspot('sign', new THREE.Vector3(19.5, 16.2, 27.5));
 
-const raycaster = new THREE.Raycaster();
-const pointer = new THREE.Vector2();
-const pickTargets = [
-  { obj: fuelGroup, key: 'fuel' }, { obj: storeGroup, key: 'store' },
-  { obj: signGroups[0], key: 'sign' }, { obj: signGroups[1], key: 'sign' },
-  { obj: beetleG, key: 'car' }
-];
-let downAt = null;
-renderer.domElement.addEventListener('pointerdown', e => downAt = [e.clientX, e.clientY]);
-renderer.domElement.addEventListener('pointerup', e => {
-  if (!downAt) return;
-  const moved = Math.hypot(e.clientX - downAt[0], e.clientY - downAt[1]);
-  downAt = null;
-  if (moved > 6) return;
-  const r = renderer.domElement.getBoundingClientRect();
-  pointer.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1);
-  raycaster.setFromCamera(pointer, camera);
-  for (const t of pickTargets) {
-    if (raycaster.intersectObject(t.obj, true).length) { showInfo(t.key); return; }
-  }
-});
-
 /* ================= LOOP / RESIZE / INIT ================= */
 const clock = new THREE.Clock();
 const projV = new THREE.Vector3();
@@ -1239,7 +1194,7 @@ function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (!w || !h) return;
   renderer.setSize(w, h, false);
-  camera.aspect = w / h; camera.updateProjectionMatrix();
+  camera.aspect = w / h; camera.fov = camera.aspect < 1.2 ? 60 : 46; camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(stage);
 window.addEventListener('resize', resize);
@@ -1248,36 +1203,72 @@ resize();
 const params = new URLSearchParams(location.search);
 applyTime(TIMES[params.get('time')] ? params.get('time') : 'day');
 const startView = VIEWS[params.get('view')] ? params.get('view') : 'overview';
-camera.position.set(...VIEWS[startView].pos);
+camera.position.copy(viewPosition(startView));
 controls.target.set(...VIEWS[startView].tgt);
 document.querySelectorAll('[data-view]').forEach(b =>
   b.classList.toggle('on', b.dataset.view === startView));
 
-// ---------- photoreal pump model (supplied by the owner): PBR-textured dispenser, cloned to every island spot ----------
-{
-  const tl = new THREE.TextureLoader();
-  const T = (f, srgb) => { const t = tl.load('./assets/pumptex/' + f); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8; return t; };
-  const pbr = (pre, opts = {}) => { const m = new THREE.MeshStandardMaterial({
-    map: T(pre + '_albedo.png', true), normalMap: T(pre + '_normal.png'),
-    roughnessMap: T(pre + '_rough.png'), metalnessMap: T(pre + '_metal.png'),
-    aoMap: T(pre + '_ao.png'), roughness: 1, metalness: 1, ...opts }); m.aoMap.channel = 0; return m; };
-  const pumpMats = {
-    Body: pbr('body'), Handle: pbr('handle'),
-    Panel: pbr('panel', { emissive: 0xffffff, emissiveMap: T('panel_emissive.png', true), emissiveIntensity: 0.5 }),
-  };
-  new OBJLoader().load('./assets/pump.obj', obj => {
-    obj.traverse(m => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true;
-      const n = m.material && m.material.name; if (pumpMats[n]) m.material = pumpMats[n]; } });
-    const bb = new THREE.Box3().setFromObject(obj); const sz = bb.getSize(new THREE.Vector3());
-    const k = 1.9 / sz.y, cx = (bb.min.x + bb.max.x) / 2, cz = (bb.min.z + bb.max.z) / 2;
-    for (const s of pumpSpots) {
-      const c = obj.clone();
-      c.scale.setScalar(k); c.rotation.y = Math.PI / 2;
-      c.position.set(s.x - cz * k, s.y - bb.min.y * k, s.z + cx * k);
-      fuelGroup.add(c);
-    }
-  }, undefined, () => { /* pumps are an enhancement; the scene stands without them */ });
+// Source textures are applied explicitly because the FBX used vendor-specific
+// materials the FBX-to-glTF converter could not automatically translate.
+const stationLoader = new GLTFLoader();
+const tloader = new THREE.TextureLoader();
+function stationMap(url) { const t=tloader.load(url); t.flipY=false; t.colorSpace=THREE.SRGBColorSpace; t.anisotropy=8; return t; }
+const stationWallMap = stationMap('./assets/web-station/store-facade.webp');
+const stationPanelMap = stationMap('./assets/web-station/canopy-panel.webp');
+function makeHeaderMaterial(number) {
+const headerTexture = ctex(512,192,(x,w,h)=>{
+  x.fillStyle='#f4f4ee';x.fillRect(0,0,w,h);x.fillStyle='#c8102e';
+  x.beginPath();x.moveTo(0,105);x.lineTo(w,40);x.lineTo(w,h);x.lineTo(0,h);x.closePath();x.fill();
+  x.fillStyle='#fff';x.beginPath();x.arc(60,92,38,0,Math.PI*2);x.fill();x.fillStyle='#c8102e';starPath(x,60,92,29);x.fill();
+  x.fillStyle='#fff';x.textAlign='center';x.font='bold 22px Arial';x.fillText('with',260,118);x.font='bold 36px Arial';x.fillText('TECHRON',260,151);
+  x.font='bold 40px Arial'; x.fillText(String(number),455,145);
+});
+const material = new THREE.MeshStandardMaterial({map:headerTexture,emissive:0xffffff,emissiveMap:headerTexture,emissiveIntensity:0.18,side:THREE.DoubleSide});
+signGlowMats.push(material);return material;
 }
+const stationPromise = new Promise((resolve,reject) => stationLoader.load('./assets/web-station/station.glb', gltf => {
+  const node = n => gltf.scene.getObjectByName(n+'_obj(4002336)');
+  const building = new THREE.Group();
+  for(const id of [40,77,78]) { const part=node(id); if(!part) return reject(new Error('Missing station store part '+id)); building.add(part); }
+  building.rotation.y=-Math.PI/2; building.position.set(-17.2,0,-5.2); storeGroup.add(building);
+  building.traverse(m=>{ if (!m.isMesh) return; m.castShadow=true; m.receiveShadow=true;
+    const id=parseInt(m.name,10);
+    if(id===49) m.material = glassMat;
+    else if(id===42 || id===76 || id===77 || id===78) m.material=M.red;
+    else if([62,63,64].includes(id)) m.material=new THREE.MeshStandardMaterial({map:stationWallMap,roughness:0.85});
+    else if([50,51,52,53,54,55,56,57,58].includes(id)) m.material=M.darkTrim;
+    else m.material=M.wallWhite;
+  });
+  const roof=node(195); if(!roof) return reject(new Error('Missing source canopy'));
+  const canopy = new THREE.Group(); canopy.rotation.y=-Math.PI/2; canopy.position.set(-0.7,-0.5,-5.09); canopy.add(roof); fuelGroup.add(canopy);
+  canopyUndersideMaterial=new THREE.MeshStandardMaterial({map:stationPanelMap,color:0xece4d5,emissive:0xcbbda0,emissiveIntensity:0.2,roughness:0.8});
+  roof.traverse(m=>{ if(!m.isMesh)return; m.castShadow=true; m.receiveShadow=true;
+    const id=parseInt(m.name,10);
+    m.material = id===199 ? canopyUndersideMaterial : id===197 ? M.darkTrim : id===198 ? M.red : M.red;
+  });
+  const column = node(11); if(!column) return reject(new Error('Missing source canopy column'));
+  const center=new THREE.Vector3(); new THREE.Box3().setFromObject(column).getCenter(center);
+  for(const z of islandZ) { const holder=new THREE.Group(), c=column.clone(); c.position.sub(center); holder.position.set(0,3,z);holder.add(c);fuelGroup.add(holder); c.traverse(m=>{if(m.isMesh){m.material=M.column;m.castShadow=true;m.receiveShadow=true;}}); }
+  applyTime(activeTime);
+  resolve();
+}, undefined, reject));
+const pumpPromise = new Promise((resolve,reject) => {
+  const T=(f,srgb)=>{const t=tloader.load('./assets/pumptex/'+f);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
+  const pbr=(pre,opts={})=>new THREE.MeshStandardMaterial({map:T(pre+'_albedo.png',true),normalMap:T(pre+'_normal.png'),roughnessMap:T(pre+'_rough.png'),metalnessMap:T(pre+'_metal.png'),aoMap:T(pre+'_ao.png'),roughness:1,metalness:1,...opts});
+  const mats={Body:pbr('body'),Handle:pbr('handle'),Panel:pbr('panel',{emissive:0xffffff,emissiveMap:T('panel_emissive.png',true),emissiveIntensity:0.5})};
+  pumpPanelMaterial=mats.Panel; applyTime(activeTime);
+  new OBJLoader().load('./assets/pump.obj',obj=>{
+    obj.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;if(mats[m.material?.name])m.material=mats[m.material.name]}});
+    const bb=new THREE.Box3().setFromObject(obj), size=bb.getSize(new THREE.Vector3()), k=1.9/size.y, cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2;
+    for(const s of pumpSpots){
+      const c=obj.clone();c.scale.setScalar(k);c.rotation.y=Math.PI/2;c.position.set(s.x-cz*k,s.y-bb.min.y*k,s.z+cx*k);fuelGroup.add(c);
+      const header=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.56),makeHeaderMaterial(s.number+1));header.position.set(s.x,2.55,s.z);header.rotation.y=Math.PI/2;fuelGroup.add(header);
+    }
+    resolve();
+  },undefined,reject);
+});
+try { await Promise.all([stationPromise,pumpPromise]); }
+catch(err){ console.error('Station source failed to load',err); document.getElementById('fallback3d').classList.add('show'); throw err; }
 
 window.__station3dReady = true;
 document.getElementById('loading3d').classList.add('done');
