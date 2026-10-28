@@ -1262,12 +1262,106 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
   applyTime(activeTime);
   resolve();
 }, undefined, reject));
+// The supplied pump model ships with one nozzle dropped on the ground and hoses that drag on the
+// floor. Holster that nozzle and shorten the hose loops at load time; pump.obj itself is unchanged.
+function fixPumpHoses(obj, THREE) {
+  const KEEP_ABOVE = 100;   // model units: just below the nozzle holsters; geometry above is untouched
+  const LOWEST = 55;        // lowest hose point after the fix (pump base is at ~10, so ~33 cm of clearance)
+  const attrs = g => ['position', 'normal', 'uv'].filter(n => g.attributes[n]);
+  function components(g) {
+    const p = g.attributes.position, n = p.count, parent = new Int32Array(n);
+    for (let i = 0; i < n; i++) parent[i] = i;
+    const find = i => { while (parent[i] !== i) { parent[i] = parent[parent[i]]; i = parent[i]; } return i; };
+    const join = (a, b) => { a = find(a); b = find(b); if (a !== b) parent[a] = b; };
+    const seen = new Map();
+    for (let i = 0; i < n; i++) {
+      const k = Math.round(p.getX(i) * 1000) + ',' + Math.round(p.getY(i) * 1000) + ',' + Math.round(p.getZ(i) * 1000);
+      const j = seen.get(k); if (j === undefined) seen.set(k, i); else join(i, j);
+    }
+    for (let i = 0; i < n; i += 3) { join(i, i + 1); join(i, i + 2); }
+    const map = new Map();
+    for (let t = 0; t < n; t += 3) {
+      const r = find(t); let c = map.get(r);
+      if (!c) { c = { tris: [], box: new THREE.Box3() }; map.set(r, c); }
+      c.tris.push(t);
+      for (let v = t; v < t + 3; v++) c.box.expandByPoint(new THREE.Vector3(p.getX(v), p.getY(v), p.getZ(v)));
+    }
+    return [...map.values()];
+  }
+  // Rebuild a non-indexed geometry from kept triangles plus z-mirrored copies.
+  function rebuild(g, keep, mirror, lift) {
+    const names = attrs(g), out = {};
+    const total = (keep.length + mirror.length) * 3;
+    names.forEach(nm => out[nm] = new Float32Array(total * g.attributes[nm].itemSize));
+    let w = 0;
+    const put = (t, flip) => {
+      const order = flip ? [0, 2, 1] : [0, 1, 2];   // mirrored triangles need reversed winding
+      for (const o of order) {
+        for (const nm of names) {
+          const a = g.attributes[nm], s = a.itemSize;
+          for (let k = 0; k < s; k++) {
+            let val = a.array[(t + o) * s + k];
+            if (flip && (nm === 'position' || nm === 'normal') && k === 2) val = -val;
+            out[nm][w * s + k] = val;
+          }
+        }
+        w++;
+      }
+    };
+    keep.forEach(t => put(t, false));
+    mirror.forEach(t => put(t, true));
+    const ng = new THREE.BufferGeometry();
+    names.forEach(nm => ng.setAttribute(nm, new THREE.BufferAttribute(out[nm], g.attributes[nm].itemSize)));
+    if (lift) lift(ng);
+    return ng;
+  }
+  const body = obj.getObjectByName('GasPump_Body'), handles = obj.getObjectByName('GasPump_Handles');
+  if (!body || !handles) return false;
+
+  // 1) Nozzle lying on the ground: drop it and holster a copy of its outer neighbour (mirrored across the pump).
+  const hc = components(handles.geometry);
+  const onFloor = hc.filter(c => c.box.max.y < 20);
+  const outerHandle = hc.filter(c => c.box.min.y > 95 && c.box.min.x < -45 && c.box.max.z < 0);
+  const hKeep = hc.filter(c => !onFloor.includes(c)).flatMap(c => c.tris);
+  handles.geometry = rebuild(handles.geometry, hKeep, onFloor.length ? outerHandle.flatMap(c => c.tris) : []);
+
+  // 2) The dropped nozzle's hose runs across the floor: replace it with the matching outer hose, mirrored.
+  const bc = components(body.geometry);
+  const isHose = c => { const s = c.box.getSize(new THREE.Vector3()); return s.y > 150 && s.x < 60; };
+  const floorHose = bc.filter(c => c.box.min.y < 5 && c.box.getSize(new THREE.Vector3()).z > 100);
+  const outerHose = bc.filter(c => isHose(c) && c.box.min.x < -70 && c.box.max.z < 0);
+  const bKeep = bc.filter(c => !floorHose.includes(c)).flatMap(c => c.tris);
+  const hoseTris = new Set(bc.filter(c => isHose(c) && !floorHose.includes(c)).flatMap(c => c.tris));
+  const keptHoseFlags = bKeep.map(t => hoseTris.has(t));
+  const mirrorTris = floorHose.length ? outerHose.flatMap(c => c.tris) : [];
+
+  // 3) Shorten every hose loop: compress hose geometry below the holsters so the lowest point sits at LOWEST.
+  let lowest = Infinity;
+  bc.filter(c => isHose(c) && !floorHose.includes(c)).forEach(c => lowest = Math.min(lowest, c.box.min.y));
+  const s = (KEEP_ABOVE - LOWEST) / (KEEP_ABOVE - lowest);
+  body.geometry = rebuild(body.geometry, bKeep, mirrorTris, ng => {
+    const p = ng.attributes.position, nrm = ng.attributes.normal;
+    const flags = keptHoseFlags.concat(mirrorTris.map(() => true));
+    for (let t = 0; t < flags.length; t++) {
+      if (!flags[t]) continue;
+      for (let v = t * 3; v < t * 3 + 3; v++) {
+        const y = p.getY(v);
+        if (y < KEEP_ABOVE) {
+          p.setY(v, KEEP_ABOVE - (KEEP_ABOVE - y) * s);
+          if (nrm) { nrm.setY(v, nrm.getY(v) / s); const l = Math.hypot(nrm.getX(v), nrm.getY(v), nrm.getZ(v)) || 1; nrm.setXYZ(v, nrm.getX(v) / l, nrm.getY(v) / l, nrm.getZ(v) / l); }
+        }
+      }
+    }
+  });
+  return true;
+}
 const pumpPromise = new Promise((resolve,reject) => {
   const T=(f,srgb)=>{const t=tloader.load('./assets/pumptex/'+f);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
   const pbr=(pre,opts={})=>new THREE.MeshStandardMaterial({map:T(pre+'_albedo.png',true),normalMap:T(pre+'_normal.png'),roughnessMap:T(pre+'_rough.png'),metalnessMap:T(pre+'_metal.png'),aoMap:T(pre+'_ao.png'),roughness:1,metalness:1,...opts});
   const mats={Body:pbr('body'),Handle:pbr('handle'),Panel:pbr('panel',{emissive:0xffffff,emissiveMap:T('panel_emissive.png',true),emissiveIntensity:0.5})};
   pumpPanelMaterial=mats.Panel; applyTime(activeTime);
   new OBJLoader().load('./assets/pump.obj',obj=>{
+    if(!fixPumpHoses(obj, THREE)) console.warn('Pump hose fix skipped: expected pump parts not found');
     obj.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;if(mats[m.material?.name])m.material=mats[m.material.name]}});
     const bb=new THREE.Box3().setFromObject(obj), size=bb.getSize(new THREE.Vector3()), k=1.9/size.y, cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2;
     for(const s of pumpSpots){
