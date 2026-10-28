@@ -65,19 +65,25 @@
   #scene3d{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
   #scene3d:active{cursor:grabbing}
   .stage-ui{position:absolute;z-index:5;pointer-events:none}
-  .stage-title{top:22px;left:22px;max-width:430px;background:rgba(10,37,64,.82);color:#fff;border-radius:18px;padding:22px 24px;backdrop-filter:blur(8px);pointer-events:auto;box-shadow:var(--shadow)}
+  .stage-title{top:22px;left:22px;max-width:342px;background:rgba(10,37,64,.82);color:#fff;border-radius:18px;padding:22px 24px;backdrop-filter:blur(8px);pointer-events:auto;box-shadow:var(--shadow)}
   .stage-title .eyebrow{display:inline-block;background:var(--red);padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;letter-spacing:.7px;text-transform:uppercase}
   .stage-title h1{font-size:clamp(27px,3.4vw,38px);line-height:1.08;font-weight:900;letter-spacing:-.5px;margin:12px 0 8px}
   .stage-title h1 em{font-style:normal;color:#ff5b66}
   .stage-title p{color:#cfdff2;font-size:15px;margin-bottom:16px}
   .stage-title .row{display:flex;gap:10px;flex-wrap:wrap}
+  .stage-title .mini-title{display:none}
+  .stage-title .x{position:absolute;top:8px;right:12px;border:none;background:none;color:#cfdff2;font-size:20px;cursor:pointer;line-height:1;padding:4px}
+  .stage-title .x:hover{color:#fff}
+  .stage-title.hidden{display:none}
   .btn-white{background:#fff;color:var(--navy)}.btn-white:hover{background:var(--sky)}
   .btn-glass{background:rgba(255,255,255,.14);color:#fff;border-color:rgba(255,255,255,.4)}.btn-glass:hover{background:rgba(255,255,255,.25)}
-  @media(max-width:640px){
+  @media(max-width:900px){
     .stage{min-height:480px}
-    .stage-title{left:12px;right:auto;top:12px;max-width:250px;padding:12px 14px;border-radius:14px}
-    .stage-title .eyebrow{font-size:10.5px;padding:3px 9px}
-    .stage-title h1{font-size:20px;margin:7px 0 0;line-height:1.12}
+    .stage-title{left:12px;right:auto;top:12px;max-width:236px;padding:10px 34px 11px 12px;border-radius:14px}
+    .stage-title .stage-logo{width:30px;height:30px;display:inline-block;vertical-align:middle;margin:0 8px 0 0}
+    .stage-title .eyebrow{display:none}
+    .stage-title h1{display:none}
+    .stage-title .mini-title{display:inline;font-size:15px;font-weight:800;vertical-align:middle;letter-spacing:.1px}
     .stage-title p{display:none}
     .stage-title .row{display:none}
   }
@@ -195,8 +201,10 @@
       </div>
     </div>
 
-    <div class="stage-ui stage-title">
+    <div class="stage-ui stage-title" id="titlecard">
+      <button class="x" id="titleclose" aria-label="Hide panel">×</button>
       <img class="stage-logo" src="assets/logo.jpg" alt="Short Stop logo — red vintage car number 35" style="margin-bottom:14px">
+      <span class="mini-title">Explore the station in 3D</span>
       <span class="eyebrow">★ Interactive 3D · Texaco with Techron</span>
       <h1>Explore the station.<br>Then come <em>see it.</em></h1>
       <p>Drag to walk the lot, scroll to zoom, and tap the glowing markers — the pumps, the store, and our famous #35 car.</p>
@@ -388,6 +396,7 @@ const canvasEl = document.getElementById('scene3d');
 let renderer;
 try {
   renderer = new THREE.WebGLRenderer({ canvas: canvasEl, antialias:true, powerPreference:'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 } catch(e) {
   document.getElementById('fallback3d').classList.add('show');
   document.getElementById('loading3d').classList.add('done');
@@ -679,7 +688,10 @@ plane(340, 340, M.grass, 0, -0.05, 0);
   s.moveTo(-41, -37); s.lineTo(19, -37); s.lineTo(21.5, -8); s.lineTo(19.5, 12); s.lineTo(15, 34);
   s.lineTo(-33, 34); s.lineTo(-41, 18); s.closePath();
   const g = new THREE.ShapeGeometry(s);
-  const m = new THREE.Mesh(g, M.concrete);
+  const lotTex = new THREE.TextureLoader().load('./assets/concrete.jpg');
+  lotTex.wrapS = lotTex.wrapT = THREE.RepeatWrapping; lotTex.repeat.set(0.09, 0.09);
+  lotTex.colorSpace = THREE.SRGBColorSpace; lotTex.anisotropy = 4;
+  const m = new THREE.Mesh(g, new THREE.MeshStandardMaterial({ map: lotTex, roughness: 0.96 }));
   m.rotation.x = Math.PI / 2; // shape XY -> world XZ (shape +Y becomes -Z... flip below via scale)
   m.rotation.x = -Math.PI / 2;
   m.scale.set(1, -1, 1);
@@ -1101,7 +1113,7 @@ function applyTime(name) {
 
 /* ================= CAMERA VIEWS ================= */
 const VIEWS = {
-  overview: { pos:[42, 26, 48],  tgt:[-6, 1, -2] },
+  overview: { pos:[29, 14, 34],  tgt:[-4, 1.5, -2] },
   pumps:    { pos:[13.5, 2.6, 10], tgt:[0, 1.8, -6] },
   store:    { pos:[-7.5, 2.4, 7],  tgt:[-29, 2.4, -2] },
   road:     { pos:[31, 2.1, 31],   tgt:[-2, 5, -8] }
@@ -1148,6 +1160,7 @@ function showInfo(key) {
   card.classList.add('show');
 }
 document.getElementById('infoclose').addEventListener('click', () => card.classList.remove('show'));
+document.getElementById('titleclose').addEventListener('click', () => document.getElementById('titlecard').classList.add('hidden'));
 
 const hotspotLayer = stage;
 const hotspots = [];
