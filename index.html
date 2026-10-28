@@ -24,7 +24,7 @@
   "telephone": "+1-830-606-1892",
   "brand": { "@type": "Brand", "name": "Texaco" },
   "address": { "@type": "PostalAddress", "streetAddress": "1185 Interstate 35 N", "addressLocality": "New Braunfels", "addressRegion": "TX", "postalCode": "78130", "addressCountry": "US" },
-  "geo": { "@type": "GeoCoordinates", "latitude": 29.700549, "longitude": -98.09473 },
+  "geo": { "@type": "GeoCoordinates", "latitude": 29.700512, "longitude": -98.095070 },
   "openingHoursSpecification": [
     { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday","Tuesday","Wednesday","Thursday","Friday"], "opens": "05:00", "closes": "00:00" },
     { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "05:00", "closes": "01:00" },
@@ -246,6 +246,7 @@
         <button class="tbtn" data-view="pumps">Pumps</button>
         <button class="tbtn" data-view="store">Store</button>
         <button class="tbtn" data-view="road">From the road</button>
+        <button class="tbtn" data-view="site">Site plan · N ↑</button>
       </div>
       <div class="toolgroup" role="group" aria-label="Time of day">
         <button class="tbtn on" data-time="day">Day</button>
@@ -368,7 +369,7 @@
         <p><a href="#explore">Explore in 3D</a><br><a href="#deals">Current Deals</a><br><a href="#visit">Find Us</a><br><a href="classic.html">Classic Site</a><br><a href="https://www.facebook.com/profile.php?id=61592980030281" target="_blank" rel="noopener">Facebook</a></p>
       </div>
     </div>
-    <small>© 2026 Texaco ShortStop · shortstop35.store · New Braunfels, Texas · TEXACO, TECHRON and the Texaco Star are trademarks of Chevron Intellectual Property LLC. 3D model is an artistic representation of the station.</small>
+    <small>© 2026 Texaco ShortStop · shortstop35.store · New Braunfels, Texas · TEXACO, TECHRON and the Texaco Star are trademarks of Chevron Intellectual Property LLC. 3D model combines an image-estimated site layout with the supplied updated pump design; dimensions are approximate, not surveyed.</small>
   </div>
 </footer>
 
@@ -400,6 +401,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
+import { addStationDetails } from './scripts/station-details.js';
 
 /* =====================================================================
    Texaco ShortStop — realistic 3D model of the real station
@@ -408,7 +410,8 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
    store west/back, long canopy N-S between store and frontage road,
    two twin-post Texaco pylons (NE + SE corners), Loop 337 junction NE,
    Edelweiss Inn (Tudor, green roof) behind, I-35 main lanes east.
-   Axes: +X = east (toward I-35), +Z = south, Y = up. Units ~ metres.
+   Site-local axes: +X = toward I-35, +Z = along the frontage, Y = up.
+   The completed site is rotated into an estimated geographic heading below. Units ~ metres.
    ===================================================================== */
 
 const stage = document.getElementById('explore');
@@ -442,7 +445,8 @@ controls.enableDamping = true;
 controls.dampingFactor = 0.06;
 controls.maxPolarAngle = Math.PI * 0.495;
 controls.minDistance = 5;
-controls.maxDistance = 130;
+// Allow the portrait site-plan framing to fit the entire lot.
+controls.maxDistance = 300;
 
 /* ---------- sky dome, sun, stars ---------- */
 const skyMat = new THREE.ShaderMaterial({
@@ -661,7 +665,7 @@ const M = {
   red:      new THREE.MeshStandardMaterial({ color:0xc8102e, roughness:0.42, metalness:0.15 }),
   redDark:  new THREE.MeshStandardMaterial({ color:0x8f0b21, roughness:0.5, metalness:0.1 }),
   darkTrim: new THREE.MeshStandardMaterial({ color:0x1d1f24, roughness:0.6, metalness:0.2 }),
-  column:   new THREE.MeshStandardMaterial({ color:0x8d99a6, roughness:0.45, metalness:0.55 }),
+  column:   new THREE.MeshStandardMaterial({ color:0xc5ccce, roughness:0.5, metalness:0.15 }),
   chrome:   new THREE.MeshStandardMaterial({ color:0xd8dce2, roughness:0.22, metalness:0.9 }),
   steel:    new THREE.MeshStandardMaterial({ color:0x9aa0a8, roughness:0.4, metalness:0.7 }),
   dark:     new THREE.MeshStandardMaterial({ color:0x232529, roughness:0.7 }),
@@ -688,6 +692,15 @@ function glowMat(tex) {
 
 /* ---------- tiny builders ---------- */
 const world = new THREE.Group(); scene.add(world);
+// Estimated NE/SW highway heading from owner reference imagery (not a survey).
+// Keep construction in local coordinates; rotate only after asset bounding-box fitting.
+const SITE_HEADING = -35 * Math.PI / 180;
+const siteRotationAxis = new THREE.Vector3(0,1,0);
+// Buildings are diagonal to the road grid in the aerial reference.
+const BUILDING_ANGLE = Math.PI / 4;
+const stationLayout = new THREE.Group(); world.add(stationLayout);
+function buildingToSite(point) { return point.applyAxisAngle(siteRotationAxis,BUILDING_ANGLE); }
+function siteToWorld(point) { return point.applyAxisAngle(siteRotationAxis,SITE_HEADING); }
 function box(w, h, d, mat, x, y, z, parent = world, shadow = true) {
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
   m.position.set(x, y, z);
@@ -710,8 +723,9 @@ plane(340, 340, M.grass, 0, -0.05, 0);
 // station lot — wedge, wider at the north (concrete)
 {
   const s = new THREE.Shape();
-  s.moveTo(-41, -37); s.lineTo(19, -37); s.lineTo(21.5, -8); s.lineTo(19.5, 12); s.lineTo(15, 34);
-  s.lineTo(-33, 34); s.lineTo(-41, 18); s.closePath();
+  s.moveTo(-49, -37); s.lineTo(12, -37); s.lineTo(21.5, -20);
+  s.lineTo(21.5, 12); s.lineTo(15, 40); s.lineTo(-13, 44);
+  s.lineTo(-45, 30); s.lineTo(-49, 5); s.closePath();
   const g = new THREE.ShapeGeometry(s);
   const lotTex = new THREE.TextureLoader().load('./assets/concrete.jpg');
   lotTex.wrapS = lotTex.wrapT = THREE.RepeatWrapping; lotTex.repeat.set(0.09, 0.09);
@@ -727,8 +741,13 @@ plane(340, 340, M.grass, 0, -0.05, 0);
 plane(9, 10, M.concrete, 21, 0.005, 26);
 plane(9, 10, M.concrete, 21, 0.005, -31);
 // sidewalk + grass strip along the frontage
-box(2.6, 0.14, 150, M.curb, 22.6, 0.07, 0);
-plane(3.4, 150, M.grass, 19.6, 0.01, 0);
+// Leave actual openings through both the verge and sidewalk at each apron.
+[[-75,-36],[-26,21],[31,75]].forEach(([a,b]) => {
+  box(2.6, 0.14, b-a, M.curb, 22.6, 0.07, (a+b)/2);
+  plane(3.4, b-a, M.grass, 19.6, 0.01, (a+b)/2);
+});
+plane(11, 10, M.concrete, 21, 0.025, 26);
+plane(11, 10, M.concrete, 21, 0.025, -31);
 // frontage road (asphalt, one-way southbound) + I-35 main lanes on embankment
 plane(13, 300, M.asphalt, 30.5, 0.02, 0);
 {
@@ -758,8 +777,8 @@ plane(13, 300, M.asphalt, 30.5, 0.02, 0);
     e.rotation.x = -Math.PI / 2; e.position.set(x, y, 0); world.add(e);
   });
 }
-// Loop 337 junction (NE): brick-paved signalised intersection + cross street
-plane(70, 13, M.asphalt, 55, 0.015, -42);
+// TX-46 / Loop 337 junction: cross street continues west past the station.
+plane(180, 13, M.asphalt, 5, 0.015, -42);
 plane(26, 13.5, M.brick, 30.5, 0.03, -42);
 {
   const cw = new THREE.MeshBasicMaterial({ color:0xf2f0ea });
@@ -785,7 +804,7 @@ const tlDots = [...trafficLight(23.5, -36.2, 0), ...trafficLight(38, -47.8, Math
 // lot light poles
 const lotLights = [];
 function lotLight(x, z) {
-  const g = new THREE.Group(); g.position.set(x, 0, z); world.add(g);
+  const g = new THREE.Group(); g.position.set(x, 0, z); stationLayout.add(g);
   cyl(0.09, 0.13, 7.6, M.steel, 0, 3.8, 0, g);
   box(1.7, 0.1, 0.5, M.dark, 0, 7.6, 0, g);
   const lamp = box(1.5, 0.08, 0.36, lampGlowMat, 0, 7.52, 0, g);
@@ -798,27 +817,27 @@ lotLight(-14, -20); lotLight(-14, 16); lotLight(12, -2);
   const lineMat = new THREE.MeshBasicMaterial({ color:0xe9e7e0, transparent:true, opacity:0.75 });
   function stall(x, z, w = 0.16, l = 5.6) {
     const s = new THREE.Mesh(new THREE.PlaneGeometry(w, l), lineMat);
-    s.rotation.x = -Math.PI / 2; s.position.set(x, 0.02, z); world.add(s);
+    s.rotation.x = -Math.PI / 2; s.position.set(x, 0.02, z); stationLayout.add(s);
   }
   for (let i = 0; i < 6; i++) stall(-21 + 0, -13.5 + i * 4.6, 0.16, 0.16), stall(-19.5, -13.5 + i * 4.6, 3.2, 0.16);
   for (let i = 0; i < 6; i++) { // separator ticks of the east-side row
     const s = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 5.2), lineMat);
-    s.rotation.x = -Math.PI / 2; s.position.set(-19.6, 0.02, -15.8 + i * 4.6); world.add(s);
+    s.rotation.x = -Math.PI / 2; s.position.set(-19.6, 0.02, -15.8 + i * 4.6); stationLayout.add(s);
   }
   for (let i = 0; i < 4; i++) { // bays south of store
     const s = new THREE.Mesh(new THREE.PlaneGeometry(0.16, 5.2), lineMat);
-    s.rotation.x = -Math.PI / 2; s.position.set(-35 + i * 4.6, 0.02, 16.5); world.add(s);
+    s.rotation.x = -Math.PI / 2; s.position.set(-35 + i * 4.6, 0.02, 16.5); stationLayout.add(s);
   }
   const ab = new THREE.Mesh(new THREE.PlaneGeometry(3.6, 5.4),
     new THREE.MeshBasicMaterial({ color:0x2456a8, transparent:true, opacity:0.8 }));
-  ab.rotation.x = -Math.PI / 2; ab.position.set(-19.6, 0.021, -17.5); world.add(ab); // accessible bay
+  ab.rotation.x = -Math.PI / 2; ab.position.set(-19.6, 0.021, -17.5); stationLayout.add(ab); // accessible bay
 }
 
-/* ================= SOURCE STATION + SINGLE ROW OF ISLANDS ================= */
+/* ================= SOURCE STATION + PAIRED DISPENSER BANKS ================= */
 // The store and canopy meshes below are loaded from the licensed source FBX,
 // converted to glTF and trimmed to the pieces needed for this real layout.
-const storeGroup = new THREE.Group(); world.add(storeGroup);
-const fuelGroup = new THREE.Group(); world.add(fuelGroup);
+const storeGroup = new THREE.Group(); stationLayout.add(storeGroup);
+const fuelGroup = new THREE.Group(); stationLayout.add(fuelGroup);
 const pumpSpots = [];
 const canopySpots = [];
 const islandZ = [-17, -6, 5, 16];
@@ -827,16 +846,34 @@ const fasciaTexE = glowMat(fasciaTex);
 const bandE = new THREE.Mesh(new THREE.PlaneGeometry(41.4, 0.95), fasciaTexE);
 bandE.position.set(8.72, 6.25, -2); bandE.rotation.y = Math.PI / 2; fuelGroup.add(bandE);
 const bandW = bandE.clone(); bandW.position.x = -8.72; bandW.rotation.y = -Math.PI / 2; fuelGroup.add(bandW);
+const endBrand = ctex(1024,128,(x,w,h)=>{
+  x.fillStyle='#c8102e';x.fillRect(0,0,w,h);
+  x.fillStyle='white';x.textAlign='center';x.textBaseline='middle';
+  x.font='900 94px Arial';x.fillText('TEXACO',w/2,h/2);
+});
+const endBrandMat=glowMat(endBrand);
+[-23.06,19.06].forEach((z,i)=>{
+  const end=new THREE.Mesh(new THREE.PlaneGeometry(17.2,0.95),endBrandMat);
+  end.position.set(0,6.25,z);end.rotation.y=i===0?Math.PI:0;fuelGroup.add(end);
+});
 for (let r = 0; r < 8; r++) for (let cix = 0; cix < 2; cix++) {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, 1.05), canopyLightMat);
   panel.position.set(-4 + cix * 8, 5.45, -20 + r * 5.2); fuelGroup.add(panel);
 }
 islandZ.forEach((z, idx) => {
-  box(1.7, 0.22, 5.0, M.curb, 0, 0.11, z, fuelGroup);
-  [-1.2, 1.2].forEach((dz, side) => pumpSpots.push({ x:0, y:0.22, z:z+dz, number:idx*4 + side*2 + 1 }));
-  [-2.7, 2.7].forEach(dz => {
-    cyl(0.08, 0.08, 0.9, M.red, -0.72, 0.45, z+dz, fuelGroup, 10);
-    cyl(0.08, 0.08, 0.9, M.red, 0.72, 0.45, z+dz, fuelGroup, 10);
+  // Reference photo: transverse island, a centre column, one pump on each
+  // side. Four pairs form two parallel banks beneath the long canopy.
+  box(10.5, 0.22, 1.7, M.curb, 0, 0.11, z, fuelGroup);
+  [-4, 4].forEach((x, side) => pumpSpots.push({ x, y:0.22, z, number:idx*4 + side*2 + 1 }));
+  [-5.05,5.05].forEach(x => [-0.64,0.64].forEach(dz => {
+    cyl(0.08,0.08,0.95,M.white,x,0.695,z+dz,fuelGroup,12);
+  }));
+  // Waste / windshield-wash cabinets sit between the pumps and centre column,
+  // clear of the driving lanes and the two dispenser faces.
+  [-1.85,1.85].forEach(x=>{
+    box(0.72,0.95,0.62,M.red,x,0.695,z,fuelGroup);
+    box(0.78,0.09,0.68,M.steel,x,1.215,z,fuelGroup);
+    box(0.46,0.19,0.025,M.tire,x,1.055,z+0.323,fuelGroup);
   });
   const lamp = new THREE.SpotLight(0xffe8bb, 0, 15, Math.PI/3, 0.8, 1.2);
   lamp.position.set(0,5.35,z); lamp.target.position.set(0,0,z);
@@ -850,6 +887,29 @@ islandZ.forEach((z, idx) => {
 const atmTex = ctex(256,96,(x,w,h)=>{x.fillStyle='#087c3a';x.fillRect(0,0,w,h);x.fillStyle='white';x.font='bold 62px Arial';x.textAlign='center';x.fillText('ATM',w/2,68)});
 const atm = new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.48),new THREE.MeshStandardMaterial({map:atmTex,emissive:0x087c3a,emissiveIntensity:0.15}));
 atm.position.set(-25.1,2.9,-7); atm.rotation.y=Math.PI/2; storeGroup.add(atm);
+
+// Photo-led fine detail pass; no extra network assets or light/shadow sources.
+addStationDetails({fuelGroup,storeGroup,islandZ,M,ctex,glowMat});
+
+/* ================= DETACHED CAR WASH ================= */
+// Aerial reference: small separate building north of the store, west of the canopy.
+// All dimensions are visual estimates, not surveyed measurements.
+{
+  const wash = new THREE.Group(); wash.position.set(-26,0,-28); stationLayout.add(wash);
+  // Model the bay as walls around an opening, rather than painting a door on a solid box.
+  box(0.35,3.8,8,M.wallWhite,-5.3,1.9,0,wash);
+  box(0.35,3.8,8,M.wallWhite,5.3,1.9,0,wash);
+  box(10.6,3.8,0.3,M.wallWhite,0,1.9,-3.9,wash);
+  box(3.2,3.1,0.3,M.wallWhite,-3.8,1.55,3.9,wash);
+  box(3.2,3.1,0.3,M.wallWhite,3.8,1.55,3.9,wash);
+  box(10.9,0.8,8.3,M.red,0,3.75,0,wash);
+  box(11.1,0.12,8.5,M.white,0,4.21,0,wash);
+  for(let z=-3.9;z<4.2;z+=0.28) box(10.8,0.035,0.035,M.steel,0,4.29,z,wash,false);
+  plane(4.4,8,M.concrete,0,0.035,0,wash);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(5.5,0.65),glowMat(carWashTex));
+  sign.position.set(0,3.77,4.17);wash.add(sign);
+  [-2.5,2.5].forEach(x=>cyl(0.09,0.09,1,M.red,x,0.5,4.7,wash,12));
+}
 
 /* ================= TWIN PYLON SIGNS (NE + SE corners) ================= */
 const signGroups = [];
@@ -880,7 +940,7 @@ pylon(19.5, -29.5);  // north-east corner, near Loop 337
 /* ================= SURROUNDINGS ================= */
 // Edelweiss Inn (west, behind the store): long Tudor block, steep dark-green roof
 {
-  const inn = new THREE.Group(); inn.position.set(-58, 0, 6); world.add(inn);
+  const inn = new THREE.Group(); inn.position.set(-34, 0, 52); inn.rotation.y=Math.PI/2; world.add(inn);
   const walls = new THREE.Mesh(new THREE.BoxGeometry(13, 6.5, 62), M.timber);
   walls.position.y = 3.25; walls.castShadow = true; walls.receiveShadow = true; inn.add(walls);
   // Steep gable roof running north–south, with light gable ends.
@@ -923,7 +983,7 @@ function tree(x, z, s = 1) {
   });
   return g;
 }
-tree(-46, -22, 1.25); tree(-48, 14, 1.4); tree(-44, 30, 1.1); tree(-66, -18, 1.3);
+tree(-52, -22, 1.25); tree(-53, 14, 1.4); tree(-49, 35, 1.1); tree(-66, -18, 1.3);
 tree(-68, 26, 1.2); tree(-40, -32, 1.0); tree(14, -52, 0.9); tree(60, 30, 1.1); tree(64, -20, 1.0);
 function shrub(x, z) {
   const b = new THREE.Mesh(new THREE.SphereGeometry(0.55 + Math.random() * 0.3, 8, 6), M.leaf2);
@@ -1039,12 +1099,14 @@ function beetle() {
   world.add(g); return g;
 }
 /* parked vehicles */
-const beetleG = beetle(); beetleG.position.set(2.95, 0, -6);               // at island 2, east lane, facing north
-const sedanP = sedan(0x3a5a8c); sedanP.position.set(-2.95, 0, 5); sedanP.rotation.y = Math.PI; // west lane, facing south
-const pickupP = pickup(0xb9bec6); pickupP.position.set(2.95, 0, 16);       // island 4, facing north
+const beetleG = beetle(); beetleG.position.set(4, 0, -9.4);               // at island 2, east lane, facing north
+const sedanP = sedan(0x3a5a8c); sedanP.position.set(-4, 0, 8.4); sedanP.rotation.y = Math.PI; // west lane, facing south
+const pickupP = pickup(0xb9bec6); pickupP.position.set(4, 0, 12.4);       // island 4, facing north
 const bay1 = sedan(0x777d85); bay1.position.set(-17.6, 0, -8); bay1.rotation.y = Math.PI / 2;  // store bay, nosed in
 const bay2 = sedan(0x8c2f2f); bay2.position.set(-17.6, 0, 3.5); bay2.rotation.y = Math.PI / 2;
 const bay3 = pickup(0x2f4a68); bay3.position.set(-30, 0, 22); bay3.rotation.y = Math.PI;       // south lot
+// Only parked vehicles follow the diagonal forecourt; moving traffic stays road-aligned.
+[beetleG,sedanP,pickupP,bay1,bay2,bay3].forEach(car=>stationLayout.add(car));
 /* moving traffic */
 const traffic = [];
 function addTraffic(veh, x, y, z, dir, speed) {
@@ -1113,8 +1175,9 @@ const carsPromise = Promise.all([loadCar('./assets/cars/bmw-e46.glb'), loadCar('
   const bmw = carTemplate(bmwModel, 4.471, false);     // E46 sedan: 4.471 m long, front already toward −Z
   const cyber = carTemplate(cyberModel, 5.683, true);  // Cybertruck: 5.683 m long, model's front is +Z
   // parked on the lot (the Beetle keeps the hero spot at island 2)
-  const parkedBmw = bmwCar(bmw, 0xaeb3b9); parkedBmw.position.set(2.95, 0, -17);                                     // fuelling at island 1, east lane, facing north
+  const parkedBmw = bmwCar(bmw, 0xaeb3b9); parkedBmw.position.set(4, 0, -20.4);                                     // fuelling at island 1, east lane, facing north
   const parkedCyber = cyberCar(cyber); parkedCyber.position.set(-17.0, 0, -4.3); parkedCyber.rotation.y = Math.PI / 2; // nosed in at the store front
+  stationLayout.add(parkedBmw,parkedCyber);
   // in traffic alongside the procedural vehicles
   addTraffic(bmwCar(bmw, 0x8e1420), 26.3, 0, -150, 1, 10);   // frontage road
   addTraffic(cyberCar(cyber), 30.5, 0, -95, 1, 12);          // frontage road
@@ -1164,12 +1227,22 @@ const VIEWS = {
   overview: { pos:[58, 31, 10],  tgt:[-8, 1, -4] },
   pumps:    { pos:[13.5, 3.3, 10], tgt:[0, 2, -6] },
   store:    { pos:[-9, 3.4, 8],  tgt:[-26, 2.4, -2] },
-  road:     { pos:[31, 2.1, 31],   tgt:[-2, 5, -8] }
+  road:     { pos:[31, 2.1, 31],   tgt:[-2, 5, -8] },
+  site:     { pos:[-7, 104, -2.01], tgt:[-7, 0, -2] }
 };
+function viewTarget(name) {
+  const p=new THREE.Vector3(...VIEWS[name].tgt);
+  return siteToWorld(name==='site' ? p : buildingToSite(p));
+}
 function viewPosition(name) {
-  const view = VIEWS[name], target = new THREE.Vector3(...view.tgt);
-  const factor = name === 'overview' ? Math.max(1, 1.25 / camera.aspect) : 1;
-  return new THREE.Vector3(...view.pos).sub(target).multiplyScalar(factor).add(target);
+  const view = VIEWS[name], localTarget = new THREE.Vector3(...view.tgt);
+  const factor = (name === 'overview' || name === 'site') ? Math.max(1, 1.25 / camera.aspect) : 1;
+  if(name === 'site') {
+    // World -Z is geographic north: don't inherit the site's local rotation.
+    return viewTarget(name).add(new THREE.Vector3(0,104*factor,-0.01));
+  }
+  const position=new THREE.Vector3(...view.pos).sub(localTarget).multiplyScalar(factor).add(localTarget);
+  return siteToWorld(name==='road' ? position : buildingToSite(position));
 }
 let fly = null;
 function flyTo(name) {
@@ -1177,7 +1250,7 @@ function flyTo(name) {
   fly = {
     t: 0, dur: 1.5,
     p0: camera.position.clone(), p1: viewPosition(name),
-    t0: controls.target.clone(), t1: new THREE.Vector3(...v.tgt)
+    t0: controls.target.clone(), t1: viewTarget(name)
   };
   document.querySelectorAll('[data-view]').forEach(b =>
     b.classList.toggle('on', b.dataset.view === name));
@@ -1196,7 +1269,7 @@ spinBtn.addEventListener('click', () => {
 /* ================= HOTSPOTS + PICKING ================= */
 const INFO = {
   fuel:  { icon:'⛽', title:'Fuel Islands — Texaco with Techron',
-           body:'Four islands in a single row under the long canopy — dispensers on both sides, numbered up to 16, diesel included (island 4 in this model, just like the green Diesel panel on the real price sign). Every grade carries Techron.' },
+           body:'Four transverse islands under the long canopy, each with a central column and a dispenser on either side. Two parallel banks provide sixteen numbered fuelling positions, diesel included (island 4 in this model, based on the green Diesel panel in the reference price sign). Every grade carries Techron.' },
   store: { icon:'🛒', title:'The Store',
            body:'The real store: glass front facing the pumps, red band across the top, ATM inside the window line (the green sign is really there). Groceries, drinks, snacks, jerky and coffee — open from 5 AM (6 AM Sundays).' },
   car:   { icon:'🚗', title:'The Famous #35',
@@ -1225,11 +1298,11 @@ function addHotspot(key, vec3) {
   el.textContent = '★';
   el.addEventListener('click', () => showInfo(key));
   hotspotLayer.appendChild(el);
-  hotspots.push({ key, el, pos: vec3 });
+  hotspots.push({ key, el, pos: vec3, parent: key==='sign' ? world : stationLayout });
 }
 addHotspot('fuel', new THREE.Vector3(0, 8.4, -6));
 addHotspot('store', new THREE.Vector3(-21, 6.8, -2));
-addHotspot('car', new THREE.Vector3(2.95, 2.0, -6));
+addHotspot('car', new THREE.Vector3(4, 2.0, -9.4));
 addHotspot('sign', new THREE.Vector3(19.5, 16.2, 27.5));
 
 /* ================= LOOP / RESIZE / INIT ================= */
@@ -1256,7 +1329,9 @@ function tick() {
   });
   controls.update();
   hotspots.forEach(h => {
-    projV.copy(h.pos).project(camera);
+    projV.copy(h.pos);
+    h.parent.localToWorld(projV);
+    projV.project(camera);
     const behind = projV.z > 1;
     h.el.style.display = behind ? 'none' : 'grid';
     if (!behind) {
@@ -1280,7 +1355,7 @@ const params = new URLSearchParams(location.search);
 applyTime(TIMES[params.get('time')] ? params.get('time') : 'day');
 const startView = VIEWS[params.get('view')] ? params.get('view') : 'overview';
 camera.position.copy(viewPosition(startView));
-controls.target.set(...VIEWS[startView].tgt);
+controls.target.copy(viewTarget(startView));
 document.querySelectorAll('[data-view]').forEach(b =>
   b.classList.toggle('on', b.dataset.view === startView));
 
@@ -1296,7 +1371,7 @@ const headerTexture = ctex(512,192,(x,w,h)=>{
   x.fillStyle='#f4f4ee';x.fillRect(0,0,w,h);x.fillStyle='#c8102e';
   x.beginPath();x.moveTo(0,105);x.lineTo(w,40);x.lineTo(w,h);x.lineTo(0,h);x.closePath();x.fill();
   x.fillStyle='#fff';x.beginPath();x.arc(60,92,38,0,Math.PI*2);x.fill();x.fillStyle='#c8102e';starPath(x,60,92,29);x.fill();
-  x.fillStyle='#fff';x.textAlign='center';x.font='bold 22px Arial';x.fillText('with',260,118);x.font='bold 36px Arial';x.fillText('TECHRON',260,151);
+  x.fillStyle='#fff';x.textAlign='center';x.font='900 40px Arial';x.fillText('T',60,107);x.font='bold 22px Arial';x.fillText('with',260,118);x.font='bold 36px Arial';x.fillText('TECHRON',260,151);
   x.font='bold 40px Arial'; x.fillText(String(number),455,145);
 });
 const material = new THREE.MeshStandardMaterial({map:headerTexture,emissive:0xffffff,emissiveMap:headerTexture,emissiveIntensity:0.18});
@@ -1307,6 +1382,12 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
   const building = new THREE.Group();
   for(const id of [40,77,78]) { const part=node(id); if(!part) return reject(new Error('Missing station store part '+id)); building.add(part); }
   building.rotation.y=-Math.PI/2; building.position.set(-17.2,0,-5.2); storeGroup.add(building);
+  // Source asset was only 8.9 m deep. Fit its depth to the aerial footprint,
+  // preserving the 24 m frontage and keeping the front at x=-24.5 m.
+  building.scale.z=14/8.8813;
+  building.updateMatrixWorld(true);
+  const storeBounds=new THREE.Box3().setFromObject(building);
+  building.position.x += -24.5-storeBounds.max.x;
   building.traverse(m=>{ if (!m.isMesh) return; m.castShadow=true; m.receiveShadow=true;
     const id=parseInt(m.name,10);
     if(id===49) m.material = glassMat;
@@ -1329,7 +1410,9 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
   box(cs.x - 0.5, 0.06, cs.z - 0.5, M.roof, cc.x, cb.max.y + 0.11, cc.z, fuelGroup);
   const column = node(11); if(!column) return reject(new Error('Missing source canopy column'));
   const center=new THREE.Vector3(); new THREE.Box3().setFromObject(column).getCenter(center);
-  for(const z of islandZ) { const holder=new THREE.Group(), c=column.clone(); c.position.sub(center); holder.position.set(0,3,z);holder.add(c);fuelGroup.add(holder); c.traverse(m=>{if(m.isMesh){m.material=M.column;m.castShadow=true;m.receiveShadow=true;}}); }
+  for(const z of islandZ) {
+    box(0.65,2.05,0.65,M.darkTrim,0,1.025,z,fuelGroup);
+    const holder=new THREE.Group(), c=column.clone(); c.position.sub(center); holder.position.set(0,3,z);holder.add(c);fuelGroup.add(holder); c.traverse(m=>{if(m.isMesh){m.material=M.column;m.castShadow=true;m.receiveShadow=true;}}); }
   applyTime(activeTime);
   resolve();
 }, undefined, reject));
@@ -1466,17 +1549,29 @@ function fixPumpHoses(obj, THREE) {
 const pumpPromise = new Promise((resolve,reject) => {
   const T=(f,srgb)=>{const t=tloader.load('./assets/pumptex/'+f);if(srgb)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=8;return t};
   const pbr=(pre,opts={})=>new THREE.MeshStandardMaterial({map:T(pre+'_albedo.png',true),normalMap:T(pre+'_normal.png'),roughnessMap:T(pre+'_rough.png'),metalnessMap:T(pre+'_metal.png'),aoMap:T(pre+'_ao.png'),roughness:1,metalness:1,...opts});
-  const mats={Body:pbr('body'),Handle:pbr('handle'),Panel:pbr('panel',{emissive:0xffffff,emissiveMap:T('panel_emissive.png',true),emissiveIntensity:0.5})};
+  const mats={Body:pbr('body',{map:T('body_texaco_albedo.png',true),metalness:0.2}),Handle:pbr('handle'),Panel:pbr('panel',{emissive:0xffffff,emissiveMap:T('panel_emissive.png',true),emissiveIntensity:0.5})};
   pumpPanelMaterial=mats.Panel; applyTime(activeTime);
   new OBJLoader().load('./assets/pump.obj',obj=>{
     if(!fixPumpHoses(obj, THREE)) console.warn('Pump hose fix incomplete: expected pump parts not found');
     obj.traverse(m=>{if(m.isMesh){m.castShadow=true;m.receiveShadow=true;if(mats[m.material?.name])m.material=mats[m.material.name]}});
     const bb=new THREE.Box3().setFromObject(obj), size=bb.getSize(new THREE.Vector3()), k=1.9/size.y, cx=(bb.min.x+bb.max.x)/2,cz=(bb.min.z+bb.max.z)/2;
     for(const s of pumpSpots){
-      const c=obj.clone();c.scale.setScalar(k);c.rotation.y=Math.PI/2;c.position.set(s.x-cz*k,s.y-bb.min.y*k,s.z+cx*k);fuelGroup.add(c);
-      // Each dispenser serves two fuelling positions: even number faces the road (east), odd faces the store (west).
-      const east=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.56),makeHeaderMaterial(s.number+1));east.position.set(s.x+0.02,2.55,s.z);east.rotation.y=Math.PI/2;fuelGroup.add(east);
-      const west=new THREE.Mesh(new THREE.PlaneGeometry(1.5,0.56),makeHeaderMaterial(s.number));west.position.set(s.x-0.02,2.55,s.z);west.rotation.y=-Math.PI/2;fuelGroup.add(west);
+      // Turn the complete dispenser about its own centre, independently of the
+      // diagonal forecourt. Local +/-Z faces now follow the canopy's long axis.
+      const dispenser=new THREE.Group();
+      dispenser.name='Dispenser-'+s.number+'-'+(s.number+1);
+      dispenser.position.set(s.x,0,s.z);
+      dispenser.rotation.y=-Math.PI/2;
+      fuelGroup.add(dispenser);
+      const c=obj.clone();c.scale.setScalar(k);c.rotation.y=Math.PI/2;
+      c.position.set(-cz*k,s.y-bb.min.y*k,cx*k);dispenser.add(c);
+      // Body, double-sided header and uprights share the same orientation.
+      box(0.56,0.58,1.6,M.red,0,2.68,0,dispenser);
+      [-0.69,0.69].forEach(dz => box(0.16,2.42,0.12,M.column,0,1.47,dz,dispenser));
+      const front=new THREE.Mesh(new THREE.PlaneGeometry(1.58,0.56),makeHeaderMaterial(s.number+1));
+      front.position.set(0.286,2.68,0);front.rotation.y=Math.PI/2;dispenser.add(front);
+      const back=new THREE.Mesh(new THREE.PlaneGeometry(1.58,0.56),makeHeaderMaterial(s.number));
+      back.position.set(-0.286,2.68,0);back.rotation.y=-Math.PI/2;dispenser.add(back);
     }
     resolve();
   },undefined,reject);
@@ -1484,6 +1579,11 @@ const pumpPromise = new Promise((resolve,reject) => {
 try { await Promise.all([stationPromise,pumpPromise,carsPromise]); }
 catch(err){ console.error('Station source failed to load',err); document.getElementById('fallback3d').classList.add('show'); throw err; }
 
+// Fit asset dimensions before applying either rotation. The road grid and inn
+// keep their own alignment; only the forecourt buildings/parking turn diagonally.
+stationLayout.rotation.y = BUILDING_ANGLE;
+world.rotation.y = SITE_HEADING;
+world.updateMatrixWorld(true);
 window.__station3dReady = true;
 document.getElementById('loading3d').classList.add('done');
 tick();
