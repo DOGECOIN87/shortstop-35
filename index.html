@@ -589,8 +589,10 @@ const fasciaTex = ctex(4096, 96, (x, w, h) => {
   x.fillStyle = '#c8102e'; x.fillRect(0, 0, w, h);
   x.fillStyle = '#ffffff'; x.font = '900 72px Arial, sans-serif';
   x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.fillText('TEXACO', w / 2 + 60, h / 2 + 4);
-  const cx = w / 2 - 240, cy = h / 2;
+  // Offset from the middle so the #35 car marker doesn't cover the lettering in the overview.
+  const lx = w * 0.34;
+  x.fillText('TEXACO', lx + 60, h / 2 + 4);
+  const cx = lx - 240, cy = h / 2;
   x.beginPath(); x.arc(cx, cy, 40, 0, Math.PI * 2); x.fill();
   x.fillStyle = '#c8102e'; starPath(x, cx, cy, 32); x.fill();
   x.fillStyle = '#ffffff'; x.font = '900 30px Arial'; x.fillText('T', cx, cy + 2);
@@ -873,10 +875,13 @@ pylon(19.5, -29.5);  // north-east corner, near Loop 337
   const inn = new THREE.Group(); inn.position.set(-58, 0, 6); world.add(inn);
   const walls = new THREE.Mesh(new THREE.BoxGeometry(13, 6.5, 62), M.timber);
   walls.position.y = 3.25; walls.castShadow = true; walls.receiveShadow = true; inn.add(walls);
-  const roofG = new THREE.CylinderGeometry(0.1, 6.9, 62.5, 3, 1);
-  const roof = new THREE.Mesh(roofG, M.innRoof);
-  roof.rotation.z = Math.PI / 2; roof.rotation.y = Math.PI / 2;
-  roof.scale.set(1, 1, 0.62); roof.position.y = 9.4; roof.castShadow = true; inn.add(roof);
+  // Steep gable roof running north–south, with light gable ends.
+  const gable = new THREE.Shape();
+  gable.moveTo(-7.4, 0); gable.lineTo(7.4, 0); gable.lineTo(0, 6.2); gable.closePath();
+  const roofG = new THREE.ExtrudeGeometry(gable, { depth: 63, bevelEnabled: false });
+  roofG.translate(0, 0, -31.5);
+  const roof = new THREE.Mesh(roofG, [M.wallWhite, M.innRoof]);
+  roof.position.y = 6.5; roof.castShadow = true; roof.receiveShadow = true; inn.add(roof);
   const cap = box(13.4, 0.4, 62.4, M.darkTrim, 0, 6.6, 0, inn);
   cap.castShadow = false;
 }
@@ -1153,7 +1158,7 @@ function addHotspot(key, vec3) {
 }
 addHotspot('fuel', new THREE.Vector3(0, 8.4, -6));
 addHotspot('store', new THREE.Vector3(-21, 6.8, -2));
-addHotspot('car', new THREE.Vector3(2.95, 2.9, -6));
+addHotspot('car', new THREE.Vector3(2.95, 2.0, -6));
 addHotspot('sign', new THREE.Vector3(19.5, 16.2, 27.5));
 
 /* ================= LOOP / RESIZE / INIT ================= */
