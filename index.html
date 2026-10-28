@@ -399,6 +399,7 @@ import * as THREE from './vendor/three.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 
 /* =====================================================================
    Texaco ShortStop — realistic 3D model of the real station
@@ -678,6 +679,7 @@ const glassMat = new THREE.MeshPhysicalMaterial({ color:0x2c4256, roughness:0.08
 const canopyLightMat = new THREE.MeshStandardMaterial({ color:0xf5efdd, emissive:0xffe9bb, emissiveIntensity:0.05 });
 const lampGlowMat = new THREE.MeshStandardMaterial({ color:0xfff2cf, emissive:0xffdf9e, emissiveIntensity:0.15 });
 const headlightMat = new THREE.MeshStandardMaterial({ color:0xfff6da, emissive:0xffedb8, emissiveIntensity:0.25 });
+const carTailMats = []; // tail-lamp materials of the supplied car models, brightened with the time of day
 const signGlowMats = [];
 function glowMat(tex) {
   const m = new THREE.MeshStandardMaterial({ map:tex, roughness:0.5, emissive:0xffffff, emissiveMap:tex, emissiveIntensity:0 });
@@ -740,10 +742,16 @@ plane(13, 300, M.asphalt, 30.5, 0.02, 0);
     const d1 = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 3.6), dashMat);
     d1.rotation.x = -Math.PI / 2; d1.position.set(28.2, 0.035, z); world.add(d1);
     const d2 = d1.clone(); d2.position.x = 32.8; world.add(d2);
-    const d3 = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 3.6), new THREE.MeshBasicMaterial({ color:0xf5d90a }));
-    d3.rotation.x = -Math.PI / 2; d3.position.set(45.6, 3.195, z); world.add(d3);
-    const d4 = d1.clone(); d4.position.set(52.4, 3.195, z); world.add(d4);
+    const d3 = d1.clone(); d3.position.set(45.25, 3.195, z); world.add(d3); // southbound lane line
+    const d4 = d1.clone(); d4.position.set(52.75, 3.195, z); world.add(d4); // northbound lane line
   }
+  // divided highway: southbound carriageway on the station (west) side, northbound beyond a concrete median barrier
+  const yellowMat = new THREE.MeshBasicMaterial({ color:0xf5d90a });
+  [48.45, 49.55].forEach(x => {
+    const e = new THREE.Mesh(new THREE.PlaneGeometry(0.2, 300), yellowMat);
+    e.rotation.x = -Math.PI / 2; e.position.set(x, 3.195, 0); world.add(e);
+  });
+  box(0.6, 0.82, 300, M.concrete, 49, 3.59, 0);
   const edgeMat = new THREE.MeshBasicMaterial({ color:0xf2f0ea });
   [[24.3, 0.035], [36.7, 0.035]].forEach(([x, y]) => {
     const e = new THREE.Mesh(new THREE.PlaneGeometry(0.28, 300), edgeMat);
@@ -1045,13 +1053,75 @@ function addTraffic(veh, x, y, z, dir, speed) {
   if (veh === undefined) return;
   traffic.push({ g: veh, dir, speed, y });
 }
-addTraffic(sedan(0xc0c4c9), 27.6, 0, -60, 1, 10.5);
-addTraffic(pickup(0x8c2f2f), 32.4, 0, 20, 1, 12);
-addTraffic(sedan(0x2f4a68), 27.6, 0, 55, 1, 9);
-addTraffic(sedan(0xe3e5e8), 46.6, 3.2, 80, -1, 21);
-addTraffic(semi(), 55.2, 3.2, -40, 1, 17);
-addTraffic(sedan(0x3a3f45), 46.6, 3.2, -90, -1, 23);
-addTraffic(semi(), 46.6, 3.2, 30, -1, 18.5);
+// Frontage road is one-way southbound (lane centres x 26.3 / 30.5 / 34.7). I-35 main lanes: southbound on the
+// station side (slow lane x 43.4, fast lane x 47.1), northbound beyond the median (fast x 51.0, slow x 54.6).
+// One speed per lane so vehicles never drive through each other.
+addTraffic(sedan(0xc0c4c9), 26.3, 0, -60, 1, 10);
+addTraffic(sedan(0x2f4a68), 26.3, 0, 55, 1, 10);
+addTraffic(pickup(0x8c2f2f), 30.5, 0, 20, 1, 12);
+addTraffic(semi(), 43.4, 3.2, -40, 1, 18);
+addTraffic(sedan(0xe3e5e8), 51.0, 3.2, 80, -1, 23);
+addTraffic(sedan(0x3a3f45), 51.0, 3.2, -90, -1, 23);
+addTraffic(semi(), 54.6, 3.2, 30, -1, 18);
+
+/* ===== supplied car models: BMW E46 M Sport + Tesla Cybertruck (optimised GLBs in assets/cars/) =====
+   Each model is scaled to its true length, its wheels set on y = 0, and turned so its front faces local −Z
+   like the procedural vehicles. The red #35 Beetle stays the hero car; these only support it. */
+const carLoader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
+function loadCar(url) { return new Promise((resolve, reject) => carLoader.load(url, g => resolve(g.scene), undefined, reject)); }
+function carTemplate(model, lengthM, frontIsPlusZ) {
+  model.updateMatrixWorld(true);
+  const bb = new THREE.Box3().setFromObject(model), c = bb.getCenter(new THREE.Vector3());
+  const k = lengthM / (bb.max.z - bb.min.z);
+  model.position.set(-c.x, -bb.min.y, -c.z);
+  const inner = new THREE.Group(); inner.add(model); inner.scale.setScalar(k);
+  if (frontIsPlusZ) inner.rotation.y = Math.PI;
+  const t = new THREE.Group(); t.add(inner);
+  t.traverse(m => {
+    if (!m.isMesh) return; m.castShadow = true; m.receiveShadow = true;
+    for (const key of ['map', 'normalMap', 'roughnessMap', 'metalnessMap', 'emissiveMap']) if (m.material[key]) m.material[key].anisotropy = 8;
+  });
+  return t;
+}
+const bmwPaints = new Map();
+function bmwCar(template, color) {
+  let mat = bmwPaints.get(color);
+  if (!mat) { mat = paint(color); bmwPaints.set(color, mat); }
+  const car = template.clone();
+  car.traverse(m => { if (m.isMesh && m.material.name === 'Carpaint_Flakes_Ruby') m.material = mat; });
+  world.add(car); return car;
+}
+function cyberCar(template) { const car = template.clone(); world.add(car); return car; }
+const carsPromise = Promise.all([loadCar('./assets/cars/bmw-e46.glb'), loadCar('./assets/cars/cybertruck.glb')]).then(([bmwModel, cyberModel]) => {
+  // lamps follow the time of day like the procedural cars' lamps
+  bmwModel.traverse(m => {
+    if (!m.isMesh) return;
+    if (m.material.name === 'Glass_Green') m.material = headlightMat;           // headlamp lenses
+    if (m.material.name === 'Material_186') {                                    // tail-lamp texture
+      m.material = m.material.clone(); m.material.emissive.setHex(0xd9232e); m.material.emissiveMap = m.material.map; carTailMats.push(m.material);
+    }
+  });
+  const cyberTail = new THREE.MeshStandardMaterial({ color:0x7a0d12, emissive:0xd9232e, emissiveIntensity:0.3 }); carTailMats.push(cyberTail);
+  const cyberSteel = new THREE.MeshStandardMaterial({ name:'Steel', color:0xb4b8bd, metalness:0.3, roughness:0.42, side:THREE.DoubleSide });
+  cyberModel.traverse(m => {
+    if (!m.isMesh) return;
+    if (m.material.name === 'FrontLight') m.material = headlightMat;
+    if (m.material.name === 'RearLight') m.material = cyberTail;
+    // fully metallic steel renders black without an environment map; use a brushed-stainless look that reads under the scene lights
+    if (m.material.name === 'Steel') m.material = cyberSteel;
+  });
+  const bmw = carTemplate(bmwModel, 4.471, false);     // E46 sedan: 4.471 m long, front already toward −Z
+  const cyber = carTemplate(cyberModel, 5.683, true);  // Cybertruck: 5.683 m long, model's front is +Z
+  // parked on the lot (the Beetle keeps the hero spot at island 2)
+  const parkedBmw = bmwCar(bmw, 0xaeb3b9); parkedBmw.position.set(2.95, 0, -17);                                     // fuelling at island 1, east lane, facing north
+  const parkedCyber = cyberCar(cyber); parkedCyber.position.set(-17.0, 0, -4.3); parkedCyber.rotation.y = Math.PI / 2; // nosed in at the store front
+  // in traffic alongside the procedural vehicles
+  addTraffic(bmwCar(bmw, 0x8e1420), 26.3, 0, -150, 1, 10);   // frontage road
+  addTraffic(cyberCar(cyber), 30.5, 0, -95, 1, 12);          // frontage road
+  addTraffic(bmwCar(bmw, 0x1d3f72), 47.1, 3.2, 50, 1, 24);   // I-35 southbound fast lane
+  addTraffic(cyberCar(cyber), 51.0, 3.2, -5, -1, 23);        // I-35 northbound fast lane
+  applyTime(activeTime);
+}).catch(err => console.warn('Car models failed to load; procedural traffic only', err));
 tlDots.forEach((d, i) => { d.material.emissiveIntensity = (i % 3 === 2) ? 0.9 : 0.04; });
 
 /* ================= TIME OF DAY ================= */
@@ -1081,6 +1151,7 @@ function applyTime(name) {
   glassMat.emissiveIntensity = T.glass * 0.55;
   if (window.interiorMat) window.interiorMat.emissiveIntensity = T.interior;
   headlightMat.emissiveIntensity = T.head;
+  carTailMats.forEach(m => m.emissiveIntensity = 0.3 + T.head * 0.8);
   starMat.opacity = T.stars;
   signGlowMats.forEach(m => m.emissiveIntensity = T.sign);
   document.querySelectorAll('[data-time]').forEach(b =>
@@ -1410,7 +1481,7 @@ const pumpPromise = new Promise((resolve,reject) => {
     resolve();
   },undefined,reject);
 });
-try { await Promise.all([stationPromise,pumpPromise]); }
+try { await Promise.all([stationPromise,pumpPromise,carsPromise]); }
 catch(err){ console.error('Station source failed to load',err); document.getElementById('fallback3d').classList.add('show'); throw err; }
 
 window.__station3dReady = true;
