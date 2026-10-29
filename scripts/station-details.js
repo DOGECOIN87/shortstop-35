@@ -30,21 +30,21 @@ export function addStationDetails({ fuelGroup, storeGroup, islandZ, M, ctex, glo
   }
   // Roof standing seams, soffit panel joints and a continuous fascia drip edge.
   const roofRibs=[],soffitJoints=[];
-  for(let z=-22.8;z<18.9;z+=0.48) roofRibs.push([0,6.865,z]);
-  for(let z=-22.8;z<18.9;z+=0.6) soffitJoints.push([0,5.426,z]);
-  batch('Roof-standing-seams',new THREE.BoxGeometry(16.8,0.035,0.025),M.steel,roofRibs);
-  batch('Soffit-panel-joints',new THREE.BoxGeometry(16.9,0.008,0.014),seam,soffitJoints);
-  [-8.72,8.72].forEach(x=>{
-    box(0.055,0.085,42.1,M.redDark,x,5.82,-2);
-    box(0.045,0.075,42.1,M.darkTrim,x,6.73,-2);
+  for(let z=-19.4;z<15.4;z+=0.48) roofRibs.push([0,6.865,z]);
+  for(let z=-19.4;z<15.4;z+=0.6) soffitJoints.push([0,5.426,z]);
+  batch('Roof-standing-seams',new THREE.BoxGeometry(13.0,0.035,0.025),M.steel,roofRibs);
+  batch('Soffit-panel-joints',new THREE.BoxGeometry(13.1,0.008,0.014),seam,soffitJoints);
+  [-6.82,6.82].forEach(x=>{
+    box(0.055,0.085,35.2,M.redDark,x,5.82,-2);
+    box(0.045,0.075,35.2,M.darkTrim,x,6.73,-2);
   });
-  [-23.06,19.06].forEach(z=>box(17.45,0.085,0.055,M.redDark,0,5.82,z));
+  [-19.67,15.67].forEach(z=>box(13.65,0.085,0.055,M.redDark,0,5.82,z));
 
   // Slim rims around the existing ceiling LEDs, not additional light sources.
   const lightRims=[];
   const lightSideRims=[];
   for(let r=0;r<8;r++) for(const x of [-4,4]) {
-    const z=-20+r*5.2;
+    const z=-17+r*4.35;
     [-0.565,0.565].forEach(d=>{lightRims.push([x,5.45,z+d]);lightSideRims.push([x+d,5.45,z]);});
   }
   batch('Recessed-LED-rims',new THREE.BoxGeometry(1.18,0.035,0.06),M.steel,lightRims);
@@ -92,10 +92,10 @@ export function addStationDetails({ fuelGroup, storeGroup, islandZ, M, ctex, glo
 
   // Concrete slab control joints. Restrict them to the canopy apron instead of
   // drawing across grass, roads, accessible markings or other buildings.
-  const longJoints=[];for(let x=-8;x<=8;x+=4)longJoints.push([x,0.013,-2]);
-  batch('Apron-lengthwise-joints',new THREE.BoxGeometry(0.018,0.005,43),seam,longJoints);
-  const crossJoints=[];for(let z=-23;z<=19;z+=5.5)crossJoints.push([0,0.013,z]);
-  batch('Apron-cross-joints',new THREE.BoxGeometry(17.2,0.005,0.018),seam,crossJoints);
+  const longJoints=[];for(let x=-6;x<=6;x+=3)longJoints.push([x,0.013,-2]);
+  batch('Apron-lengthwise-joints',new THREE.BoxGeometry(0.018,0.005,35.2),seam,longJoints);
+  const crossJoints=[];for(let z=-19.6;z<=15.6;z+=4.4)crossJoints.push([0,0.013,z]);
+  batch('Apron-cross-joints',new THREE.BoxGeometry(13.4,0.005,0.018),seam,crossJoints);
 
   // Flush underground fill lids visible beside the canopy in the aerial photo.
   const lids=[];
@@ -107,11 +107,10 @@ export function addStationDetails({ fuelGroup, storeGroup, islandZ, M, ctex, glo
   batch('Underground-fuel-fill-lids',new THREE.CylinderGeometry(0.27,0.27,0.025,24),rubber,lids);
 
   // Store entrance apron, scored sidewalk, door mats and accessible approach.
-  box(2.1,0.16,25.8,M.curb,-23.5,0.08,-2,shop);
-  const walkJoints=[];for(let z=-14;z<11;z+=1.8)walkJoints.push([-23.5,0.164,z]);
-  batch('Sidewalk-expansion-joints',new THREE.BoxGeometry(2.08,0.006,0.018),seam,walkJoints,shop);
+  // The wall-following sidewalk is owned by store-side-landscape.js; avoid
+  // overlapping a second slab here. Keep the door mats and access marking.
   // Door locations are inherited from the source glTF's two entry openings.
-  [-10.9,0.1].forEach(z=>box(1.1,0.018,1.8,rubber,-23.7,0.17,z,shop));
+  [-9.3,0.5].forEach(z=>box(1.1,0.018,1.8,rubber,-21.6,0.17,z,shop));
   const access=ctex(256,256,(c,w,h)=>{
     c.fillStyle='#245da7';c.fillRect(0,0,w,h);c.strokeStyle='white';c.fillStyle='white';c.lineWidth=14;
     c.beginPath();c.arc(133,51,18,0,Math.PI*2);c.fill();
@@ -120,9 +119,10 @@ export function addStationDetails({ fuelGroup, storeGroup, islandZ, M, ctex, glo
     c.beginPath();c.moveTo(125,105);c.lineTo(172,105);c.stroke();
   });
   const symbol=new THREE.Mesh(new THREE.PlaneGeometry(2.2,2.2),new THREE.MeshStandardMaterial({map:access,roughness:0.95}));
-  symbol.name='Accessible-parking-symbol';symbol.rotation.x=-Math.PI/2;symbol.position.set(-19.6,0.03,-17.5);shop.add(symbol);
-  const hatch=[];for(let z=-19.5;z<-14.5;z+=0.65) hatch.push([-16.8,0.029,z]);
-  batch('Accessible-access-aisle',new THREE.BoxGeometry(1.6,0.005,0.09),M.white,hatch,shop);
+  symbol.name='Accessible-parking-symbol';symbol.rotation.set(-Math.PI/2,0,Math.PI/2);symbol.position.set(-18.1,0.03,-15.2);shop.add(symbol);
+  // Nose-in bays run toward the west-facing storefront, along local X.
+  const hatch=[];for(let x=-20.4;x<-15.5;x+=0.65) hatch.push([x,0.029,-18.2]);
+  batch('Accessible-access-aisle',new THREE.BoxGeometry(0.09,0.005,1.6),M.white,hatch,shop);
   // Service downpipes on the back corners of the shop, with low elbows.
   [-13.6,9.5].forEach(z=>{
     box(0.1,4.8,0.1,M.steel,-38.6,2.4,z,shop);

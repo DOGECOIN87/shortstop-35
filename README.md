@@ -77,3 +77,219 @@ Validation:
 
 Small hardware and accessibility markings are visual modelling details, not an
 as-built inventory or a claim of accessibility-code compliance.
+
+### Forecourt accuracy follow-up
+
+Fuelling cars now park parallel to the dispenser faces (across the canopy),
+rather than pointing nose-first at the pumps. The generic high-contrast pavement
+photograph is no longer used: the lot and aprons share a deterministic, subtle
+broom-finished concrete texture, with separate slab-joint geometry. Source white
+siding is replaced with an estimated limestone-course material, window frames
+use a lower-metalness aluminum finish, and the red store fascia carries the name.
+These are reference-led improvements, not an exact reconstruction of the shop's
+openings or signage. A straight-on storefront photograph with doors and windows
+unobstructed is still needed for those dimensions and placements.
+
+Regression: `node --experimental-default-type=module tests/forecourt-alignment.mjs`
+
+### Supplied pump and canopy design (reference-specific replacement)
+
+`scripts/reference-design.js` replaces the generic OBJ pump and source canopy.
+The eight reference-specific dispensers have silver frames, swept red/white
+Techron graphics, red star cabinets, black terminals, LCD/payment/grade controls,
+nozzle holsters, and hanging hose geometry. The canopy now uses white long-side
+fascia, a low red ribbon, a black top cap, red end faces, raised TEXACO letters,
+upright star roundels and tan masonry columns. The freestanding advertising
+panels and three forecourt light poles were removed per the owner's markup.
+The existing site footprint, paired pump positions, and local/geographic
+orientation are retained. This is a reference-led design, not fabrication CAD.
+
+Validation:
+`node --experimental-default-type=module --loader ./tests/three-loader.mjs tests/reference-design.mjs`
+plus the existing detail/alignment tests and a Chromium load/render check.
+
+The newly vendored FontLoader/TextGeometry are Three.js r160 (MIT; see
+`vendor/LICENSE-three.txt`). Helvetiker Bold is sourced from the same release;
+its embedded Magenta/MgOpen font license is also in `assets/fonts/LICENSE.txt`.
+All new assets are self-hosted. No Google API key is required or included.
+
+### Owner-marked side landscaping
+
+`scripts/store-side-landscape.js` adds connected raised sidewalks, a curbed grass
+strip, a screened dumpster pad with gates and a lidded dumpster, and a 14 m pole
+with an approximately 5.4 × 3.6 m Texas flag. The flag uses a locally drawn
+blue/white/red single-star texture and animated cloth geometry anchored at its
+hoist edge. A night uplight is attached to the pole; reduced-motion preferences
+hold the flag still. The side parking markings are removed from the new grass
+and the nearby pickup is moved clear of the outer walkway. Placement follows the
+owner's annotated screenshot; measurements remain approximate.
+
+Select **Flag & grounds** or use `?view=grounds` to inspect the new area.
+Test: `node --experimental-default-type=module tests/store-side-landscape.mjs`.
+
+### Flat-aerial recalibration (supersedes the earlier estimated road layout)
+
+`scripts/reference-plan.js` contains the shared image coordinates and conversion
+used by the store, canopy, wash, dumpster, signs, pavement and surrounding roads.
+The basis is the supplied flat `Screenshot_20261028-111913_Chrome.jpg`, normalised
+to 1256 × 1568 pixels. Four canopy corners anchor the image-to-building transform;
+the tilted Maps images are not mixed into this ground-plane calibration.
+
+- Approximate canopy footprint: 13.6 × 35.2 m; store: 16 × 21.4 m.
+- Separate traced concrete forecourt, short dumpster approach, curved pedestrian
+  sidewalk and grass islands replace the incorrect vehicle loop behind the store.
+- The car wash has its own aerial-derived rotation rather than inheriting the
+  storefront's heading. The screened dumpster is behind the store; the requested
+  silver flagpole and animated Texas flag remain beside it.
+- The frontage road curves independently of the station. I-35 is substantially
+  farther east, with the cross street passing beneath its raised deck. Traffic
+  follows the actual generated road curves rather than straight offset lanes.
+- The hotel has a rear parking row and drive aisle, wheel stops and a frontage
+  entrance. Nearby coffee/shop/McDonald's buildings remain approximate massing.
+- **Aerial plan** (`?view=site`) aligns the display to the supplied close Maps comparison (hotel left, I-35 below). This is
+  not a surveyed north-bearing claim. Clouds are suppressed in overhead views.
+
+Road/pavement boundaries are visually traced estimates. The scale, hotel shell,
+lane markings, neighbouring buildings and storefront openings are not surveyed,
+Google-tile-georeferenced or an exact architectural reconstruction. No visitor
+API key or remote map service is required.
+
+Regression checks:
+
+```sh
+node --experimental-default-type=module tests/site-circulation.mjs
+node --experimental-default-type=module tests/store-side-landscape.mjs
+node --experimental-default-type=module tests/station-details.mjs
+node --experimental-default-type=module tests/forecourt-alignment.mjs
+node --experimental-default-type=module --loader ./tests/three-loader.mjs tests/reference-design.mjs
+```
+
+The checks include the four calibration anchors, road separation, clear hotel
+parking/aisle spacing, concrete rear access, pump details and finite flag geometry.
+A headless Chromium Aerial plan render is also checked for browser errors; these
+checks do not establish photographic or survey accuracy.
+
+### Startup and mobile rendering
+
+Slow startup no longer triggers a permanent failure overlay. The loading screen
+shows retry/simple-site options after 30 seconds; actual import/WebGL failures
+show the fallback immediately. Successful first-frame rendering clears both
+loading and stale fallback overlays. Mobile rendering caps pixel ratio at 1.25
+and uses 1024-pixel sun shadows (desktop: 1.5 and 2048 respectively).
+
+Regression: `node tests/startup.mjs`. Chromium checks also exercised a 390 × 844
+high-DPI touch viewport, view buttons, and a deliberately blocked module request.
+
+### Close aerial comparison corrections
+
+The grass beside the canopy now has an uninterrupted curb; the main forecourt
+opening is at the end of that island, not through the fuel-fill apron. Hotel
+parking uses the image polygon and angled car row, with matching wheel stops and
+walk, rather than an oversized rectangular pad. Motel massing includes recessed
+room frontage and projecting cross gables, with doors/windows and timber details.
+These roof/room details are still visual approximations, not measured elevations.
+The cross-street median is continuous, the lane markings remain above pavement
+in the depth buffer, and asphalt no longer has repeated artificial dark blotches.
+Neighbouring lots are included as approximate traced pavement footprints.
+
+### Marked forecourt cleanup
+
+Removed all four blank freestanding advertising boards (including their posts
+and bases) and all three standalone lot-light poles. Recessed canopy lights,
+public-road lights and roadside Texaco price signs remain. Canopy end logos use
+upright outward-facing circular meshes instead of rotated cylinder-cap textures,
+so the star and T read upright from either end. The reference-design regression
+checks both face orientations and the absence of the removed objects.
+
+### Dumpster, rear grass and roof-mounted flag lighting
+
+The enclosure is shifted 1.2 m toward local left, with grass strips behind the
+store and enclosure, keeping the pad and gate clear. Rooftop equipment now seats
+on the fitted store roof height rather than a fixed guessed elevation. A visible
+roof-corner floodlight tracks that roof height and aims upward at the flag; it
+lights at night. The silver pole remains unchanged. Cloth motion combines slow
+gusts, travelling folds, changing wind direction, sag and faster free-edge flutter,
+while keeping the hoist edge pinned and honoring reduced-motion preferences.
+Regression tests check clearances, roof height, fixture aim, night activation,
+anchoring and finite animated coordinates over long animation times.
+
+### Roadside obstacle clearance
+
+Legacy straight-road streetlight placements are removed. Streetlights, trees and
+shrubs now check their full footprint (including lamp arms / tree canopies) against
+the rendered road triangles plus a 0.5 m buffer. Checks cover both frontage roads,
+I-35, the cross street, rear access and driveway/hotel aisle surfaces. Conflicting
+decorations are omitted rather than arbitrarily pushed into another driveway.
+Regression: `node --experimental-default-type=module tests/road-clearance.mjs`.
+
+### Store-side aerial landscaping
+
+The top-down references now drive separate curved/polygonal grass pockets and
+walks rather than a rectangular sidewalk frame. Rear grass stays outside the
+store footprint; the tan rear walk bends around the shifted dumpster instead of
+crossing its enclosure. A front-door walkway, side-wall walk, curved side
+connector and car-wash approach are linked, with a small curbed planted island
+beside the accessible approach. The dumpster gate and parking bays stay open.
+The requested silver pole, animated flag and roof-mounted spotlight are retained.
+These are visually fitted outlines, not survey/accessibility-certified dimensions.
+Browser verification: Aerial plan renders with no JavaScript errors or fallback.
+
+The store now also has a 1.45 m wall-hugging sidewalk on the north and rear
+walls and both exposed south-wall sections, joined to the existing storefront
+walk. The south-wall segment directly behind the dumpster is deliberately left
+unpaved across the full pad width. Adjacent rear grass was trimmed back to avoid
+covering the new walk; overlapping old storefront slab geometry was removed.
+
+The owner's green-marked screenshot defines two additional lawn strips: the
+car-wash-facing side of the store and the rear wall outside its sidewalk. These
+are explicit polygonal grass surfaces, replacing the smaller rear-lawn overlay;
+wall-side concrete, the outer curved walk and dumpster access remain clear.
+Grass uses depth bias to prevent underlying forecourt concrete bleeding through.
+
+### Car-wash / accessible-approach correction
+
+Removed the owner-crossed small planted island beside the accessible bay,
+including its curb; the larger marked wall-side grass strips remain. Car-wash
+position now uses measured roof corners in the same 111913 flat image as the
+canopy and pavement. Its approximately 7.30 × 11.23 m footprint and -0.722 rad
+rotation supersede the rejected second-image placement. Regression:
+`node --experimental-default-type=module tests/car-wash-placement.mjs`.
+
+### Shared-image car-wash and pavement retrace
+
+All four wash roof corners are stored as source pixels in `reference-plan.js`.
+Their converted centre, mean opposing-edge dimensions and heading define the
+wash model; the regression checks the rectangle against each image corner.
+The invented rear vehicle loop is removed. The forecourt ends along the curved
+pedestrian path, with only a short service approach to the dumpster gate.
+Frontage-road curvature and hotel-driveway endpoints have been retraced closer
+to the source; both driveway tips are checked against the rendered road surface.
+The source-image overlay and browser Aerial plan were inspected. Screenshot
+resolution, perspective and assumed canopy scale still preclude survey accuracy.
+
+### Owner-selected 111922 local reference (current local layout)
+
+The owner selected `Screenshot_20261028-111922_Chrome.jpg` as authoritative for
+the immediate station layout. `scripts/reference-close.js` stores its normalised
+pixel outlines and a joint eight-corner store/canopy calibration. The car wash,
+connected wash apron, forecourt, grass islands, pedestrian path and entrances
+now use that image. An adapter expresses them in the existing scene frame;
+wide-image context remains for the surrounding highway/hotel. The deliberately
+shifted dumpster and its walking bypass retain the owner's custom placement.
+
+**Reference** (`?view=reference`) is a close overhead comparison view with markers
+hidden; **Aerial plan** remains the wider surroundings overview. Browser rendering
+was checked without JS errors. `tests/reference-close.mjs` checks eight anchors
+and consistency of the image-frame conversion; it does not prove survey accuracy.
+This section supersedes the earlier 111913-only local-placement notes.
+
+### Owner-painted broader pavement envelope (091341 markup)
+
+The latest markup overrides the narrow aerial forecourt boundary for rendering:
+a single continuous concrete apron now extends outside the curved rear walk,
+wraps behind the store/car wash and broadens around the south sign/entrance.
+Wall-side sidewalks and planted pockets remain separate raised surfaces. The
+expanded apron is included in decoration clearance, so legacy trees/shrubs/poles
+cannot be left in the newly paved area. This is an owner-directed layout change,
+not a claim that the larger envelope was surveyed from the aerial.
+Regression: `node --experimental-default-type=module tests/owner-pavement.mjs`.
