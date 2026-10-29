@@ -12,7 +12,11 @@ assert.equal(details.getObjectByName('Underground-fuel-fill-lids').count,8);
 assert.equal(details.children.filter(c=>c.name.startsWith('Position-number-')).length,16);
 assert.equal(details.getObjectByName('Recessed-LED-rims').count,32);
 assert.equal(details.getObjectByName('Recessed-LED-side-rims').count,32);
-assert.ok(shop.getObjectByName('Accessible-parking-symbol'));
+const accessSymbol=shop.getObjectByName('Accessible-parking-symbol');assert.ok(accessSymbol);
+const symbolTop=new THREE.Vector3(0,1,0).applyEuler(accessSymbol.rotation);
+assert.ok(symbolTop.distanceTo(new THREE.Vector3(-1,0,0))<1e-9,'wheelchair symbol faces the storefront');
+const aisle=shop.getObjectByName('Accessible-access-aisle');
+assert.ok(aisle.geometry.parameters.depth>aisle.geometry.parameters.width,'aisle stripes run across the correctly aligned bay');
 let draws=0;
 for(const root of [details,shop]) root.traverse(o=>{
   assert.ok(o.position.toArray().every(Number.isFinite));
