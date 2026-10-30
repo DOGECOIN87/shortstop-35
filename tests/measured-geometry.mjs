@@ -75,3 +75,16 @@ console.log('PASS: Aerial plan / Reference framing compensates the heading corre
 assert.ok(Array.isArray(design.canopyGlow) && design.canopyGlow.length === 3 && design.canopyGlow.every(g => g.material.emissiveIntensity === 0 && g.night > g.golden));
 assert.ok(source.includes("canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = name === 'night' ? g.night : name === 'golden' ? g.golden : 0);"));
 console.log('PASS: canopy band, letters and star badges glow only at golden hour/night');
+
+// Georeference helper, flagpole and pylons.
+import { trueToSite, FLAGPOLE, PYLONS, SITE_ORIGIN_TRUE } from '../scripts/station-geometry.js';
+const o = trueToSite(SITE_ORIGIN_TRUE); near(o[0], 0, 1e-9, 'origin x'); near(o[1], 0, 1e-9, 'origin z');
+// A point due north of the site origin must land on world -Z after the site heading turn.
+const n = trueToSite([SITE_ORIGIN_TRUE[0], SITE_ORIGIN_TRUE[1] + 10]), a = SITE_HEADING_DEG * Math.PI / 180;
+near(n[0] * Math.cos(a) + n[1] * Math.sin(a), 0, 1e-9, 'north stays on the world z axis'); near(-n[0] * Math.sin(a) + n[1] * Math.cos(a), -10, 1e-9, 'north = world -Z');
+near(FLAGPOLE.top, 20.3, 1e-9, 'flagpole top from lidar');
+assert.ok(PYLONS.south.top > PYLONS.north.top && PYLONS.south.top < 20);
+assert.ok(source.includes('pylon(...trueToSite(PYLONS.south.trueXY), PYLONS.south.top)'));
+const landscape = fs.readFileSync(new URL('../scripts/store-side-landscape.js', import.meta.url), 'utf8');
+assert.ok(landscape.includes('const H=FLAGPOLE.top-0.2'));
+console.log('PASS: georeference helper, 20 m flagpole, measured pylon heights/position');

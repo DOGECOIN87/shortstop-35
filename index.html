@@ -436,7 +436,7 @@ import { addSiteCirculation, CIRCULATION } from './scripts/site-circulation.js';
 import { createRoadClearance } from './scripts/road-clearance.js';
 import { PLAN, aerialToSite } from './scripts/reference-plan.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
-import { CANOPY, STORE, WASH, INN, SITE_HEADING_DEG, canopyLightRows } from './scripts/station-geometry.js';
+import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector } from './scripts/sun-position.js';
 
 /* =====================================================================
@@ -837,28 +837,30 @@ const sideLandscape=addStoreSideLandscape({stationLayout,M,ctex});
 
 /* ================= TWIN PYLON SIGNS (NE + SE corners) ================= */
 const signGroups = [];
-function pylon(x, z) {
+function pylon(x, z, top_ = 14.95) {
+  // Panels keep their size; posts and stacking follow the measured overall height.
   const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = -Math.PI / 2; world.add(g);
   // twin red posts — sign faces east (toward +X world = local -Z after rotation handled by plane placements below)
-  [-1.5, 1.5].forEach(dz => cyl(0.17, 0.19, 11.6, M.red, dz, 5.8, 0, g, 12));
+  [-1.5, 1.5].forEach(dz => cyl(0.17, 0.19, top_ - 3.35, M.red, dz, (top_ - 3.35) / 2, 0, g, 12));
   box(4.9, 0.35, 0.7, M.redDark, 0, 0.5, 0, g);
   const starM = glowMat(starTex);
   const top = new THREE.Mesh(new THREE.BoxGeometry(4.9, 3.1, 0.55),
     [M.white, M.white, M.white, M.white, starM, starM]);
-  top.position.set(0, 13.4, 0); top.castShadow = true; g.add(top);
+  top.position.set(0, top_ - 1.55, 0); top.castShadow = true; g.add(top);
   const priceM = glowMat(priceTex);
   const price = new THREE.Mesh(new THREE.BoxGeometry(4.9, 2.9, 0.5),
     [M.dark, M.dark, M.dark, M.dark, priceM, priceM]);
-  price.position.set(0, 10.3, 0); price.castShadow = true; g.add(price);
+  price.position.set(0, top_ - 4.65, 0); price.castShadow = true; g.add(price);
   const washM = glowMat(carWashTex);
   const wash = new THREE.Mesh(new THREE.BoxGeometry(4.9, 1.15, 0.5),
     [M.red, M.red, M.red, M.red, washM, washM]);
-  wash.position.set(0, 8.3, 0); wash.castShadow = true; g.add(wash);
+  wash.position.set(0, top_ - 6.65, 0); wash.castShadow = true; g.add(wash);
   // rotate so the textured faces (+Z local) point east (+X world)
   g.rotation.y = Math.PI / 2;
   signGroups.push(g); return g;
 }
-const roadsideSigns=siteCirculation.signPositions.map(([x,z])=>pylon(x,z)); // traced corners
+// NE pylon: traced position, lidar height. SE pylon: lidar position and height.
+const roadsideSigns=[pylon(...siteCirculation.signPositions[0], PYLONS.north.top), pylon(...trueToSite(PYLONS.south.trueXY), PYLONS.south.top)];
 // pylon(18, 37);   // south-east corner
 // pylon(16, -22);  // north-east corner, near Loop 337
 

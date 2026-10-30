@@ -34,14 +34,14 @@ layout. Heights are above the forecourt slab.
 | Car wash | 7.7 × 10.9 m, 4.31 m | 8.6 × 11.3 m, 3.86 m | Lidar roof returns; OSM outline 8.1 × 11.5 m |
 | Edelweiss Inn roof | ridge 8.0 m | ridge 9.2 m (steep roof, single storey kept) | Lidar roof p95 9.18 m |
 | Site heading | −35° (visual estimate) | −40.81° | Rigid fit of store/canopy/car-wash centres to lidar footprints (residuals 0.4–1.3 m); world −Z = true north |
+| Flagpole | 14.4 m | 20.3 m to the finial | Lidar slender object reaching ~20.3 m at the modelled flag position |
+| Price pylons | ~15 m each, traced positions | SE: 19.6 m at its lidar position; NE: 12.2 m (traced position kept until roads are rebuilt) | Lidar tall objects at the SE/NE corners, matching earlier research notes |
 | Sun (Day/Golden) | fixed artistic positions | real solar position at the store coordinate for the visitor's date (`?date=YYYY-MM-DD` to pin) | NOAA solar position; Day = solar noon + 1 h, Golden = sunset − 40 min; Night unchanged |
 
 **Still estimated:** storefront openings and signage (a straight-on storefront
 photo is still needed), canopy underside, pump-island spacing, the traced ground
 layout (forecourt, lawns, walks, parking), the inn's position and footprint,
-road geometry, flagpole height (lidar shows a ~20 m object at the modelled flag
-position — awaiting owner confirmation before changing the 14.4 m pole), price
-pylon heights/positions, neighbouring buildings and terrain (the site is still
+road geometry, the NE pylon's position, neighbouring buildings and terrain (the site is still
 modelled flat; lidar shows the lot ~2 m above the frontage road). The lidar is
 from 2017; changes since then are not reflected in these measurements.
 

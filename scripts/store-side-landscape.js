@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
 import { PLAN } from './reference-plan.js';
+import { FLAGPOLE } from './station-geometry.js';
 import {getSurfacePlan,surfaceMesh} from './surface-plan.js';
 
 // Owner-marked side of the shop: local +Z end wall. Dimensions are estimates.
@@ -71,15 +72,18 @@ export function addStoreSideLandscape({stationLayout,M,ctex}) {
   });
   const pole=new THREE.Group();pole.name='Texas-flagpole';pole.position.set(-26,0,16.2);pole.rotation.y=Math.PI/4;group.add(pole);
   const footing=new THREE.Mesh(new THREE.CylinderGeometry(0.47,0.54,0.24,24),walk);footing.position.y=0.2;pole.add(footing);
-  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.065,0.12,14,32),stainless);shaft.name='Stainless-steel-flagpole-shaft';shaft.position.y=7.22;shaft.castShadow=true;pole.add(shaft);
-  const finial=new THREE.Mesh(new THREE.SphereGeometry(0.14,20,12),stainless);finial.name='Silver-flagpole-finial';finial.position.y=14.3;pole.add(finial);
-  const rope=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,13.1,8),walk);rope.position.set(-0.1,7.2,0);pole.add(rope);
+  // Height from 2017 lidar: a slender object reaching ~20.3 m stands at the
+  // modelled flag position (was a 14 m estimate). See station-geometry.js.
+  const H=FLAGPOLE.top-0.2, shaftH=H-0.22;
+  const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.075,0.15,shaftH,32),stainless);shaft.name='Stainless-steel-flagpole-shaft';shaft.position.y=0.22+shaftH/2;shaft.castShadow=true;pole.add(shaft);
+  const finial=new THREE.Mesh(new THREE.SphereGeometry(0.16,20,12),stainless);finial.name='Silver-flagpole-finial';finial.position.y=H+0.08;pole.add(finial);
+  const rope=new THREE.Mesh(new THREE.CylinderGeometry(0.012,0.012,H-0.9,8),walk);rope.position.set(-0.1,(H-0.9)/2+0.2,0);pole.add(rope);
   const cleat=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.25,0.15),stainless);cleat.position.set(-0.13,1.5,0);pole.add(cleat);
   const width=5.4,height=3.6;
   const geometry=new THREE.PlaneGeometry(width,height,36,24);geometry.translate(width/2,-height/2,0);
   const rest=geometry.attributes.position.array.slice();geometry.attributes.position.setUsage(THREE.DynamicDrawUsage);
   const flag=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({map:flagTexture,side:THREE.DoubleSide,roughness:0.9,metalness:0}));
-  flag.name='Waving-Texas-flag';flag.position.set(0.09,13.9,0);flag.castShadow=true;pole.add(flag);
+  flag.name='Waving-Texas-flag';flag.position.set(0.09,H-0.3,0);flag.castShadow=true;pole.add(flag);
   // A roof-mounted, upward-facing floodlight, not a ground light at the pole.
   const roofMount=new THREE.Group();roofMount.name='Roof-corner-flag-spotlight';
   roofMount.position.set(PLAN.store.centerX+PLAN.store.depth/2-0.3,5.2,PLAN.store.centerZ+PLAN.store.frontage/2-0.3);group.add(roofMount);
@@ -87,9 +91,9 @@ export function addStoreSideLandscape({stationLayout,M,ctex}) {
   const bracket=new THREE.Mesh(new THREE.BoxGeometry(0.1,0.24,0.1),steel);bracket.position.y=0.16;roofMount.add(bracket);
   const housing=new THREE.Mesh(new THREE.BoxGeometry(0.42,0.3,0.26),rubber);housing.name='Flag-floodlight-housing';housing.position.y=0.3;roofMount.add(housing);
   const lens=new THREE.Mesh(new THREE.PlaneGeometry(0.34,0.22),new THREE.MeshStandardMaterial({color:0xfff0dc,emissive:0xffe7bd,emissiveIntensity:0,roughness:0.3}));lens.position.set(0,0,0.135);housing.add(lens);
-  const uplight=new THREE.SpotLight(0xfff0dc,0,32,0.39,0.65,1.6);uplight.name='Roof-to-flag-spotlight';uplight.position.y=0.3;roofMount.add(uplight);group.add(uplight.target);
+  const uplight=new THREE.SpotLight(0xfff0dc,0,40,0.33,0.65,1.6);uplight.name='Roof-to-flag-spotlight';uplight.position.y=0.3;roofMount.add(uplight);group.add(uplight.target);
   // Pole and roof use the same station-local frame, so scene rotation is safe.
-  const aim=pole.position.clone().add(new THREE.Vector3(2.2,12.35,0).applyAxisAngle(new THREE.Vector3(0,1,0),pole.rotation.y));
+  const aim=pole.position.clone().add(new THREE.Vector3(2.2,H-0.3-1.55,0).applyAxisAngle(new THREE.Vector3(0,1,0),pole.rotation.y));
   uplight.target.position.copy(aim);
   function setRoofHeight(height){
     roofMount.position.y=height+0.03;

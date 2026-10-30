@@ -52,6 +52,28 @@ export const INN = Object.freeze({ wallHeight: 4.4, ridge: 9.2 });
 // turns a further 5.81 degrees clockwise seen from above.
 export const SITE_HEADING_DEG = -35 - 5.81;
 
+// Site georeference: the site's world origin sits 37.55 m east and 5.33 m south
+// of the store coordinate in the local true-north frame (same rigid fit).
+export const SITE_ORIGIN_TRUE = Object.freeze([37.55, -5.33]);
+// Local true-north metres (east, north) -> site frame (x, z) before the heading turn.
+export function trueToSite([east, north]) {
+  const wx = east - SITE_ORIGIN_TRUE[0], wz = -(north - SITE_ORIGIN_TRUE[1]);
+  const a = -SITE_HEADING_DEG * Math.PI / 180;
+  return [wx * Math.cos(a) + wz * Math.sin(a), -wx * Math.sin(a) + wz * Math.cos(a)];
+}
+
+// Flagpole: lidar slender object reaching ~20.3 m at the modelled flag position.
+export const FLAGPOLE = Object.freeze({ top: 20.3 });
+
+// Twin-post price pylons (lidar tall objects at the SE and NE corners, matching
+// the earlier research notes). The SE pylon moves to its measured position;
+// the NE one keeps its traced position (its lidar spot falls on the traced
+// road until roads are rebuilt) but takes its measured height.
+export const PYLONS = Object.freeze({
+  south: { trueXY: [16.30, -38.39], top: 19.6 },
+  north: { top: 12.2 }
+});
+
 // Recessed canopy light grid (8 rows x 2 banks) spread along the canopy.
 export function canopyLightRows(rows = 8, inset = 2.0) {
   const first = CANOPY.startZ + inset, step = (CANOPY.length - inset * 2) / (rows - 1);
