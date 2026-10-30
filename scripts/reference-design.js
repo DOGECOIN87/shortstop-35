@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
 import { TextGeometry } from '../vendor/jsm/geometries/TextGeometry.js';
+import { CANOPY } from './station-geometry.js';
 
 export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) {
   const silver=new THREE.MeshStandardMaterial({color:0xc8cecf,metalness:0.25,roughness:0.36});
@@ -36,7 +37,12 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
     for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?47:106;const x=128+Math.cos(a)*r,y=128+Math.sin(a)*r;if(i)c.lineTo(x,y);else c.moveTo(x,y);}c.closePath();c.fill();
     c.fillStyle='#fff';c.fillRect(78,96,100,19);c.fillRect(116,105,24,92);
   });
-  const starMaterial=new THREE.MeshStandardMaterial({map:starMap,transparent:true,roughness:0.4});
+  const starMaterial=new THREE.MeshStandardMaterial({map:starMap,transparent:true,roughness:0.4,emissive:0xffffff,emissiveMap:starMap,emissiveIntensity:0});
+  // Illuminated new-design canopy branding: red band, TEXACO letters and star
+  // badges glow after dark (driven by the time-of-day presets).
+  const canopyBand=M.red.clone();canopyBand.emissive=new THREE.Color(0xff2236);canopyBand.emissiveIntensity=0;
+  const litLetters=white.clone();litLetters.emissive=new THREE.Color(0xffffff);litLetters.emissiveIntensity=0;
+  const canopyGlow=[{material:canopyBand,night:1.1,golden:0.35},{material:litLetters,night:0.9,golden:0.3},{material:starMaterial,night:0.75,golden:0.25}];
   function box(parent,w,h,d,material,x,y,z,name=''){
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.name=name;m.castShadow=m.receiveShadow=true;parent.add(m);return m;
   }
@@ -72,41 +78,66 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
     return g;
   }
   function canopy(islandZ) {
+    // Red/white Texaco canopy style from the owner's design references, sized
+    // to the measured canopy (station-geometry.js): 32.4 x 12.8 m, top 5.40 m.
     const g=new THREE.Group();g.name='Reference-white-red-masonry-canopy';
-    box(g,13.6,0.16,35.2,underside,0,5.53,-2,'White-soffit');
-    box(g,13.6,0.99,35.2,white,0,6.105,-2,'White-fascia');
-    box(g,13.76,0.13,35.34,M.darkTrim,0,6.735,-2,'Black-top-edge');
-    box(g,13.5,0.07,35.0,M.roof,0,6.83,-2,'Roof-surface');
-    [-6.82,6.82].forEach(x=>{
-      box(g,0.09,0.18,35.2,M.red,x,5.8,-2,'Long-red-ribbon');
-      box(g,0.055,0.045,35.2,M.redDark,x,5.69,-2,'Red-lower-reveal');
+    const C=CANOPY,W=C.width,L=C.length,cz=C.centerZ,half=W/2;
+    const fasciaMid=(C.fasciaTop+C.fasciaBottom)/2;
+    box(g,W,C.soffitDepth,L,underside,0,C.clearance+C.soffitDepth/2,cz,'White-soffit');
+    box(g,W,C.fasciaDepth,L,white,0,fasciaMid,cz,'White-fascia');
+    box(g,W+0.16,C.edgeDepth,L+0.14,M.darkTrim,0,C.edgeTop-C.edgeDepth/2,cz,'Black-top-edge');
+    // Roof membrane caps the fascia stack (lidar roof ~5.34-5.40 m).
+    box(g,W-0.1,0.07,L-0.2,M.roof,0,C.roofTop-0.035,cz,'Roof-surface');
+    [-(half+0.02),half+0.02].forEach(x=>{
+      box(g,0.09,0.18,L,canopyBand,x,C.fasciaBottom+0.12,cz,'Long-red-ribbon');
+      box(g,0.055,0.045,L,M.redDark,x,C.fasciaBottom+0.01,cz,'Red-lower-reveal');
     });
-    [-19.67,15.67].forEach((z,i)=>{
-      box(g,13.65,1.03,0.12,M.red,0,6.14,z,'Red-brand-end');
+    const endMid=fasciaMid+0.035;
+    [C.startZ-0.07,C.endZ+0.07].forEach((z,i)=>{
+      box(g,W+0.05,C.fasciaDepth+0.04,0.12,M.red,0,endMid,z,'Red-brand-end');
       // True extruded lettering, with dark sidewalls, not flattened fascia text.
       if(font){
-        const text=new TextGeometry('TEXACO',{font,size:0.83,height:0.11,curveSegments:4,bevelEnabled:true,bevelSize:0.008,bevelThickness:0.006,bevelSegments:1});
-        text.computeBoundingBox();text.translate(-(text.boundingBox.max.x-text.boundingBox.min.x)/2,-0.32,0);
-        const letters=new THREE.Mesh(text,[white,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,6.14,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
+        const ls=0.83*C.fasciaDepth/0.99; // letter size follows the fascia depth
+        const text=new TextGeometry('TEXACO',{font,size:ls,height:0.11,curveSegments:4,bevelEnabled:true,bevelSize:0.008,bevelThickness:0.006,bevelSegments:1});
+        text.computeBoundingBox();const tb=text.boundingBox;text.translate(-(tb.max.x-tb.min.x)/2-tb.min.x,-(tb.max.y+tb.min.y)/2,0);
+        const letters=new THREE.Mesh(text,[litLetters,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,endMid,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
       }
-      // Cylinder cap UVs rotate/mirror the badge. Use an outward-facing,
-      // upright circular face instead, with only a Y rotation at the back end.
+      // New-design roundel: a large star badge on the top corner of each end,
+      // standing proud of the roofline (lidar edge returns reach ~6.1-6.5 m).
+      // Cylinder cap UVs rotate/mirror the badge, so the face is an outward,
+      // upright circle with only a Y rotation at the back end.
+      const R=0.9;
       const emblem=new THREE.Group();emblem.name='Canopy-star-roundel';
-      emblem.position.set(i?-4.9:4.9,6.17,z+(i?0.12:-0.12));
+      emblem.position.set((i?-1:1)*(half-R-0.05),C.edgeTop,z+(i?0.14:-0.14));
       if(!i)emblem.rotation.y=Math.PI;
-      const rim=new THREE.Mesh(new THREE.CylinderGeometry(0.53,0.53,0.14,40),white);
-      rim.name='Canopy-roundel-rim';rim.rotation.x=Math.PI/2;emblem.add(rim);
-      const logo=new THREE.Mesh(new THREE.CircleGeometry(0.53,40),starMaterial);
-      logo.name='Upright-canopy-star-face';logo.position.z=0.076;emblem.add(logo);
+      const rim=new THREE.Mesh(new THREE.CylinderGeometry(R,R,0.18,48),white);
+      rim.name='Canopy-roundel-rim';rim.rotation.x=Math.PI/2;rim.castShadow=true;emblem.add(rim);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(R,0.045,8,48),M.redDark);
+      ring.name='Canopy-roundel-red-ring';ring.position.z=0.05;emblem.add(ring);
+      const logo=new THREE.Mesh(new THREE.CircleGeometry(R-0.04,48),starMaterial);
+      logo.name='Upright-canopy-star-face';logo.position.z=0.092;emblem.add(logo);
       g.add(emblem);
     });
+    // "with TECHRON" graphic printed on the white soffit along both long sides,
+    // read from the pump lanes (new-design reference).
+    const techronMap=ctex(1024,128,(c,w,h)=>{
+      c.clearRect(0,0,w,h);c.fillStyle='#c8102e';c.font='italic bold 84px Arial';c.textAlign='center';c.textBaseline='middle';
+      c.fillText('with TECHRON',w/2,h/2+4);
+    });
+    const techronMat=new THREE.MeshStandardMaterial({map:techronMap,alphaTest:0.4,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+    [-(half-1.35),half-1.35].forEach((x,k)=>{
+      const graphic=new THREE.Mesh(new THREE.PlaneGeometry(9.6,1.2),techronMat);
+      graphic.name='Soffit-Techron-graphic';graphic.rotation.set(Math.PI/2,0,k?Math.PI/2:-Math.PI/2);
+      graphic.position.set(x,C.clearance-0.004,cz);g.add(graphic);
+    });
     islandZ.forEach(z=>{
-      box(g,0.84,5.2,0.84,masonry,0,2.9,z,'Tan-masonry-column');
+      const colTop=C.clearance+0.05,colH=colTop-0.3;
+      box(g,0.84,colH,0.84,masonry,0,0.3+colH/2,z,'Tan-masonry-column');
       box(g,0.89,0.45,0.89,M.darkTrim,0,0.45,z,'Column-base-collar');
-      box(g,0.98,0.12,0.98,white,0,5.39,z,'Column-capital');
+      box(g,0.98,0.12,0.98,white,0,C.clearance-0.06,z,'Column-capital');
 
     });
     return g;
   }
-  return {pump,canopy,panelMaterial,underside};
+  return {pump,canopy,panelMaterial,underside,canopyGlow};
 }

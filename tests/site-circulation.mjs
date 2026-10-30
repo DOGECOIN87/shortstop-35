@@ -1,7 +1,7 @@
 // node --experimental-default-type=module tests/site-circulation.mjs
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
-import { addSiteCirculation,CIRCULATION } from '../scripts/site-circulation.js';
+import { addSiteCirculation,CIRCULATION,hotelShift } from '../scripts/site-circulation.js';
 import { createRoadClearance } from '../scripts/road-clearance.js';
 import { PLAN,aerialToBuilding,aerialToSite } from '../scripts/reference-plan.js';
 const material=new THREE.MeshStandardMaterial();const M=new Proxy({}, {get:()=>material});
@@ -16,7 +16,7 @@ for(const p of parkingSpots){
  const frontDistance=Math.cos(CIRCULATION.hotel.heading)*dx-Math.sin(CIRCULATION.hotel.heading)*dz;
  assert.ok(frontDistance-2.3>CIRCULATION.hotel.width/2,'parked cars clear of angled motel frontage');
 }
-const row=PLAN.hotelCarRow.map(aerialToSite);
+const row=PLAN.hotelCarRow.map(p=>hotelShift(aerialToSite(p)));
 assert.ok(Math.abs(parkingSpots[0].x-row[0][0])<1e-6);
 assert.ok(Math.abs(parkingSpots.at(-1).z-row[1][1])<1e-6);
 assert.ok(group.getObjectByName('Continuous-curb-beside-canopy'));
