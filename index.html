@@ -436,6 +436,7 @@ import { addSiteCirculation, CIRCULATION } from './scripts/site-circulation.js';
 import { createRoadClearance } from './scripts/road-clearance.js';
 import { PLAN, aerialToSite } from './scripts/reference-plan.js';
 import { OSM_BUILDINGS } from './scripts/osm-roads.js';
+import { TRAFFIC_LANES } from './scripts/traffic-lanes.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector } from './scripts/sun-position.js';
@@ -1072,25 +1073,29 @@ siteCirculation.parkingSpots.forEach((p,i)=>{
 });
 /* moving traffic */
 const traffic = [];
-function addTraffic(veh, x, y, z, dir, speed) {
-  veh.position.set(x, y, z);
-  veh.rotation.y = dir > 0 ? Math.PI : 0;
-  if (veh === undefined) return;
-  const highway=x>37;
-  const path=highway?siteCirculation.highway.path:siteCirculation.frontage.path;
-  traffic.push({g:veh,dir,speed,y,path,laneOffset:x-(highway?49:30.5),progress:(z+165)/330,length:path.getLength()});
+// Lanes come from the Blender build (scripts/traffic-lanes.js, true-north metres like the detailed GLB), so cars
+// stay in their lane on the modelled roads and follow the road height. Convert to `world` space: the GLB root sits
+// at (-37.55, -0.4, -5.33) in scene space and `world` is turned by SITE_HEADING.
+const lanePaths = {};
+function lanePath(name) {
+  if (!lanePaths[name]) lanePaths[name] = new THREE.CatmullRomCurve3(TRAFFIC_LANES[name].map(([e, n, u]) =>
+    new THREE.Vector3(e - 37.55, u - 0.4, -n - 5.33).applyAxisAngle(siteRotationAxis, -SITE_HEADING)), false, 'centripetal');
+  return lanePaths[name];
 }
-// Frontage road is one-way southbound (lane centres x 26.3 / 30.5 / 34.7). I-35 (OSM, two carriageways ~21.7 m
-// apart): southbound on the station side (slow lane x 39.95, fast x 43.55), northbound beyond the barrier
-// (fast x 54.45, slow x 58.05); x is lane offset + 49 (path centre).
+function addTraffic(veh, lane, progress, speed) {
+  const path = lanePath(lane);
+  traffic.push({g:veh,dir:1,speed,path,progress,length:path.getLength()});
+}
+// Frontage road is one-way southbound: the curb lane is fed by the SH 46 right turn, the left lane by the frontage
+// mainline through the signal. I-35 cars use the lanes on the modelled bridge decks over SH 46.
 // One speed per lane so vehicles never drive through each other.
-addTraffic(sedan(0xc0c4c9), 26.3, 0, -60, 1, 10);
-addTraffic(sedan(0x2f4a68), 26.3, 0, 55, 1, 10);
-addTraffic(pickup(0x8c2f2f), 30.5, 0, 20, 1, 12);
-addTraffic(semi(), 39.95, CIRCULATION.highwayDeck, -40, 1, 18);
-addTraffic(sedan(0xe3e5e8), 54.45, CIRCULATION.highwayDeck, 80, -1, 23);
-addTraffic(sedan(0x3a3f45), 54.45, CIRCULATION.highwayDeck, -90, -1, 23);
-addTraffic(semi(), 58.05, CIRCULATION.highwayDeck, 30, -1, 18);
+addTraffic(sedan(0xc0c4c9), 'frontageCurb', 0.05, 10);
+addTraffic(sedan(0x2f4a68), 'frontageCurb', 0.38, 10);
+addTraffic(pickup(0x8c2f2f), 'frontageLeft', 0.1, 12);
+addTraffic(semi(), 'i35SbSlow', 0.2, 18);
+addTraffic(sedan(0xe3e5e8), 'i35NbFast', 0.1, 23);
+addTraffic(sedan(0x3a3f45), 'i35NbFast', 0.45, 23);
+addTraffic(semi(), 'i35NbSlow', 0.3, 18);
 
 /* ===== supplied car models: BMW E46 M Sport + Tesla Cybertruck (optimised GLBs in assets/cars/) =====
    Each model is scaled to its true length, its wheels set on y = 0, and turned so its front faces local −Z
@@ -1145,10 +1150,10 @@ const carsPromise = Promise.all([loadCar('./assets/cars/bmw-e46.glb'), loadCar('
   const parkedCyber = cyberCar(cyber); parkedCyber.position.set(-17.0, 0, -4.3); parkedCyber.rotation.y = Math.PI / 2; // nosed in at the store front
   stationLayout.add(parkedBmw,parkedCyber);
   // in traffic alongside the procedural vehicles
-  addTraffic(bmwCar(bmw, 0x8e1420), 26.3, 0, -150, 1, 10);   // frontage road
-  addTraffic(cyberCar(cyber), 30.5, 0, -95, 1, 12);          // frontage road
-  addTraffic(bmwCar(bmw, 0x1d3f72), 43.55, CIRCULATION.highwayDeck, 50, 1, 24);  // I-35 southbound fast lane
-  addTraffic(cyberCar(cyber), 54.45, CIRCULATION.highwayDeck, -5, -1, 23);       // I-35 northbound fast lane
+  addTraffic(bmwCar(bmw, 0x8e1420), 'frontageCurb', 0.71, 10);   // frontage road, curb lane
+  addTraffic(cyberCar(cyber), 'frontageLeft', 0.6, 12);           // frontage road, left lane
+  addTraffic(bmwCar(bmw, 0x1d3f72), 'i35SbFast', 0.5, 24);        // I-35 southbound fast lane
+  addTraffic(cyberCar(cyber), 'i35NbFast', 0.78, 23);             // I-35 northbound fast lane
   applyTime(activeTime);
 }).catch(err => console.warn('Car models failed to load; procedural traffic only', err));
 tlDots.forEach((d, i) => { d.material.emissiveIntensity = (i % 3 === 2) ? 0.9 : 0.04; });
@@ -1304,7 +1309,6 @@ function tick() {
   traffic.forEach(v=>{
     v.progress=((v.progress+v.dir*v.speed*dt/v.length)%1+1)%1;
     const p=v.path.getPointAt(v.progress),t=v.path.getTangentAt(v.progress);
-    p.addScaledVector(new THREE.Vector3(t.z,0,-t.x),v.laneOffset);p.y=v.y;
     v.g.position.copy(p);v.g.rotation.y=Math.atan2(t.x,t.z)+(v.dir>0?Math.PI:0);
   });
   clouds.forEach((c, i) => {
