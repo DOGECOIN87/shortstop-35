@@ -10,10 +10,11 @@ import { solarPosition, solarEvents, sunPresetVector } from '../scripts/sun-posi
 
 const near = (a, b, tol, msg) => assert.ok(Math.abs(a - b) <= tol, `${msg}: ${a} vs ${b}`);
 
-// Lidar/OSM-measured canopy: 32.4 x 12.8 m, edge ~5.69 m, roof deck ~5.34 m.
+// Lidar/OSM-measured canopy: 32.4 x 12.8 m, roof top 5.40 m (lidar ~5.34 m).
 assert.equal(CANOPY.width, 12.8); assert.equal(CANOPY.length, 32.4);
-near(CANOPY.edgeTop, 5.69, 1e-9, 'canopy edge height');
-near(CANOPY.clearance, 4.41, 0.005, 'assumed 14 ft 6 in clearance');
+near(CANOPY.roofTop, 5.40, 1e-9, 'canopy roof top');
+assert.ok(CANOPY.edgeTop < CANOPY.roofTop, 'membrane caps the black edge so the roof reads light from above');
+near(CANOPY.clearance, 4.195, 0.005, 'derived clearance (~13 ft 9 in, to confirm)');
 const material = new THREE.MeshStandardMaterial(), M = new Proxy({}, { get: () => material });
 const font = new FontLoader().parse(JSON.parse(fs.readFileSync(new URL('../assets/fonts/helvetiker_bold.typeface.json', import.meta.url), 'utf8')));
 const design = createReferenceDesign({ M, font, ctex: () => new THREE.Texture(), glowMat: () => material, makeHeaderMaterial: () => material });
@@ -22,7 +23,7 @@ const canopy = design.canopy(islandZ); canopy.updateMatrixWorld(true);
 const box = new THREE.Box3().setFromObject(canopy);
 near(box.max.x - box.min.x, CANOPY.width + 0.2, 0.25, 'canopy width incl. trim');
 near(box.max.z - box.min.z, CANOPY.length + 0.3, 0.3, 'canopy length incl. trim/end faces');
-assert.ok(box.max.y < 5.8 && box.max.y > 5.6, `canopy top ${box.max.y} must follow lidar (~5.69 m), not the old 6.87 m`);
+assert.ok(box.max.y < 5.5 && box.max.y > 5.35, `canopy top ${box.max.y} must follow lidar (~5.4 m), not the old 6.87 m`);
 const soffit = canopy.getObjectByName('White-soffit');
 near(soffit.position.y - soffit.geometry.parameters.height / 2, CANOPY.clearance, 1e-9, 'soffit underside');
 for (const col of canopy.children.filter(c => c.name === 'Tan-masonry-column')) {

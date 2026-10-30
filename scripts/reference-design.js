@@ -74,14 +74,14 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
   }
   function canopy(islandZ) {
     // Red/white Texaco canopy style from the owner's design references, sized
-    // to the measured canopy (station-geometry.js): 32.4 x 12.8 m, edge ~5.69 m.
+    // to the measured canopy (station-geometry.js): 32.4 x 12.8 m, top 5.40 m.
     const g=new THREE.Group();g.name='Reference-white-red-masonry-canopy';
     const C=CANOPY,W=C.width,L=C.length,cz=C.centerZ,half=W/2;
     const fasciaMid=(C.fasciaTop+C.fasciaBottom)/2;
     box(g,W,C.soffitDepth,L,underside,0,C.clearance+C.soffitDepth/2,cz,'White-soffit');
     box(g,W,C.fasciaDepth,L,white,0,fasciaMid,cz,'White-fascia');
     box(g,W+0.16,C.edgeDepth,L+0.14,M.darkTrim,0,C.edgeTop-C.edgeDepth/2,cz,'Black-top-edge');
-    // Roof membrane sits recessed inside the fascia (lidar roof deck ~5.34 m).
+    // Roof membrane caps the fascia stack (lidar roof ~5.34-5.40 m).
     box(g,W-0.1,0.07,L-0.2,M.roof,0,C.roofTop-0.035,cz,'Roof-surface');
     [-(half+0.02),half+0.02].forEach(x=>{
       box(g,0.09,0.18,L,M.red,x,C.fasciaBottom+0.12,cz,'Long-red-ribbon');
@@ -92,8 +92,9 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
       box(g,W+0.05,C.fasciaDepth+0.04,0.12,M.red,0,endMid,z,'Red-brand-end');
       // True extruded lettering, with dark sidewalls, not flattened fascia text.
       if(font){
-        const text=new TextGeometry('TEXACO',{font,size:0.83,height:0.11,curveSegments:4,bevelEnabled:true,bevelSize:0.008,bevelThickness:0.006,bevelSegments:1});
-        text.computeBoundingBox();text.translate(-(text.boundingBox.max.x-text.boundingBox.min.x)/2,-0.32,0);
+        const ls=0.83*C.fasciaDepth/0.99; // letter size follows the fascia depth
+        const text=new TextGeometry('TEXACO',{font,size:ls,height:0.11,curveSegments:4,bevelEnabled:true,bevelSize:0.008,bevelThickness:0.006,bevelSegments:1});
+        text.computeBoundingBox();const tb=text.boundingBox;text.translate(-(tb.max.x-tb.min.x)/2-tb.min.x,-(tb.max.y+tb.min.y)/2,0);
         const letters=new THREE.Mesh(text,[white,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,endMid,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
       }
       // Cylinder cap UVs rotate/mirror the badge. Use an outward-facing,
