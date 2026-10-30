@@ -435,6 +435,7 @@ import { addStoreSideLandscape } from './scripts/store-side-landscape.js';
 import { addSiteCirculation, CIRCULATION } from './scripts/site-circulation.js';
 import { createRoadClearance } from './scripts/road-clearance.js';
 import { PLAN, aerialToSite } from './scripts/reference-plan.js';
+import { OSM_BUILDINGS } from './scripts/osm-roads.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector } from './scripts/sun-position.js';
@@ -870,7 +871,7 @@ const roadsideSigns=[pylon(...trueToSite(PYLONS.north.trueXY), PYLONS.north.top)
 {
   const inn = new THREE.Group();inn.name='Edelweiss-reference-massing';
   inn.position.set(CIRCULATION.hotel.x,0,CIRCULATION.hotel.z);
-  inn.rotation.y=CIRCULATION.hotel.heading;world.add(inn);
+  inn.rotation.y=CIRCULATION.hotel.heading;inn.scale.z=CIRCULATION.hotel.lengthScale;world.add(inn); // OSM-fitted pose and length
   box(10.5,4.4,CIRCULATION.hotel.length,M.wallWhite,-1.25,2.2,0,inn);
   function pitchedRoof(width,length,height,x,z,heading=0){
     const profile=new THREE.Shape();profile.moveTo(-width/2,0);profile.lineTo(width/2,0);profile.lineTo(0,height);profile.closePath();
@@ -899,10 +900,16 @@ const roadsideSigns=[pylon(...trueToSite(PYLONS.north.trueXY), PYLONS.north.top)
 // McDonald's across Loop 337 (NE, simplified background)
 {
 
+  // OSM outline (ODbL) with 2017 lidar heights: walls ~3.9 m, mansard/sign band to ~5.5 m.
+  const mcPts=OSM_BUILDINGS.mcdonalds.map(trueToSite), mcShape=new THREE.Shape();
+  mcPts.forEach(([x,z],i)=>{if(i)mcShape.lineTo(x,-z);else mcShape.moveTo(x,-z);}); mcShape.closePath();
+  const mcBody=new THREE.Mesh(new THREE.ExtrudeGeometry(mcShape,{depth:3.9,bevelEnabled:false}),new THREE.MeshStandardMaterial({ color:0x6b5a4a, roughness:0.9 }));
+  mcBody.rotation.x=-Math.PI/2; mcBody.castShadow=mcBody.receiveShadow=true; world.add(mcBody);
+  const mcBand=new THREE.Mesh(new THREE.ExtrudeGeometry(mcShape,{depth:1.2,bevelEnabled:false}),new THREE.MeshStandardMaterial({ color:0x3c3c40, roughness:0.8 }));
+  mcBand.rotation.x=-Math.PI/2; mcBand.position.y=3.9; mcBand.castShadow=true; world.add(mcBand);
+  // The arches sign keeps its traced roadside position, just west of the building.
   const mcLocation=aerialToSite([920,460]);
   const mc = new THREE.Group(); mc.position.set(mcLocation[0], 0, mcLocation[1]); world.add(mc);
-  box(20, 5, 12, new THREE.MeshStandardMaterial({ color:0x6b5a4a, roughness:0.9 }), 0, 2.5, 0, mc);
-  box(20.6, 1.1, 12.6, new THREE.MeshStandardMaterial({ color:0x3c3c40, roughness:0.8 }), 0, 5.4, 0, mc);
   cyl(0.14, 0.16, 13, M.steel, -14, 6.5, 4, mc, 10);
   const arch = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 5.4),
     new THREE.MeshStandardMaterial({ map:archesTex, transparent:true, emissive:0xffc72c, emissiveMap:archesTex, emissiveIntensity:0.15, side:THREE.DoubleSide }));

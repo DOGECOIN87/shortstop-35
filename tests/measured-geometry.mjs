@@ -96,3 +96,16 @@ const hw = OSM_ROADS.highway.find(p => Math.abs(p[1]) < 15); assert.ok(hw && hw[
 const circ = fs.readFileSync(new URL('../scripts/site-circulation.js', import.meta.url), 'utf8');
 assert.ok(circ.includes("osmSite('frontage')") && circ.includes("osmSite('cross')") && circ.includes("osmSite('highway').reverse()"));
 console.log('PASS: OSM road network georeferenced; pylons at lidar positions');
+
+// Edelweiss Inn and neighbouring buildings follow their OSM outlines.
+const { OSM_BUILDINGS } = await import('../scripts/osm-roads.js');
+const { CIRCULATION, hotelShift } = await import('../scripts/site-circulation.js');
+const { trueToSite: toSite } = await import('../scripts/station-geometry.js');
+const areaCentroid = pts => { let a = 0, cx = 0, cz = 0; pts.forEach(([x1, z1], i) => { const [x2, z2] = pts[(i + 1) % pts.length]; const c = x1 * z2 - x2 * z1; a += c; cx += (x1 + x2) * c; cz += (z1 + z2) * c; }); return [cx / (3 * a), cz / (3 * a)]; };
+const innC = areaCentroid(OSM_BUILDINGS.edelweissInn.map(toSite));
+near(Math.hypot(innC[0] - CIRCULATION.hotel.x, innC[1] - CIRCULATION.hotel.z), 0, 3, 'inn centre on its OSM outline');
+near(CIRCULATION.hotel.length * CIRCULATION.hotel.lengthScale, 77.34, 0.05, 'inn length from OSM');
+const moved = hotelShift([CIRCULATION.hotel.x, CIRCULATION.hotel.z]); assert.ok(moved.every(Number.isFinite));
+assert.ok(circ.includes("osmBuilding('Traced-bagel-shop-building','einsteinBros',5.3)") && circ.includes("'retailNorth',5.2") && circ.includes("'retailWest',5.2"));
+assert.ok(source.includes('OSM_BUILDINGS.mcdonalds.map(trueToSite)') && source.includes('depth:3.9'));
+console.log('PASS: Edelweiss Inn on its OSM outline; neighbouring buildings from OSM with lidar heights');
