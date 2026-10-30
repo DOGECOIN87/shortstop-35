@@ -97,16 +97,33 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
         text.computeBoundingBox();const tb=text.boundingBox;text.translate(-(tb.max.x-tb.min.x)/2-tb.min.x,-(tb.max.y+tb.min.y)/2,0);
         const letters=new THREE.Mesh(text,[white,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,endMid,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
       }
-      // Cylinder cap UVs rotate/mirror the badge. Use an outward-facing,
-      // upright circular face instead, with only a Y rotation at the back end.
+      // New-design roundel: a large star badge on the top corner of each end,
+      // standing proud of the roofline (lidar edge returns reach ~6.1-6.5 m).
+      // Cylinder cap UVs rotate/mirror the badge, so the face is an outward,
+      // upright circle with only a Y rotation at the back end.
+      const R=0.9;
       const emblem=new THREE.Group();emblem.name='Canopy-star-roundel';
-      emblem.position.set((i?-1:1)*(half-1.9),endMid+0.03,z+(i?0.12:-0.12));
+      emblem.position.set((i?-1:1)*(half-R-0.05),C.edgeTop,z+(i?0.14:-0.14));
       if(!i)emblem.rotation.y=Math.PI;
-      const rim=new THREE.Mesh(new THREE.CylinderGeometry(0.53,0.53,0.14,40),white);
-      rim.name='Canopy-roundel-rim';rim.rotation.x=Math.PI/2;emblem.add(rim);
-      const logo=new THREE.Mesh(new THREE.CircleGeometry(0.53,40),starMaterial);
-      logo.name='Upright-canopy-star-face';logo.position.z=0.076;emblem.add(logo);
+      const rim=new THREE.Mesh(new THREE.CylinderGeometry(R,R,0.18,48),white);
+      rim.name='Canopy-roundel-rim';rim.rotation.x=Math.PI/2;rim.castShadow=true;emblem.add(rim);
+      const ring=new THREE.Mesh(new THREE.TorusGeometry(R,0.045,8,48),M.redDark);
+      ring.name='Canopy-roundel-red-ring';ring.position.z=0.05;emblem.add(ring);
+      const logo=new THREE.Mesh(new THREE.CircleGeometry(R-0.04,48),starMaterial);
+      logo.name='Upright-canopy-star-face';logo.position.z=0.092;emblem.add(logo);
       g.add(emblem);
+    });
+    // "with TECHRON" graphic printed on the white soffit along both long sides,
+    // read from the pump lanes (new-design reference).
+    const techronMap=ctex(1024,128,(c,w,h)=>{
+      c.clearRect(0,0,w,h);c.fillStyle='#c8102e';c.font='italic bold 84px Arial';c.textAlign='center';c.textBaseline='middle';
+      c.fillText('with TECHRON',w/2,h/2+4);
+    });
+    const techronMat=new THREE.MeshStandardMaterial({map:techronMap,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+    [-(half-1.35),half-1.35].forEach((x,k)=>{
+      const graphic=new THREE.Mesh(new THREE.PlaneGeometry(9.6,1.2),techronMat);
+      graphic.name='Soffit-Techron-graphic';graphic.rotation.set(Math.PI/2,0,k?Math.PI/2:-Math.PI/2);
+      graphic.position.set(x,C.clearance-0.004,cz);g.add(graphic);
     });
     islandZ.forEach(z=>{
       const colTop=C.clearance+0.05,colH=colTop-0.3;

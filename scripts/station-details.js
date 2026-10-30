@@ -52,7 +52,7 @@ export function addStationDetails({ fuelGroup, storeGroup, islandZ, M, ctex, glo
   batch('Recessed-LED-rims',new THREE.BoxGeometry(1.18,0.035,0.06),M.steel,lightRims);
   batch('Recessed-LED-side-rims',new THREE.BoxGeometry(0.06,0.035,1.06),M.steel,lightSideRims);
 
-  const bolts=[];
+  const bolts=[],bollardBands=[];
   islandZ.forEach((z,row)=>{
     box(0.88,0.055,0.88,M.steel,0,0.26,z);
     for(const x of [-0.33,0.33]) for(const dz of [-0.33,0.33]) bolts.push([x,0.31,z+dz]);
@@ -80,17 +80,19 @@ export function addStationDetails({ fuelGroup, storeGroup, islandZ, M, ctex, glo
       box(0.23,0.36,0.23,rubber,x+0.49,0.73,z);
       box(0.026,0.7,0.026,paleMetal,x+0.49,1.11,z);
       box(0.2,0.045,0.045,rubber,x+0.49,1.47,z);
-      const notice=label('WASH • WASTE',0.54,0.11,{background:'#24292c',size:35});
+      const notice=label('TRASH',0.54,0.11,{background:'#4f5559',size:44});
       notice.position.set(x,0.79,z+0.327);details.add(notice);
     }
-    // Protective bollard caps, foot rings and subtle reflective collars.
+    // Protective bollard caps, foot rings and white reflective bands (new-design
+    // red bollards with striped tops, per the pump reference photo).
     for(const x of [-5.05,5.05]) for(const dz of [-0.64,0.64]) {
       mesh(new THREE.CylinderGeometry(0.12,0.12,0.04,12),M.steel,x,0.25,z+dz);
       mesh(new THREE.SphereGeometry(0.08,12,8),paleMetal,x,1.17,z+dz);
-      mesh(new THREE.CylinderGeometry(0.084,0.084,0.065,12),M.red,x,1.06,z+dz);
+      bollardBands.push([x,1.06,z+dz],[x,0.93,z+dz]);
     }
   });
   batch('Column-anchor-bolts',new THREE.CylinderGeometry(0.045,0.045,0.045,6),M.steel,bolts);
+  batch('Bollard-reflective-bands',new THREE.CylinderGeometry(0.084,0.084,0.06,12),M.white,bollardBands);
 
   // Concrete slab control joints. Restrict them to the canopy apron instead of
   // drawing across grass, roads, accessible markings or other buildings.

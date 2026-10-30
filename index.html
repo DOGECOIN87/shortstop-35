@@ -769,6 +769,7 @@ const fuelGroup = new THREE.Group(); stationLayout.add(fuelGroup);
 const pumpSpots = [];
 const canopySpots = [];
 const islandZ = [-14, -5, 4, 13];
+const binGrey = new THREE.MeshStandardMaterial({ color:0x60666a, roughness:0.72, metalness:0.15 });
 // Canopy footprint is measured (lidar/OSM: 32.4 x 12.8 m, see station-geometry.js).
 for (const lz of canopyLightRows()) for (let cix = 0; cix < 2; cix++) {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, 1.05), canopyLightMat);
@@ -785,7 +786,7 @@ islandZ.forEach((z, idx) => {
   // Waste / windshield-wash cabinets sit between the pumps and centre column,
   // clear of the driving lanes and the two dispenser faces.
   [-1.85,1.85].forEach(x=>{
-    box(0.72,0.95,0.62,M.dark,x,0.695,z,fuelGroup);
+    box(0.72,0.95,0.62,binGrey,x,0.695,z,fuelGroup); // grey trash/wash bins (new-design reference)
     box(0.78,0.09,0.68,M.steel,x,1.215,z,fuelGroup);
     box(0.46,0.19,0.025,M.tire,x,1.055,z+0.323,fuelGroup);
   });

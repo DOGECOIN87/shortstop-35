@@ -22,8 +22,13 @@ const islandZ = [-14, -5, 4, 13];
 const canopy = design.canopy(islandZ); canopy.updateMatrixWorld(true);
 const box = new THREE.Box3().setFromObject(canopy);
 near(box.max.x - box.min.x, CANOPY.width + 0.2, 0.25, 'canopy width incl. trim');
-near(box.max.z - box.min.z, CANOPY.length + 0.3, 0.3, 'canopy length incl. trim/end faces');
-assert.ok(box.max.y < 5.5 && box.max.y > 5.35, `canopy top ${box.max.y} must follow lidar (~5.4 m), not the old 6.87 m`);
+assert.ok(box.max.z - box.min.z > CANOPY.length && box.max.z - box.min.z < CANOPY.length + 0.9, 'canopy length incl. end faces and roundels');
+const roof = new THREE.Box3().setFromObject(canopy.getObjectByName('Roof-surface'));
+near(roof.max.y, CANOPY.roofTop, 1e-6, 'canopy roof line follows lidar (~5.4 m), not the old 6.87 m');
+const badges = canopy.children.filter(c => c.name === 'Canopy-star-roundel');
+assert.equal(badges.length, 2);
+for (const b of badges) { const bb = new THREE.Box3().setFromObject(b); assert.ok(bb.max.y > CANOPY.roofTop + 0.5 && bb.max.y < 6.5, `roundel top ${bb.max.y} stands proud of the roof within lidar edge returns (<=6.5 m)`); }
+assert.equal(canopy.children.filter(c => c.name === 'Soffit-Techron-graphic').length, 2, 'with TECHRON soffit graphics on both sides');
 const soffit = canopy.getObjectByName('White-soffit');
 near(soffit.position.y - soffit.geometry.parameters.height / 2, CANOPY.clearance, 1e-9, 'soffit underside');
 for (const col of canopy.children.filter(c => c.name === 'Tan-masonry-column')) {
