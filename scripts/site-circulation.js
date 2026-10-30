@@ -1,8 +1,12 @@
 import * as THREE from '../vendor/three.module.js';
 import { PLAN,aerialToSite } from './reference-plan.js';
 import {getSurfacePlan,surfaceMesh} from './surface-plan.js';
+import { OSM_ROADS, osmSite } from './osm-roads.js';
+import { trueToSite } from './station-geometry.js';
 
-export const CIRCULATION={hotel:{x:-31.5,z:70,length:85,width:13,heading:1.517},hotelDrive:{z:53.7,width:5.4},crossStreet:{z:-38,width:21},highwayDeck:6.2};
+// highwayDeck: lidar deck top 201.7 m vs store ground 196.2 m (5.5 m). Highway width: two
+// 4-lane carriageways whose OSM centrelines are ~21.7 m apart, plus a central barrier.
+export const CIRCULATION={hotel:{x:-31.5,z:70,length:85,width:13,heading:1.517},hotelDrive:{z:53.7,width:5.4},crossStreet:{z:-38,width:21},highwayDeck:5.5,highway:{width:36.1,laneLines:[-14.45,-10.85,-7.25,7.25,10.85,14.45],edges:[-3.65,3.65]}};
 
 export function addSiteCirculation({world,M,ctex,glowMat}) {
   const obstacleSurfaces=[];
@@ -63,46 +67,48 @@ export function addSiteCirculation({world,M,ctex,glowMat}) {
     }
   }
 
-  const frontage=ribbon('Traced-south-frontage-road',PLAN.frontage,12.2,roadMaterial,0.035);
-  const cross=ribbon('Traced-cross-street',PLAN.crossStreet,CIRCULATION.crossStreet.width,roadMaterial,0.038);
-  const highway=ribbon('Traced-I35-deck',PLAN.highway,24,roadMaterial,CIRCULATION.highwayDeck);
-  const otherPoints=[];
-  for(let i=0;i<=20;i++){
-    const p=highway.path.getPoint(i/20),t=highway.path.getTangent(i/20),n=new THREE.Vector3(t.z,0,-t.x);
-    p.addScaledVector(n,35);otherPoints.push([p.x,p.z]);
-  }
-  siteRibbon('Opposite-frontage-road',otherPoints,11.5,roadMaterial,0.035);
-  // Deck and embankment follow the traced highway, leaving the cross street open.
-  for(let i=0;i<80;i++){
-    const a=highway.path.getPoint(i/80),b=highway.path.getPoint((i+1)/80),mid=a.clone().add(b).multiplyScalar(0.5),direction=b.clone().sub(a);
-    const onBridge=Math.abs(mid.z-CIRCULATION.crossStreet.z)<20;
-    const h=onBridge?0.65:6.05;
-    const support=box(onBridge?'I35-open-span-deck':'I35-embankment',onBridge?24.5:28,h,direction.length()+0.2,onBridge?M.concrete:M.grass,mid.x,onBridge?5.8:h/2,mid.z);
+  // Road network from OpenStreetMap (ODbL), georeferenced into the site frame.
+  // Object names are kept for compatibility with existing consumers/tests.
+  const frontage=siteRibbon('Traced-south-frontage-road',osmSite('frontage'),12.2,roadMaterial,0.035);
+  siteRibbon('OSM-frontage-road-mainline',osmSite('frontageMainline'),10.5,roadMaterial,0.033);
+  for(const [name,key] of [['OSM-frontage-to-SH46-ramp','rampToCross'],['OSM-south-turnaround','uturnSouth'],['OSM-north-turnaround','uturnNorth']])siteRibbon(name,osmSite(key),6.5,roadMaterial,0.031);
+  const cross=siteRibbon('Traced-cross-street',osmSite('cross'),CIRCULATION.crossStreet.width,roadMaterial,0.038);
+  const H=CIRCULATION.highway;
+  const highway=siteRibbon('Traced-I35-deck',osmSite('highway').reverse(),H.width,roadMaterial,CIRCULATION.highwayDeck);
+  siteRibbon('Opposite-frontage-road',osmSite('oppositeFrontage'),11.5,roadMaterial,0.035);
+  // Open deck where OSM tags the I-35 bridges (over SH 46 and the turnarounds); embankment elsewhere.
+  const bridges=[osmSite('bridgeNB'),osmSite('bridgeSB')];
+  const segDist=(p,[a,b])=>{const ab=[b[0]-a[0],b[1]-a[1]],t=Math.max(0,Math.min(1,((p[0]-a[0])*ab[0]+(p[1]-a[1])*ab[1])/(ab[0]**2+ab[1]**2)));return Math.hypot(p[0]-a[0]-ab[0]*t,p[1]-a[1]-ab[1]*t);};
+  for(let i=0;i<120;i++){
+    const a=highway.path.getPoint(i/120),b=highway.path.getPoint((i+1)/120),mid=a.clone().add(b).multiplyScalar(0.5),direction=b.clone().sub(a);
+    const onBridge=bridges.some(br=>segDist([mid.x,mid.z],br)<14);
+    const h=onBridge?0.65:CIRCULATION.highwayDeck-0.15;
+    const support=box(onBridge?'I35-open-span-deck':'I35-embankment',onBridge?H.width+0.5:H.width+4,h,direction.length()+0.2,onBridge?M.concrete:M.grass,mid.x,onBridge?CIRCULATION.highwayDeck-0.4:h/2,mid.z);
     support.rotation.y=Math.atan2(direction.x,direction.z);support.castShadow=false;
   }
   // Lane markings follow road tangents. Don't draw dashed lines through the
   // frontage/cross-street junction or a continuous curb across an entrance.
+  const junctions=OSM_ROADS.junctions.map(trueToSite);
   function markings(road,offsets,y,skipIntersection=false){
     const length=road.path.getLength();
     for(let d=0;d<length;d+=8){
       const t=d/length,p=road.path.getPointAt(t),v=road.path.getTangentAt(t);
-      const junction=aerialToSite([910,750]);
-      if(skipIntersection&&Math.hypot(p.x-junction[0],p.z-junction[1])<15)continue;
+      if(skipIntersection&&junctions.some(j=>Math.hypot(p.x-j[0],p.z-j[1])<15))continue;
       const n=new THREE.Vector3(v.z,0,-v.x);
       for(const offset of offsets){const q=p.clone().addScaledVector(n,offset),line=box('Road-lane-dash',0.13,0.005,3.2,white,q.x,y,q.z);line.rotation.y=Math.atan2(v.x,v.z);}
     }
   }
   markings(frontage,[-2.05,2.05],0.047,true);
   markings(cross,[-7.5,-4.5,4.5,7.5],0.05,true);
-  markings(highway,[-8.1,-4.2,4.2,8.1],6.214);
+  markings(highway,H.laneLines,CIRCULATION.highwayDeck+0.014);
   for(let d=0;d<highway.path.getLength();d+=3){
     const p=highway.path.getPointAt(d/highway.path.getLength()),v=highway.path.getTangentAt(d/highway.path.getLength());
-    const median=box('I35-median-barrier',0.65,0.8,3.1,M.concrete,p.x,6.6,p.z);median.rotation.y=Math.atan2(v.x,v.z);
+    const median=box('I35-median-barrier',0.65,0.8,3.1,M.concrete,p.x,CIRCULATION.highwayDeck+0.4,p.z);median.rotation.y=Math.atan2(v.x,v.z);
   }
   const cp=cross.path;
   for(let d=0;d<cp.getLength();d+=3){
     const p=cp.getPointAt(d/cp.getLength());
-    if((p.x>9&&p.x<38)||(p.x>61&&p.x<102))continue;
+    if(junctions.some(j=>Math.hypot(p.x-j[0],p.z-j[1])<18))continue; // no median across junctions/entrances
     const t=cp.getTangentAt(d/cp.getLength());const edge=box('Cross-street-median-curb',3.1,0.15,3.15,M.curb,p.x,0.105,p.z);edge.rotation.y=Math.atan2(t.x,t.z);
     const m=box('Cross-street-brick-median',2.8,0.04,3.15,M.brick,p.x,0.2,p.z);m.rotation.y=edge.rotation.y;
   }

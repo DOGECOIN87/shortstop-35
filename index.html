@@ -859,8 +859,8 @@ function pylon(x, z, top_ = 14.95) {
   g.rotation.y = Math.PI / 2;
   signGroups.push(g); return g;
 }
-// NE pylon: traced position, lidar height. SE pylon: lidar position and height.
-const roadsideSigns=[pylon(...siteCirculation.signPositions[0], PYLONS.north.top), pylon(...trueToSite(PYLONS.south.trueXY), PYLONS.south.top)];
+// Both pylons at their lidar positions and heights (NE by the SH 46 junction, SE by the south entrance).
+const roadsideSigns=[pylon(...trueToSite(PYLONS.north.trueXY), PYLONS.north.top), pylon(...trueToSite(PYLONS.south.trueXY), PYLONS.south.top)];
 // pylon(18, 37);   // south-east corner
 // pylon(16, -22);  // north-east corner, near Loop 337
 
@@ -911,15 +911,17 @@ const roadsideSigns=[pylon(...siteCirculation.signPositions[0], PYLONS.north.top
 // Reject legacy decorations that now conflict with recalibrated roads/driveways.
 const hasRoadClearance=createRoadClearance(siteCirculation.obstacleSurfaces);
 // Street lights stand on grass; their entire arm must clear the road.
-function streetLight(x, z) {
+function streetLight(x, z, toward = null, h = 8.6) {
   if(!hasRoadClearance(x,z,3.1))return null;
   const g = new THREE.Group(); g.position.set(x, 0, z); world.add(g);
-  cyl(0.09, 0.12, 8.6, M.steel, 0, 4.3, 0, g);
-  box(0.12, 0.12, 2.6, M.steel, 0, 8.55, -1.2, g);
-  const lamp = box(0.5, 0.1, 1.1, lampGlowMat, 0, 8.48, -2.3, g);
+  if (toward) g.rotation.y = Math.atan2(-(toward[0] - x), -(toward[1] - z)); // arm reaches over the road
+  cyl(0.09, 0.12, h, M.steel, 0, h / 2, 0, g);
+  box(0.12, 0.12, 2.6, M.steel, 0, h - 0.05, -1.2, g);
+  const lamp = box(0.5, 0.1, 1.1, lampGlowMat, 0, h - 0.12, -2.3, g);
   return lamp;
 }
-for(const pixel of [[794,790],[710,915]])streetLight(...aerialToSite(pixel));
+// Two 12.3 m street lights measured in the 2017 lidar on the strip east of the canopy.
+for (const p of [[41.15, -19.95], [50.0, 13.5]]) streetLight(...trueToSite(p), trueToSite([p[0] + 8, p[1]]), 12.3);
 // trees — big mature oaks west (behind store / around the inn), shrubs at the frontage
 function tree(x, z, s = 1) {
   if(!hasRoadClearance(x,z,4*s))return null;
@@ -1067,20 +1069,21 @@ function addTraffic(veh, x, y, z, dir, speed) {
   veh.position.set(x, y, z);
   veh.rotation.y = dir > 0 ? Math.PI : 0;
   if (veh === undefined) return;
-  const highway=x>40;
+  const highway=x>37;
   const path=highway?siteCirculation.highway.path:siteCirculation.frontage.path;
   traffic.push({g:veh,dir,speed,y,path,laneOffset:x-(highway?49:30.5),progress:(z+165)/330,length:path.getLength()});
 }
-// Frontage road is one-way southbound (lane centres x 26.3 / 30.5 / 34.7). I-35 main lanes: southbound on the
-// station side (slow lane x 43.4, fast lane x 47.1), northbound beyond the median (fast x 51.0, slow x 54.6).
+// Frontage road is one-way southbound (lane centres x 26.3 / 30.5 / 34.7). I-35 (OSM, two carriageways ~21.7 m
+// apart): southbound on the station side (slow lane x 39.95, fast x 43.55), northbound beyond the barrier
+// (fast x 54.45, slow x 58.05); x is lane offset + 49 (path centre).
 // One speed per lane so vehicles never drive through each other.
 addTraffic(sedan(0xc0c4c9), 26.3, 0, -60, 1, 10);
 addTraffic(sedan(0x2f4a68), 26.3, 0, 55, 1, 10);
 addTraffic(pickup(0x8c2f2f), 30.5, 0, 20, 1, 12);
-addTraffic(semi(), 43.4, CIRCULATION.highwayDeck, -40, 1, 18);
-addTraffic(sedan(0xe3e5e8), 51.0, CIRCULATION.highwayDeck, 80, -1, 23);
-addTraffic(sedan(0x3a3f45), 51.0, CIRCULATION.highwayDeck, -90, -1, 23);
-addTraffic(semi(), 54.6, CIRCULATION.highwayDeck, 30, -1, 18);
+addTraffic(semi(), 39.95, CIRCULATION.highwayDeck, -40, 1, 18);
+addTraffic(sedan(0xe3e5e8), 54.45, CIRCULATION.highwayDeck, 80, -1, 23);
+addTraffic(sedan(0x3a3f45), 54.45, CIRCULATION.highwayDeck, -90, -1, 23);
+addTraffic(semi(), 58.05, CIRCULATION.highwayDeck, 30, -1, 18);
 
 /* ===== supplied car models: BMW E46 M Sport + Tesla Cybertruck (optimised GLBs in assets/cars/) =====
    Each model is scaled to its true length, its wheels set on y = 0, and turned so its front faces local −Z
@@ -1137,8 +1140,8 @@ const carsPromise = Promise.all([loadCar('./assets/cars/bmw-e46.glb'), loadCar('
   // in traffic alongside the procedural vehicles
   addTraffic(bmwCar(bmw, 0x8e1420), 26.3, 0, -150, 1, 10);   // frontage road
   addTraffic(cyberCar(cyber), 30.5, 0, -95, 1, 12);          // frontage road
-  addTraffic(bmwCar(bmw, 0x1d3f72), 47.1, CIRCULATION.highwayDeck, 50, 1, 24);   // I-35 southbound fast lane
-  addTraffic(cyberCar(cyber), 51.0, CIRCULATION.highwayDeck, -5, -1, 23);        // I-35 northbound fast lane
+  addTraffic(bmwCar(bmw, 0x1d3f72), 43.55, CIRCULATION.highwayDeck, 50, 1, 24);  // I-35 southbound fast lane
+  addTraffic(cyberCar(cyber), 54.45, CIRCULATION.highwayDeck, -5, -1, 23);       // I-35 northbound fast lane
   applyTime(activeTime);
 }).catch(err => console.warn('Car models failed to load; procedural traffic only', err));
 tlDots.forEach((d, i) => { d.material.emissiveIntensity = (i % 3 === 2) ? 0.9 : 0.04; });

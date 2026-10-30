@@ -65,13 +65,11 @@ export function trueToSite([east, north]) {
 // Flagpole: lidar slender object reaching ~20.3 m at the modelled flag position.
 export const FLAGPOLE = Object.freeze({ top: 20.3 });
 
-// Twin-post price pylons (lidar tall objects at the SE and NE corners, matching
-// the earlier research notes). The SE pylon moves to its measured position;
-// the NE one keeps its traced position (its lidar spot falls on the traced
-// road until roads are rebuilt) but takes its measured height.
+// Twin-post price pylons: lidar tall objects at the SE and NE corners (matching
+// the earlier research notes), placed at their measured positions and heights.
 export const PYLONS = Object.freeze({
   south: { trueXY: [16.30, -38.39], top: 19.6 },
-  north: { top: 12.2 }
+  north: { trueXY: [36.78, 29.55], top: 12.2 }
 });
 
 // Recessed canopy light grid (8 rows x 2 banks) spread along the canopy.

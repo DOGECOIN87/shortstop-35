@@ -35,13 +35,16 @@ layout. Heights are above the forecourt slab.
 | Edelweiss Inn roof | ridge 8.0 m | ridge 9.2 m (steep roof, single storey kept) | Lidar roof p95 9.18 m |
 | Site heading | −35° (visual estimate) | −40.81° | Rigid fit of store/canopy/car-wash centres to lidar footprints (residuals 0.4–1.3 m); world −Z = true north |
 | Flagpole | 14.4 m | 20.3 m to the finial | Lidar slender object reaching ~20.3 m at the modelled flag position |
-| Price pylons | ~15 m each, traced positions | SE: 19.6 m at its lidar position; NE: 12.2 m (traced position kept until roads are rebuilt) | Lidar tall objects at the SE/NE corners, matching earlier research notes |
+| Price pylons | ~15 m each, traced positions | SE 19.6 m and NE 12.2 m, both at their lidar positions | Lidar tall objects at the SE/NE corners, matching earlier research notes |
+| Roads | traced from screenshots | OpenStreetMap centrelines in the fitted frame: SH 46→frontage ramp, frontage road, SH 46, I-35 (two carriageways ~21.7 m apart, 36 m deck), northbound frontage, both turnarounds | © OpenStreetMap contributors (ODbL), `scripts/osm-roads.js` |
+| I-35 deck height | 6.2 m above the lot | 5.5 m; open span where OSM tags the bridges | Lidar deck top 201.7 m vs store ground 196.2 m |
+| Street lights (frontage strip) | 8.6 m, traced | 12.3 m at two lidar positions | Lidar |
 | Sun (Day/Golden) | fixed artistic positions | real solar position at the store coordinate for the visitor's date (`?date=YYYY-MM-DD` to pin) | NOAA solar position; Day = solar noon + 1 h, Golden = sunset − 40 min; Night unchanged |
 
 **Still estimated:** storefront openings and signage (a straight-on storefront
 photo is still needed), canopy underside, pump-island spacing, the traced ground
 layout (forecourt, lawns, walks, parking), the inn's position and footprint,
-road geometry, the NE pylon's position, neighbouring buildings and terrain (the site is still
+neighbouring buildings and terrain (the site is still
 modelled flat; lidar shows the lot ~2 m above the frontage road). The lidar is
 from 2017; changes since then are not reflected in these measurements.
 

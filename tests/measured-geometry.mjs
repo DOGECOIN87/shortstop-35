@@ -84,7 +84,15 @@ const n = trueToSite([SITE_ORIGIN_TRUE[0], SITE_ORIGIN_TRUE[1] + 10]), a = SITE_
 near(n[0] * Math.cos(a) + n[1] * Math.sin(a), 0, 1e-9, 'north stays on the world z axis'); near(-n[0] * Math.sin(a) + n[1] * Math.cos(a), -10, 1e-9, 'north = world -Z');
 near(FLAGPOLE.top, 20.3, 1e-9, 'flagpole top from lidar');
 assert.ok(PYLONS.south.top > PYLONS.north.top && PYLONS.south.top < 20);
-assert.ok(source.includes('pylon(...trueToSite(PYLONS.south.trueXY), PYLONS.south.top)'));
+assert.ok(source.includes('pylon(...trueToSite(PYLONS.south.trueXY), PYLONS.south.top)') && source.includes('pylon(...trueToSite(PYLONS.north.trueXY), PYLONS.north.top)'));
 const landscape = fs.readFileSync(new URL('../scripts/store-side-landscape.js', import.meta.url), 'utf8');
 assert.ok(landscape.includes('const H=FLAGPOLE.top-0.2'));
 console.log('PASS: georeference helper, 20 m flagpole, measured pylon heights/position');
+
+// OSM roads: present, georeferenced, and on the expected side of the station.
+import { OSM_ROADS, osmSite } from '../scripts/osm-roads.js';
+for (const k of ['frontage','frontageMainline','cross','highway','oppositeFrontage','bridgeNB','bridgeSB']) assert.ok(OSM_ROADS[k].length >= 2, k);
+const hw = OSM_ROADS.highway.find(p => Math.abs(p[1]) < 15); assert.ok(hw && hw[0] > 120 && hw[0] < 165, 'I-35 runs ~140 m east of the store');
+const circ = fs.readFileSync(new URL('../scripts/site-circulation.js', import.meta.url), 'utf8');
+assert.ok(circ.includes("osmSite('frontage')") && circ.includes("osmSite('cross')") && circ.includes("osmSite('highway').reverse()"));
+console.log('PASS: OSM road network georeferenced; pylons at lidar positions');
