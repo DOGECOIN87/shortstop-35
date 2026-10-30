@@ -1292,6 +1292,7 @@ function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
   if(!reduceFlagMotion) windTime+=dt;
+  if (window.__waveFlag) window.__waveFlag(windTime);
   sideLandscape.update(windTime,activeTime==='night');
   if (fly) {
     fly.t += dt / fly.dur;
@@ -1445,6 +1446,56 @@ stationLayout.rotation.y = BUILDING_ANGLE;
 stationLayout.position.copy(STATION_OFFSET);
 world.rotation.y = SITE_HEADING;
 world.updateMatrixWorld(true);
+/* ===== Detailed station model built in Blender (blender/shortstop_station.blend) =====
+   Exported to assets/web-station/shortstop_detailed.glb in the same true-north local frame as
+   trueToSite(): glTF +X = east, -Z = north, so it sits at the site origin offset. It replaces the
+   procedural station; the moving traffic, sky, lighting presets, views and hotspots stay. */
+let detailedFlag = null;
+try {
+  const detailed = await new Promise((res, rej) => new GLTFLoader().setMeshoptDecoder(MeshoptDecoder)
+    .load('./assets/web-station/shortstop_detailed.glb', res, undefined, rej));
+  const root = (detailed.scenes || []).find(s => s.children.length) || detailed.scene;
+  root.position.set(-37.55, -0.4, -5.33);
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    o.castShadow = true; o.receiveShadow = true;
+    if (o.material && o.material.map && /flag/i.test(o.material.name || '')) detailedFlag = o;
+  });
+  scene.add(root);
+  const keepMoving = new Set(traffic.map(v => v.g));
+  world.children.forEach(c => { if (!keepMoving.has(c)) c.visible = false; });
+  if (detailedFlag) {
+    // Wave the flag on the page (the Blender wave is a geometry-nodes effect that glTF cannot carry).
+    // The optimised GLB stores the flag as quantised int16 under a scaled node; bake it to float metres in root space.
+    root.updateMatrixWorld(true);
+    const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert().multiply(detailedFlag.matrixWorld);
+    const geo = detailedFlag.geometry.clone(), q = geo.attributes.position, f32 = new Float32Array(q.count * 3);
+    for (let i = 0; i < q.count; i++) { f32[3*i] = q.getX(i); f32[3*i+1] = q.getY(i); f32[3*i+2] = q.getZ(i); }
+    geo.setAttribute('position', new THREE.BufferAttribute(f32, 3)); geo.deleteAttribute('normal'); geo.applyMatrix4(toRoot);
+    geo.computeVertexNormals(); detailedFlag.geometry = geo;
+    root.add(detailedFlag); detailedFlag.position.set(0, 0, 0); detailedFlag.quaternion.identity(); detailedFlag.scale.set(1, 1, 1);
+    detailedFlag.frustumCulled = false; detailedFlag.material.side = THREE.DoubleSide;
+    const pos = geo.attributes.position, base = pos.array.slice();
+    const dir = new THREE.Vector2(-0.0872, 0.9962), nrm = new THREE.Vector3(0.9962, 0, 0.0872);
+    let hx = Infinity, top = -Infinity, hoistX = 0, hoistZ = 0;
+    for (let i = 0; i < pos.count; i++) {
+      const x = base[3*i], y = base[3*i+1], z = base[3*i+2], s = x*dir.x + z*dir.y;
+      if (s < hx) { hx = s; hoistX = x; hoistZ = z; } if (y > top) top = y;
+    }
+    const FL = 8.69;
+    window.__waveFlag = t => {
+      for (let i = 0; i < pos.count; i++) {
+        const x0 = base[3*i], y0 = base[3*i+1], z0 = base[3*i+2];
+        const a = (x0 - hoistX)*dir.x + (z0 - hoistZ)*dir.y, v = y0 - top, xn = Math.max(0, a / FL), env = Math.pow(xn, 1.25);
+        const w = (0.62*Math.sin(0.85*a - 5.2*t + 0.18*v) + 0.22*Math.sin(1.9*a - 8.3*t - 0.55*v)) * env;
+        const dz = 0.16*Math.sin(1.1*a - 6.1*t)*env - 0.35*xn*xn, dx = -0.35*Math.abs(w)*xn;
+        pos.setXYZ(i, x0 + nrm.x*w + dir.x*dx, y0 + dz, z0 + nrm.z*w + dir.y*dx);
+      }
+      pos.needsUpdate = true; detailedFlag.geometry.computeVertexNormals();
+    };
+  }
+} catch (err) { console.warn('Detailed station model failed to load; showing the procedural station', err); }
+
 // Only dismiss startup after the first frame has actually rendered.
 tick();
 window.__station3dComplete();
