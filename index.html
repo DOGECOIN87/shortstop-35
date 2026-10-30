@@ -436,6 +436,8 @@ import { addSiteCirculation, CIRCULATION } from './scripts/site-circulation.js';
 import { createRoadClearance } from './scripts/road-clearance.js';
 import { PLAN, aerialToSite } from './scripts/reference-plan.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
+import { CANOPY, STORE, SITE_HEADING_DEG, canopyLightRows } from './scripts/station-geometry.js';
+import { sunPresetVector } from './scripts/sun-position.js';
 
 /* =====================================================================
    Texaco ShortStop — realistic 3D model of the real station
@@ -692,9 +694,10 @@ function glowMat(tex) {
 
 /* ---------- tiny builders ---------- */
 const world = new THREE.Group(); scene.add(world);
-// Estimated NE/SW highway heading from owner reference imagery (not a survey).
-// Keep construction in local coordinates; rotate only after asset bounding-box fitting.
-const SITE_HEADING = -35 * Math.PI / 180;
+// Site heading: the owner-reference estimate (-35 deg) corrected by a rigid fit
+// of the store, canopy and car-wash centres to 2017 lidar footprints (-5.81 deg).
+// World -Z is true north. Rotate only after asset bounding-box fitting.
+const SITE_HEADING = SITE_HEADING_DEG * Math.PI / 180;
 const siteRotationAxis = new THREE.Vector3(0,1,0);
 // Buildings are diagonal to the road grid in the aerial reference.
 const BUILDING_ANGLE = Math.PI / 4;
@@ -766,10 +769,10 @@ const fuelGroup = new THREE.Group(); stationLayout.add(fuelGroup);
 const pumpSpots = [];
 const canopySpots = [];
 const islandZ = [-14, -5, 4, 13];
-// Canopy footprint follows the calibrated flat aerial (approximately 35.2 x 13.6 m).
-for (let r = 0; r < 8; r++) for (let cix = 0; cix < 2; cix++) {
+// Canopy footprint is measured (lidar/OSM: 32.4 x 12.8 m, see station-geometry.js).
+for (const lz of canopyLightRows()) for (let cix = 0; cix < 2; cix++) {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, 1.05), canopyLightMat);
-  panel.position.set(-4 + cix * 8, 5.45, -17 + r * 4.35); fuelGroup.add(panel);
+  panel.position.set(-4 + cix * 8, CANOPY.clearance, lz); fuelGroup.add(panel);
 }
 islandZ.forEach((z, idx) => {
   // Reference photo: transverse island, a centre column, one pump on each
@@ -787,7 +790,7 @@ islandZ.forEach((z, idx) => {
     box(0.46,0.19,0.025,M.tire,x,1.055,z+0.323,fuelGroup);
   });
   const lamp = new THREE.SpotLight(0xffe8bb, 0, 15, Math.PI/3, 0.8, 1.2);
-  lamp.position.set(0,5.35,z); lamp.target.position.set(0,0,z);
+  lamp.position.set(0,CANOPY.clearance-0.1,z); lamp.target.position.set(0,0,z);
   lamp.castShadow=true; lamp.shadow.mapSize.set(512,512);
   fuelGroup.add(lamp, lamp.target); canopySpots.push(lamp);
 });
@@ -1135,6 +1138,7 @@ const TIMES = {
 let pumpPanelMaterial;
 let canopyUndersideMaterial;
 let activeTime = 'day';
+const sunDate = (() => { const q = new URLSearchParams(location.search).get('date'); const d = q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? new Date(q + 'T12:00:00Z') : new Date(); return isNaN(d) ? new Date() : d; })();
 function applyTime(name) {
   const T = TIMES[name]; if (!T) return;
   activeTime = name;
@@ -1145,7 +1149,8 @@ function applyTime(name) {
   skyMat.uniforms.mid.value.setHex(T.sky[1]);
   skyMat.uniforms.bot.value.setHex(T.sky[2]);
   scene.background.setHex(T.bg); scene.fog.color.setHex(T.fog);
-  sun.intensity = T.sun; sun.position.set(...T.sunPos); sun.color.setHex(T.sunCol);
+  // Day/Golden use the real sun path over the store for today (or ?date=YYYY-MM-DD).
+  sun.intensity = T.sun; sun.position.set(...(sunPresetVector(name, sunDate) || T.sunPos)); sun.color.setHex(T.sunCol);
   hemi.intensity = T.hemi;
   renderer.toneMappingExposure = T.exp;
   canopyLightMat.emissiveIntensity = T.panel;
@@ -1351,6 +1356,11 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
   building.scale.z=PLAN.store.depth/8.8813;
   building.scale.x=PLAN.store.frontage/24.0069;
   building.updateMatrixWorld(true);
+  // Height follows the lidar parapet/fascia edge (~4.65 m) instead of the
+  // generic source shell (~5.36 m); the footprint already matched.
+  const sourceTop=new THREE.Box3().setFromObject(building).max.y;
+  building.scale.y=STORE.parapetTop/sourceTop;
+  building.updateMatrixWorld(true);
   const storeBounds=new THREE.Box3().setFromObject(building);
   building.position.x += PLAN.store.centerX+PLAN.store.depth/2-storeBounds.max.x;
   building.position.z += PLAN.store.centerZ-(storeBounds.min.z+storeBounds.max.z)/2;
@@ -1380,7 +1390,7 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
     c.fillText('Short Stop',w/2,h/2);
   });
   const storeName=new THREE.Mesh(new THREE.PlaneGeometry(7,0.72),glowMat(storeSignTex));
-  storeName.name='Store-name-fascia';storeName.position.set(-22.26,4.65,-1.4);
+  storeName.name='Store-name-fascia';storeName.position.set(-22.26,4.65*building.scale.y,-1.4);storeName.scale.y=building.scale.y; // stays on the shell's red band
   storeName.rotation.y=Math.PI/2;storeGroup.add(storeName);
   // New reference canopy replaces the old imported roof and silver columns.
   fuelGroup.add(referenceDesign.canopy(islandZ));

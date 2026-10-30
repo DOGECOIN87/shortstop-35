@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
 import { TextGeometry } from '../vendor/jsm/geometries/TextGeometry.js';
+import { CANOPY } from './station-geometry.js';
 
 export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) {
   const silver=new THREE.MeshStandardMaterial({color:0xc8cecf,metalness:0.25,roughness:0.36});
@@ -72,27 +73,33 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
     return g;
   }
   function canopy(islandZ) {
+    // Red/white Texaco canopy style from the owner's design references, sized
+    // to the measured canopy (station-geometry.js): 32.4 x 12.8 m, edge ~5.69 m.
     const g=new THREE.Group();g.name='Reference-white-red-masonry-canopy';
-    box(g,13.6,0.16,35.2,underside,0,5.53,-2,'White-soffit');
-    box(g,13.6,0.99,35.2,white,0,6.105,-2,'White-fascia');
-    box(g,13.76,0.13,35.34,M.darkTrim,0,6.735,-2,'Black-top-edge');
-    box(g,13.5,0.07,35.0,M.roof,0,6.83,-2,'Roof-surface');
-    [-6.82,6.82].forEach(x=>{
-      box(g,0.09,0.18,35.2,M.red,x,5.8,-2,'Long-red-ribbon');
-      box(g,0.055,0.045,35.2,M.redDark,x,5.69,-2,'Red-lower-reveal');
+    const C=CANOPY,W=C.width,L=C.length,cz=C.centerZ,half=W/2;
+    const fasciaMid=(C.fasciaTop+C.fasciaBottom)/2;
+    box(g,W,C.soffitDepth,L,underside,0,C.clearance+C.soffitDepth/2,cz,'White-soffit');
+    box(g,W,C.fasciaDepth,L,white,0,fasciaMid,cz,'White-fascia');
+    box(g,W+0.16,C.edgeDepth,L+0.14,M.darkTrim,0,C.edgeTop-C.edgeDepth/2,cz,'Black-top-edge');
+    // Roof membrane sits recessed inside the fascia (lidar roof deck ~5.34 m).
+    box(g,W-0.1,0.07,L-0.2,M.roof,0,C.roofTop-0.035,cz,'Roof-surface');
+    [-(half+0.02),half+0.02].forEach(x=>{
+      box(g,0.09,0.18,L,M.red,x,C.fasciaBottom+0.12,cz,'Long-red-ribbon');
+      box(g,0.055,0.045,L,M.redDark,x,C.fasciaBottom+0.01,cz,'Red-lower-reveal');
     });
-    [-19.67,15.67].forEach((z,i)=>{
-      box(g,13.65,1.03,0.12,M.red,0,6.14,z,'Red-brand-end');
+    const endMid=fasciaMid+0.035;
+    [C.startZ-0.07,C.endZ+0.07].forEach((z,i)=>{
+      box(g,W+0.05,C.fasciaDepth+0.04,0.12,M.red,0,endMid,z,'Red-brand-end');
       // True extruded lettering, with dark sidewalls, not flattened fascia text.
       if(font){
         const text=new TextGeometry('TEXACO',{font,size:0.83,height:0.11,curveSegments:4,bevelEnabled:true,bevelSize:0.008,bevelThickness:0.006,bevelSegments:1});
         text.computeBoundingBox();text.translate(-(text.boundingBox.max.x-text.boundingBox.min.x)/2,-0.32,0);
-        const letters=new THREE.Mesh(text,[white,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,6.14,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
+        const letters=new THREE.Mesh(text,[white,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,endMid,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
       }
       // Cylinder cap UVs rotate/mirror the badge. Use an outward-facing,
       // upright circular face instead, with only a Y rotation at the back end.
       const emblem=new THREE.Group();emblem.name='Canopy-star-roundel';
-      emblem.position.set(i?-4.9:4.9,6.17,z+(i?0.12:-0.12));
+      emblem.position.set((i?-1:1)*(half-1.9),endMid+0.03,z+(i?0.12:-0.12));
       if(!i)emblem.rotation.y=Math.PI;
       const rim=new THREE.Mesh(new THREE.CylinderGeometry(0.53,0.53,0.14,40),white);
       rim.name='Canopy-roundel-rim';rim.rotation.x=Math.PI/2;emblem.add(rim);
@@ -101,9 +108,10 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
       g.add(emblem);
     });
     islandZ.forEach(z=>{
-      box(g,0.84,5.2,0.84,masonry,0,2.9,z,'Tan-masonry-column');
+      const colTop=C.clearance+0.05,colH=colTop-0.3;
+      box(g,0.84,colH,0.84,masonry,0,0.3+colH/2,z,'Tan-masonry-column');
       box(g,0.89,0.45,0.89,M.darkTrim,0,0.45,z,'Column-base-collar');
-      box(g,0.98,0.12,0.98,white,0,5.39,z,'Column-capital');
+      box(g,0.98,0.12,0.98,white,0,C.clearance-0.06,z,'Column-capital');
 
     });
     return g;
