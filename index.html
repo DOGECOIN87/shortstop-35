@@ -780,7 +780,7 @@ const fuelGroup = new THREE.Group(); stationLayout.add(fuelGroup);
 const pumpSpots = [];
 const canopySpots = [];
 const islandZ = [-14, -5, 4, 13];
-const binGrey = new THREE.MeshStandardMaterial({ color:0x60666a, roughness:0.72, metalness:0.15 });
+const binGrey = new THREE.MeshStandardMaterial({ color:0x8c9296, roughness:0.6, metalness:0.2 });
 // Canopy footprint is measured (lidar/OSM: 32.4 x 12.8 m, see station-geometry.js).
 for (const lz of canopyLightRows()) for (let cix = 0; cix < 2; cix++) {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, 1.05), canopyLightMat);

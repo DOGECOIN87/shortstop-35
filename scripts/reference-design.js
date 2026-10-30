@@ -119,7 +119,7 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
       c.clearRect(0,0,w,h);c.fillStyle='#c8102e';c.font='italic bold 84px Arial';c.textAlign='center';c.textBaseline='middle';
       c.fillText('with TECHRON',w/2,h/2+4);
     });
-    const techronMat=new THREE.MeshStandardMaterial({map:techronMap,transparent:true,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
+    const techronMat=new THREE.MeshStandardMaterial({map:techronMap,alphaTest:0.4,roughness:0.85,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2});
     [-(half-1.35),half-1.35].forEach((x,k)=>{
       const graphic=new THREE.Mesh(new THREE.PlaneGeometry(9.6,1.2),techronMat);
       graphic.name='Soffit-Techron-graphic';graphic.rotation.set(Math.PI/2,0,k?Math.PI/2:-Math.PI/2);
