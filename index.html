@@ -436,7 +436,7 @@ import { addSiteCirculation, CIRCULATION } from './scripts/site-circulation.js';
 import { createRoadClearance } from './scripts/road-clearance.js';
 import { PLAN, aerialToSite } from './scripts/reference-plan.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
-import { CANOPY, STORE, SITE_HEADING_DEG, canopyLightRows } from './scripts/station-geometry.js';
+import { CANOPY, STORE, WASH, INN, SITE_HEADING_DEG, canopyLightRows } from './scripts/station-geometry.js';
 import { sunPresetVector } from './scripts/sun-position.js';
 
 /* =====================================================================
@@ -803,11 +803,11 @@ addStationDetails({fuelGroup,storeGroup,islandZ,M,ctex,glowMat});
 const sideLandscape=addStoreSideLandscape({stationLayout,M,ctex});
 
 /* ================= DETACHED CAR WASH ================= */
-// Aerial reference: small separate building north of the store, west of the canopy.
-// All dimensions are visual estimates, not surveyed measurements.
+// Small separate building north of the store, west of the canopy. Position and
+// heading come from the aerial trace; size and height from lidar/OSM (WASH).
 {
   const wash = new THREE.Group();wash.name='Aerial-aligned-car-wash'; wash.position.set(PLAN.wash.x,0,PLAN.wash.z);wash.rotation.y=PLAN.wash.heading;
-  wash.scale.set(PLAN.wash.width/11,1,PLAN.wash.depth/8);stationLayout.add(wash);
+  wash.scale.set(WASH.width/11,WASH.roofTop/4.31,WASH.length/8);stationLayout.add(wash);
   // Model the bay as walls around an opening, rather than painting a door on a solid box.
   box(0.35,3.8,8,M.wallWhite,-5.3,1.9,0,wash);
   box(0.35,3.8,8,M.wallWhite,5.3,1.9,0,wash);
@@ -863,11 +863,11 @@ const roadsideSigns=siteCirculation.signPositions.map(([x,z])=>pylon(x,z)); // t
     const geometry=new THREE.ExtrudeGeometry(profile,{depth:length,bevelEnabled:false});geometry.translate(0,0,-length/2);
     const roof=new THREE.Mesh(geometry,[M.wallWhite,M.innRoof]);roof.name='Hotel-gabled-roof';roof.position.set(x,4.4,z);roof.rotation.y=heading;roof.castShadow=roof.receiveShadow=true;inn.add(roof);
   }
-  pitchedRoof(12,86,3.6,-1.25,0);
+  pitchedRoof(12,86,INN.ridge-INN.wallHeight,-1.25,0); // steep roof to the lidar ridge (~9.2 m)
   // Four cross-gabled bays are visible along the parking-facing eave.
   for(const z of [-35,-12,15,35]){
     box(2.5,4.4,7.5,M.wallWhite,5.25,2.2,z,inn);
-    pitchedRoof(8.2,14,3.7,0,z,Math.PI/2);
+    pitchedRoof(8.2,14,INN.ridge-INN.wallHeight-0.25,0,z,Math.PI/2);
     box(0.08,0.16,7.5,M.timber,6.54,3.9,z,inn);
   }
   for(let z=-38;z<=38;z+=4.5){

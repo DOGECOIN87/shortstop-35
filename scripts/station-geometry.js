@@ -40,6 +40,13 @@ export const STORE = Object.freeze({
   parapetTop: 4.65
 });
 
+// Car wash: roof returns 11.3 x 8.6 m (OSM wall outline 11.5 x 8.1 m), roof ~3.86 m.
+export const WASH = Object.freeze({ length: 11.3, width: 8.6, roofTop: 3.86 });
+
+// Edelweiss Inn: lidar roof returns p50 ~7.15 m, p95 ~9.18 m (ridge). Kept as a
+// single storey with a steep (Tudor) roof: 4.4 m walls + 4.8 m rise.
+export const INN = Object.freeze({ wallHeight: 4.4, ridge: 9.2 });
+
 // Rigid fit of the screenshot-built layout onto the lidar footprints
 // (store, canopy and car-wash centres; residuals 0.4-1.3 m): the whole site
 // turns a further 5.81 degrees clockwise seen from above.

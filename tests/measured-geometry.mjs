@@ -58,3 +58,10 @@ assert.ok(day[1] > 40 && day[2] > 0, 'day sun high and to the south (+Z is south
 assert.ok(golden[0] < -50 && golden[1] < 12, 'golden sun low in the west');
 assert.equal(sunPresetVector('night'), null, 'night keeps its moonlight');
 console.log('PASS: measured canopy/store dimensions and heights, detail hardware, fitted heading, real sun positions');
+
+// Car wash and inn follow lidar/OSM too.
+import { WASH, INN } from '../scripts/station-geometry.js';
+assert.ok(WASH.length > WASH.width && Math.abs(WASH.roofTop - 3.86) < 1e-9);
+assert.ok(source.includes('wash.scale.set(WASH.width/11,WASH.roofTop/4.31,WASH.length/8)'));
+near(INN.ridge, 9.2, 1e-9, 'inn ridge'); assert.ok(source.includes('pitchedRoof(12,86,INN.ridge-INN.wallHeight,-1.25,0)'));
+console.log('PASS: car wash size/height and inn ridge from lidar');
