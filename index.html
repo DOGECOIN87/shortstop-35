@@ -1186,7 +1186,9 @@ function viewPosition(name) {
   if(['site','reference'].includes(name)) {
     // Align with the close Maps comparison (hotel vertical, highway below);
     // not a claim that the screenshots provide a surveyed compass bearing.
-    const bearing=(name==='reference'?4.1:49)*Math.PI/180;
+    // The heading correction turns the site; turn these plan cameras with it so
+    // the owner-chosen screen framing (hotel vertical, I-35 below) is unchanged.
+    const bearing=((name==='reference'?4.1:49)+(SITE_HEADING_DEG+35))*Math.PI/180;
     return viewTarget(name).add(new THREE.Vector3(Math.sin(bearing)*0.01,view.pos[1]*factor,Math.cos(bearing)*0.01));
   }
   const position=new THREE.Vector3(...view.pos).sub(localTarget).multiplyScalar(factor).add(localTarget);

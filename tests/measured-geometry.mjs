@@ -65,3 +65,5 @@ assert.ok(WASH.length > WASH.width && Math.abs(WASH.roofTop - 3.86) < 1e-9);
 assert.ok(source.includes('wash.scale.set(WASH.width/11,WASH.roofTop/4.31,WASH.length/8)'));
 near(INN.ridge, 9.2, 1e-9, 'inn ridge'); assert.ok(source.includes('pitchedRoof(12,86,INN.ridge-INN.wallHeight,-1.25,0)'));
 console.log('PASS: car wash size/height and inn ridge from lidar');
+assert.ok(source.includes("const bearing=((name==='reference'?4.1:49)+(SITE_HEADING_DEG+35))*Math.PI/180;"),'plan cameras keep the owner-chosen framing after the heading fit');
+console.log('PASS: Aerial plan / Reference framing compensates the heading correction');
