@@ -1149,6 +1149,7 @@ const TIMES = {
 };
 let pumpPanelMaterial;
 let canopyUndersideMaterial;
+let canopyGlowMaterials = [];
 let activeTime = 'day';
 const sunDate = (() => { const q = new URLSearchParams(location.search).get('date'); const d = q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? new Date(q + 'T12:00:00Z') : new Date(); return isNaN(d) ? new Date() : d; })();
 function applyTime(name) {
@@ -1157,6 +1158,7 @@ function applyTime(name) {
   if (pumpPanelMaterial) pumpPanelMaterial.emissiveIntensity = name === 'night' ? 2 : name === 'golden' ? 0.8 : 0.2;
   canopySpots.forEach(light => light.intensity = name === 'night' ? 75 : name === 'golden' ? 18 : 0);
   if (canopyUndersideMaterial) canopyUndersideMaterial.emissiveIntensity = name === 'night' ? 0.45 : 0.2;
+  canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = name === 'night' ? g.night : name === 'golden' ? g.golden : 0);
   skyMat.uniforms.top.value.setHex(T.sky[0]);
   skyMat.uniforms.mid.value.setHex(T.sky[1]);
   skyMat.uniforms.bot.value.setHex(T.sky[2]);
@@ -1361,6 +1363,7 @@ const referenceFont=await new FontLoader().loadAsync('./assets/fonts/helvetiker_
 const referenceDesign=createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font:referenceFont});
 pumpPanelMaterial=referenceDesign.panelMaterial;
 canopyUndersideMaterial=referenceDesign.underside;
+canopyGlowMaterials=referenceDesign.canopyGlow;
 const stationPromise = new Promise((resolve,reject) => stationLoader.load('./assets/web-station/station.glb', gltf => {
   const node = n => gltf.scene.getObjectByName(n+'_obj(4002336)');
   const building = new THREE.Group();

@@ -72,3 +72,6 @@ near(INN.ridge, 9.2, 1e-9, 'inn ridge'); assert.ok(source.includes('pitchedRoof(
 console.log('PASS: car wash size/height and inn ridge from lidar');
 assert.ok(source.includes("const bearing=((name==='reference'?4.1:49)+(SITE_HEADING_DEG+35))*Math.PI/180;"),'plan cameras keep the owner-chosen framing after the heading fit');
 console.log('PASS: Aerial plan / Reference framing compensates the heading correction');
+assert.ok(Array.isArray(design.canopyGlow) && design.canopyGlow.length === 3 && design.canopyGlow.every(g => g.material.emissiveIntensity === 0 && g.night > g.golden));
+assert.ok(source.includes("canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = name === 'night' ? g.night : name === 'golden' ? g.golden : 0);"));
+console.log('PASS: canopy band, letters and star badges glow only at golden hour/night');

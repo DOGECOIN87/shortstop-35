@@ -37,7 +37,12 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
     for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?47:106;const x=128+Math.cos(a)*r,y=128+Math.sin(a)*r;if(i)c.lineTo(x,y);else c.moveTo(x,y);}c.closePath();c.fill();
     c.fillStyle='#fff';c.fillRect(78,96,100,19);c.fillRect(116,105,24,92);
   });
-  const starMaterial=new THREE.MeshStandardMaterial({map:starMap,transparent:true,roughness:0.4});
+  const starMaterial=new THREE.MeshStandardMaterial({map:starMap,transparent:true,roughness:0.4,emissive:0xffffff,emissiveMap:starMap,emissiveIntensity:0});
+  // Illuminated new-design canopy branding: red band, TEXACO letters and star
+  // badges glow after dark (driven by the time-of-day presets).
+  const canopyBand=M.red.clone();canopyBand.emissive=new THREE.Color(0xff2236);canopyBand.emissiveIntensity=0;
+  const litLetters=white.clone();litLetters.emissive=new THREE.Color(0xffffff);litLetters.emissiveIntensity=0;
+  const canopyGlow=[{material:canopyBand,night:1.1,golden:0.35},{material:litLetters,night:0.9,golden:0.3},{material:starMaterial,night:0.75,golden:0.25}];
   function box(parent,w,h,d,material,x,y,z,name=''){
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.name=name;m.castShadow=m.receiveShadow=true;parent.add(m);return m;
   }
@@ -84,7 +89,7 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
     // Roof membrane caps the fascia stack (lidar roof ~5.34-5.40 m).
     box(g,W-0.1,0.07,L-0.2,M.roof,0,C.roofTop-0.035,cz,'Roof-surface');
     [-(half+0.02),half+0.02].forEach(x=>{
-      box(g,0.09,0.18,L,M.red,x,C.fasciaBottom+0.12,cz,'Long-red-ribbon');
+      box(g,0.09,0.18,L,canopyBand,x,C.fasciaBottom+0.12,cz,'Long-red-ribbon');
       box(g,0.055,0.045,L,M.redDark,x,C.fasciaBottom+0.01,cz,'Red-lower-reveal');
     });
     const endMid=fasciaMid+0.035;
@@ -95,7 +100,7 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
         const ls=0.83*C.fasciaDepth/0.99; // letter size follows the fascia depth
         const text=new TextGeometry('TEXACO',{font,size:ls,height:0.11,curveSegments:4,bevelEnabled:true,bevelSize:0.008,bevelThickness:0.006,bevelSegments:1});
         text.computeBoundingBox();const tb=text.boundingBox;text.translate(-(tb.max.x-tb.min.x)/2-tb.min.x,-(tb.max.y+tb.min.y)/2,0);
-        const letters=new THREE.Mesh(text,[white,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,endMid,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
+        const letters=new THREE.Mesh(text,[litLetters,black]);letters.name='Raised-TEXACO-letters';letters.position.set(0,endMid,z+(i?0.075:-0.075));if(!i)letters.rotation.y=Math.PI;letters.castShadow=true;g.add(letters);
       }
       // New-design roundel: a large star badge on the top corner of each end,
       // standing proud of the roofline (lidar edge returns reach ~6.1-6.5 m).
@@ -134,5 +139,5 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
     });
     return g;
   }
-  return {pump,canopy,panelMaterial,underside};
+  return {pump,canopy,panelMaterial,underside,canopyGlow};
 }
