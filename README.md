@@ -5,13 +5,47 @@ Official website for Texaco ShortStop, 1185 Interstate 35 N, New Braunfels, TX 7
 - `index.html` — interactive 3D site (Three.js, self-hosted in `vendor/` — no CDN dependency)
 - `classic.html` — lightweight non-3D version
 - Hosted on GitHub Pages. Custom domain: shortstop35.store (see CNAME).
-- 3D deep links: `?view=pumps|store|road|overview` and `?time=day|golden|night`
+- 3D deep links: `?view=overview|pumps|store|grounds|road|site|reference`, `?time=day|golden|night` and optional `?date=YYYY-MM-DD` (sun position)
 - To update the site, edit the HTML and commit — GitHub Pages redeploys automatically.
 
 ## 3D model credits
 
 - "BMW E46 MSport" by Ricy (https://sketchfab.com/ngon_3d), licensed CC BY 4.0 (http://creativecommons.org/licenses/by/4.0/). Source: https://sketchfab.com/3d-models/bmw-e46-msport-614c2f1660474178a1d4717b7492d1c7. Modified: geometry compressed, textures resized to WebP, car paint recoloured in the page.
 - "Low Poly Tesla Cybertruck" by kulonee (https://sketchfab.com/ynesolefru), Sketchfab Standard license. Source: https://sketchfab.com/3d-models/low-poly-tesla-cybertruck-64b4af3ab92543d297992ac4c2f8ed96. Modified: geometry compressed, materials adjusted in the page.
+
+## Data credits
+
+- Building sizes and heights: USGS 3D Elevation Program lidar, TX Central B1 2017 (StratMap 50 cm), via the public EPT mirror on AWS — public domain (U.S. Government work).
+- Map data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. Used to cross-check building outlines and road bearings.
+- Raw datasets are not stored in this repository.
+
+## Measured geometry (lidar/OSM) — 2026-10-29
+
+`scripts/station-geometry.js` holds the measured numbers that size the 3D model.
+Measurements were made in a local true-north frame around the store coordinate
+from 2017 lidar (2.09 M points) and OSM, then compared with the screenshot-built
+layout. Heights are above the forecourt slab.
+
+| Element | Before (estimated) | Now | Basis |
+|---|---|---|---|
+| Canopy | 35.2 × 13.6 m, top 6.87 m | 32.4 × 12.8 m, top 5.40 m | Lidar roof returns 32.4 × 12.8 m, roof ~5.34 m; OSM 32.0 × 12.8 m |
+| Canopy underside | 5.45 m | ~4.2 m (13 ft 9 in) | **Assumed** (lidar cannot see it); derived from a 0.85 m fascia — confirm with the posted clearance sign |
+| Store | 21.4 × 16 m, top 5.36 m | 21.4 × 16 m, top 4.65 m | Footprint already matched (OSM wall 19.8 × 15.8 m, roof 21.2 × 17.3 m); lidar parapet ~4.65 m, roof deck ~4.09 m |
+| Car wash | 7.7 × 10.9 m, 4.31 m | 8.6 × 11.3 m, 3.86 m | Lidar roof returns; OSM outline 8.1 × 11.5 m |
+| Edelweiss Inn roof | ridge 8.0 m | ridge 9.2 m (steep roof, single storey kept) | Lidar roof p95 9.18 m |
+| Site heading | −35° (visual estimate) | −40.81° | Rigid fit of store/canopy/car-wash centres to lidar footprints (residuals 0.4–1.3 m); world −Z = true north |
+| Sun (Day/Golden) | fixed artistic positions | real solar position at the store coordinate for the visitor's date (`?date=YYYY-MM-DD` to pin) | NOAA solar position; Day = solar noon + 1 h, Golden = sunset − 40 min; Night unchanged |
+
+**Still estimated:** storefront openings and signage (a straight-on storefront
+photo is still needed), canopy underside, pump-island spacing, the traced ground
+layout (forecourt, lawns, walks, parking), the inn's position and footprint,
+road geometry, flagpole height (lidar shows a ~20 m object at the modelled flag
+position — awaiting owner confirmation before changing the 14.4 m pole), price
+pylon heights/positions, neighbouring buildings and terrain (the site is still
+modelled flat; lidar shows the lot ~2 m above the frontage road). The lidar is
+from 2017; changes since then are not reflected in these measurements.
+
+Regression: `node --experimental-default-type=module --loader ./tests/three-loader.mjs tests/measured-geometry.mjs`
 
 ## Reference-based site update
 
@@ -33,9 +67,10 @@ private API credentials in this public static site or commit them to the reposit
 
 ### Site orientation
 
-The completed site group is rotated by an estimated -35° about world Y so the
-highway runs NE/SW rather than straight north/south. This is a visual heading
-estimate, not a surveyed bearing. `?view=site` is north-up (world -Z); close-up
+The completed site group is rotated about world Y so the highway runs NE/SW.
+The original visual estimate was -35°; it is now -40.81°, from a rigid fit of the
+store, canopy and car-wash centres to 2017 lidar footprints (see "Measured
+geometry" above). The ground layout itself is still traced, not surveyed. `?view=site` is north-up (world -Z); close-up
 camera presets and HTML hotspot projections use the same local-to-world transform.
 Rotation is applied after glTF fitting so world-space bounding boxes do not alter
 the store dimensions during loading.
