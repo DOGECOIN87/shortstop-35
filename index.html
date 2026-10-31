@@ -1496,6 +1496,9 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
     for(let j=0;j<5;j++)box(0.025,0.035,0.72,M.steel,-31-0.28+j*0.14,roofY+0.8,z,storeGroup);
   }
   // ===== FOODMART storefront (redesigned to match owner's FoodMart references) =====
+  // Wrapped in try/catch so a storefront-detail error never prevents the
+  // rest of the 3D scene from rendering.
+  try {
   // Red fascia band with white "FOODMART" lettering and the Texaco-style star,
   // matching the owner's straight-on storefront photo.
   function starPath(x, cx, cy, r) {
@@ -1742,6 +1745,9 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
   openSign.scale.y = building.scale.y;
   openSign.rotation.y = Math.PI / 2;
   storeGroup.add(openSign);
+  } catch (e) {
+    console.warn('FoodMart storefront detail failed to render:', e);
+  }
   // New reference canopy replaces the old imported roof and silver columns.
   fuelGroup.add(referenceDesign.canopy(islandZ));
   applyTime(activeTime);
