@@ -1450,7 +1450,9 @@ function makeHeaderMaterial(number) {
   const material = new THREE.MeshStandardMaterial({map:headerTexture,emissive:0xffffff,emissiveMap:headerTexture,emissiveIntensity:0.2});
   signGlowMats.push(material);return material;
 }
-const referenceFont=await new FontLoader().loadAsync('./assets/fonts/helvetiker_bold.typeface.json');
+let referenceFont=null;
+try { referenceFont=await new FontLoader().loadAsync('./assets/fonts/helvetiker_bold.typeface.json'); }
+catch(e){ console.warn('Font load failed; canopy lettering will use fallback:', e); }
 const referenceDesign=createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font:referenceFont});
 pumpPanelMaterial=referenceDesign.panelMaterial;
 canopyUndersideMaterial=referenceDesign.underside;
