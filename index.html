@@ -261,6 +261,7 @@
         <button class="tbtn" data-time="night">Night</button>
       </div>
       <div class="toolgroup">
+        <button class="tbtn" id="tourbtn" aria-pressed="true">Tour: On</button>
         <button class="tbtn" id="spinbtn">🔄 Auto-spin: Off</button>
       </div>
     </div>
@@ -436,7 +437,8 @@ import { addSiteCirculation, CIRCULATION } from './scripts/site-circulation.js';
 import { createRoadClearance } from './scripts/road-clearance.js';
 import { PLAN, aerialToSite } from './scripts/reference-plan.js';
 import { OSM_BUILDINGS } from './scripts/osm-roads.js';
-import { TRAFFIC_LANES } from './scripts/traffic-lanes.js';
+import { TRAFFIC_LANES, TRAFFIC_SIGNALS } from './scripts/traffic-lanes.js';
+import { createSimulation, signalState } from './scripts/traffic-engine.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector } from './scripts/sun-position.js';
@@ -1071,31 +1073,28 @@ const hotelPaints=[0xe7e5de,0x3a4148,0x7a2028,0xb1b2ac,0x263e59];
 siteCirculation.parkingSpots.forEach((p,i)=>{
   const car=sedan(hotelPaints[i%hotelPaints.length]);car.position.set(p.x,0,p.z);car.rotation.y=p.heading;
 });
-/* moving traffic */
-const traffic = [];
-// Lanes come from the Blender build (scripts/traffic-lanes.js, true-north metres like the detailed GLB), so cars
-// stay in their lane on the modelled roads and follow the road height. Convert to `world` space: the GLB root sits
-// at (-37.55, -0.4, -5.33) in scene space and `world` is turned by SITE_HEADING.
-const lanePaths = {};
-function lanePath(name) {
-  if (!lanePaths[name]) lanePaths[name] = new THREE.CatmullRomCurve3(TRAFFIC_LANES[name].map(([e, n, u]) =>
-    new THREE.Vector3(e - 37.55, u - 0.4, -n - 5.33).applyAxisAngle(siteRotationAxis, -SITE_HEADING)), false, 'centripetal');
-  return lanePaths[name];
+/* Signal-controlled moving traffic. Coordinates and timing are shared with the Blender bake. */
+const trafficSimulation=createSimulation(TRAFFIC_LANES,TRAFFIC_SIGNALS);
+const traffic=trafficSimulation.cars.map(car=>({car,g:sedan(car.color)}));
+const animatedSignalLenses=[];
+let trafficAccumulator=0;
+function updateTraffic(dt){
+  trafficAccumulator+=dt;
+  while(trafficAccumulator>=.05){trafficSimulation.step(.05);trafficAccumulator-=.05;}
+  for(const v of traffic){
+    const p=v.car.p;
+    v.g.position.set(p.x-37.55,p.z-.4+.015,-p.y-5.33).applyAxisAngle(siteRotationAxis,-SITE_HEADING);
+    const tangent=new THREE.Vector3(p.dx,0,-p.dy).applyAxisAngle(siteRotationAxis,-SITE_HEADING);
+    v.g.rotation.y=Math.atan2(tangent.x,tangent.z)+Math.PI;
+  }
+  for(const lens of animatedSignalLenses){
+    const state=signalState(trafficSimulation.time,lens.group);
+    const on=['red','yellow','green'][lens.index]===state;
+    lens.mesh.material.color.setHex(on?lens.color:0x080808);
+    lens.mesh.material.emissive.setHex(on?lens.color:0x000000);
+    lens.mesh.material.emissiveIntensity=on?2.5:0;
+  }
 }
-function addTraffic(veh, lane, progress, speed) {
-  const path = lanePath(lane);
-  traffic.push({g:veh,dir:1,speed,path,progress,length:path.getLength()});
-}
-// Frontage road is one-way southbound: the curb lane is fed by the SH 46 right turn, the left lane by the frontage
-// mainline through the signal. I-35 cars use the lanes on the modelled bridge decks over SH 46.
-// One speed per lane so vehicles never drive through each other.
-addTraffic(sedan(0xc0c4c9), 'frontageCurb', 0.05, 10);
-addTraffic(sedan(0x2f4a68), 'frontageCurb', 0.38, 10);
-addTraffic(pickup(0x8c2f2f), 'frontageLeft', 0.1, 12);
-addTraffic(semi(), 'i35SbSlow', 0.2, 18);
-addTraffic(sedan(0xe3e5e8), 'i35NbFast', 0.1, 23);
-addTraffic(sedan(0x3a3f45), 'i35NbFast', 0.45, 23);
-addTraffic(semi(), 'i35NbSlow', 0.3, 18);
 
 /* ===== supplied car models: BMW E46 M Sport + Tesla Cybertruck (optimised GLBs in assets/cars/) =====
    Each model is scaled to its true length, its wheels set on y = 0, and turned so its front faces local −Z
@@ -1149,11 +1148,11 @@ const carsPromise = Promise.all([loadCar('./assets/cars/bmw-e46.glb'), loadCar('
   const parkedBmw = bmwCar(bmw, 0xaeb3b9); parkedBmw.position.set(4, 0, -17.4); parkedBmw.rotation.y=-Math.PI/2;                                     // parallel to the pump face (imported BMW front is -Z)
   const parkedCyber = cyberCar(cyber); parkedCyber.position.set(-17.0, 0, -4.3); parkedCyber.rotation.y = Math.PI / 2; // nosed in at the store front
   stationLayout.add(parkedBmw,parkedCyber);
-  // in traffic alongside the procedural vehicles
-  addTraffic(bmwCar(bmw, 0x8e1420), 'frontageCurb', 0.71, 10);   // frontage road, curb lane
-  addTraffic(cyberCar(cyber), 'frontageLeft', 0.6, 12);           // frontage road, left lane
-  addTraffic(bmwCar(bmw, 0x1d3f72), 'i35SbFast', 0.5, 24);        // I-35 southbound fast lane
-  addTraffic(cyberCar(cyber), 'i35NbFast', 0.78, 23);             // I-35 northbound fast lane
+  // Upgrade moving actors without changing the existing BMW/Cybertruck templates or their paint.
+  traffic.forEach((v,i)=>{
+    world.remove(v.g);
+    v.g=i%6===0?cyberCar(cyber):bmwCar(bmw,v.car.color);
+  });
   applyTime(activeTime);
 }).catch(err => console.warn('Car models failed to load; procedural traffic only', err));
 tlDots.forEach((d, i) => { d.material.emissiveIntensity = (i % 3 === 2) ? 0.9 : 0.04; });
@@ -1231,7 +1230,8 @@ let fly = null;
 function flyTo(name) {
   const v = VIEWS[name]; if (!v) return;activeView=name;
   fly = {
-    t: 0, dur: 1.5,
+    t: 0, dur: 3.5,
+    arc: Math.min(28,camera.position.distanceTo(viewPosition(name))*.16),
     p0: camera.position.clone(), p1: viewPosition(name),
     t0: controls.target.clone(), t1: viewTarget(name)
   };
@@ -1243,11 +1243,43 @@ document.querySelectorAll('[data-view]').forEach(b =>
 document.querySelectorAll('[data-time]').forEach(b =>
   b.addEventListener('click', () => applyTime(b.dataset.time)));
 const spinBtn = document.getElementById('spinbtn');
-spinBtn.addEventListener('click', () => {
-  controls.autoRotate = !controls.autoRotate;
-  controls.autoRotateSpeed = 0.7;
-  spinBtn.textContent = controls.autoRotate ? '🔄 Auto-spin: On' : '🔄 Auto-spin: Off';
+const tourBtn=document.getElementById('tourbtn');
+const tourViews=['overview','pumps','store','grounds','road','site'];
+const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let tourEnabled=!reducedMotion,tourPaused=false,tourDwell=0,lastInteraction=-Infinity,spinRequested=null,spinBeforeInteraction=false;
+function pauseTour(){
+  spinBeforeInteraction=controls.autoRotate;
+  lastInteraction=performance.now();tourPaused=true;tourDwell=0;fly=null;
+  controls.autoRotate=false;
+}
+stage.addEventListener('pointerdown',pauseTour,{capture:true});
+stage.addEventListener('wheel',pauseTour,{capture:true,passive:true});
+stage.addEventListener('keydown',pauseTour,{capture:true});
+controls.addEventListener('start',pauseTour);
+tourBtn.addEventListener('click',()=>{
+  tourEnabled=!tourEnabled;tourPaused=false;tourDwell=0;
+  lastInteraction=-Infinity;
 });
+spinBtn.addEventListener('click',()=>{
+  spinRequested=!(spinRequested??spinBeforeInteraction);
+});
+function updateTour(dt){
+  if(tourEnabled&&tourPaused&&performance.now()-lastInteraction>=20000){tourPaused=false;tourDwell=0;}
+  const running=tourEnabled&&!tourPaused;
+  if(running&&!fly){
+    tourDwell+=dt;
+    if(tourDwell>=12){
+      tourDwell=0;
+      flyTo(tourViews[(tourViews.indexOf(activeView)+1)%tourViews.length]);
+    }
+  }
+  controls.autoRotate=!fly&&(spinRequested??running);
+  controls.autoRotateSpeed=activeView==='site'?.15:.45;
+  const label=tourEnabled?(tourPaused?'Tour: Paused':'Tour: On'):'Tour: Off';
+  if(tourBtn.textContent!==label)tourBtn.textContent=label;
+  tourBtn.setAttribute('aria-pressed',String(tourEnabled));
+  spinBtn.textContent=controls.autoRotate?'🔄 Auto-spin: On':'🔄 Auto-spin: Off';
+}
 
 /* ================= HOTSPOTS + PICKING ================= */
 const INFO = {
@@ -1303,14 +1335,12 @@ function tick() {
     fly.t += dt / fly.dur;
     const k = fly.t >= 1 ? 1 : 1 - Math.pow(1 - fly.t, 3);
     camera.position.lerpVectors(fly.p0, fly.p1, k);
+    camera.position.y+=Math.sin(Math.PI*k)*fly.arc;
     controls.target.lerpVectors(fly.t0, fly.t1, k);
     if (fly.t >= 1) fly = null;
   }
-  traffic.forEach(v=>{
-    v.progress=((v.progress+v.dir*v.speed*dt/v.length)%1+1)%1;
-    const p=v.path.getPointAt(v.progress),t=v.path.getTangentAt(v.progress);
-    v.g.position.copy(p);v.g.rotation.y=Math.atan2(t.x,t.z)+(v.dir>0?Math.PI:0);
-  });
+  updateTraffic(dt);
+  updateTour(dt);
   clouds.forEach((c, i) => {
     c.visible=camera.position.y<35; // Keep aerial views unobstructed.
     c.position.x += dt * (0.5 + i * 0.07);
@@ -1342,7 +1372,8 @@ resize();
 
 const params = new URLSearchParams(location.search);
 applyTime(TIMES[params.get('time')] ? params.get('time') : 'day');
-const startView = VIEWS[params.get('view')] ? params.get('view') : 'reference';
+const requestedView=params.get('view')==='flag'?'grounds':params.get('view');
+const startView = VIEWS[requestedView] ? requestedView : 'overview';
 activeView=startView;
 camera.position.copy(viewPosition(startView));
 controls.target.copy(viewTarget(startView));
@@ -1463,6 +1494,14 @@ try {
   root.traverse(o => {
     if (!o.isMesh) return;
     o.castShadow = true; o.receiveShadow = true;
+    const signal=(o.name||'').replaceAll('_',' ').match(/Signal head (Frontage N|SH46 NW|SH46 SE) \d+ lens (\d)/);
+    const signalMaterial=(o.material?.name||'').match(/SS Animated signal (frontage|sh46) (\d)/);
+    if(signal||signalMaterial){
+      o.material=o.material.clone();
+      const group=signalMaterial?signalMaterial[1]:signal[1]==='Frontage N'?'frontage':'sh46';
+      const index=Number(signalMaterial?signalMaterial[2]:signal[2]);
+      animatedSignalLenses.push({mesh:o,group,index,color:[0xff2412,0xffb800,0x16e34a][index]});
+    }
     if (o.material && o.material.map && /flag/i.test(o.material.name || '')) detailedFlag = o;
   });
   scene.add(root);
