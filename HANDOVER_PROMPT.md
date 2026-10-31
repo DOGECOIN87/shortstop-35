@@ -1,0 +1,117 @@
+# Handover Prompt: FoodMart 3D Storefront & Interior Scene
+
+## Overview
+
+Build an interactive Three.js 3D scene of a **FoodMart convenience store** with matching exterior storefront and interior fit-out, based on the owner's reference photos and floor plan sketch. The scene runs in `index.html` (no build step, self-hosted Three.js in `vendor/`).
+
+## Repository Structure
+
+```
+/home/user/shortstop-35/
+├── index.html                 # Main Three.js app (single HTML file, all code inline)
+├── scripts/reference-design.js # Texaco pump + canopy construction
+├── scripts/station-geometry.js # Measured geometry constants
+├── scripts/reference-plan.js   # Aerial/ground plan calibration
+├── scripts/site-circulation.js # Roads, sidewalks, parking
+├── scripts/store-side-landscape.js # Store-side walks/grass
+├── scripts/surface-plan.js     # Polygon clipping for ground surfaces
+├── scripts/sun-position.js     # Time-of-day sun calculations
+├── scripts/traffic-engine.js   # Moving traffic simulation
+├── scripts/traffic-lanes.js    # Road lane definitions
+├── scripts/station-details.js  # Fine forecourt details
+├── scripts/road-clearance.js   # Clearance checks
+├── vendor/three.module.js      # Three.js (self-hosted, no CDN)
+├── vendor/jsm/                 # Three.js addons (OrbitControls, GLTFLoader, etc.)
+├── assets/web-station/station.glb  # Store building shell (loaded & reskinned)
+├── assets/cars/                # Car GLTF models
+├── assets/fonts/helvetiker_bold.typeface.json
+└── preview-server.py           # Local dev server (python3 scripts/preview-server.py --port 8081)
+```
+
+## Reference Images (Owner-Provided)
+
+### Storefront (exterior)
+- **FOODMART sign**: Red fascia band, white "FOODMART" lettering, Texaco-style star logo with "T" in center
+- **"WE APPRECIATE YOUR BUSINESS" band**: White band with red text below the windows on the front wall
+- **Neon window signs**: CBD, E-CIGS, 10 THC, DELTA 8 (across the front glazing)
+- **Front entrance**: Double glass doors at center of front facade
+- **"OPEN" neon sign**: Yellow, in the front window
+- **Gray CMU/concrete block wall texture**: The building facade is gray concrete block (not limestone)
+- **Fully transparent front glazing**: Interior visible through windows
+
+### Interior (matching photos 8-12)
+- **Back-wall beverage coolers**: Row of glass-door refrigerators with stocked drinks
+- **Left & right snack aisles**: Shelving stocked with chips/candy products (3 levels each)
+- **Centre island**: Grab-and-go drinks display
+- **Checkout counter**: With register/screen
+- **Slot machines**: Inside the store near checkout (NOT outside on sidewalk)
+- **ATM + Bitcoin ATM**: Near entrance inside
+- **Tiled sales floor**: Gray/white tile
+
+### Pumps & Canopy (Texaco reference)
+- **Pump headers**: White field, red diagonal band, star/T badge, "with TECHRON", pump number
+- **Canopy**: Red/white Texaco canopy, star roundels on ends, TEXACO raised letters
+- **Night lighting**: TEXACO letters and star roundels glow, perimeter LED edge lighting, pump island base lights
+
+## Current State of `index.html` (What's Been Built)
+
+The scene is already implemented. Key sections to understand:
+
+### Time-of-Day System (lines ~1195-1240)
+- Presets: `day`, `golden`, `night`
+- Controls sky color, fog, sun position/intensity, sign emissive, interior lighting, lamp brightness
+- Buttons in toolbar switch time; `?time=day|golden|night` URL param
+
+### Store Building (station.glb, lines ~1460-1510)
+- Loaded from `assets/web-station/station.glb`, reskinned:
+  - IDs 62,63,64 = front glazing → transparent glass material
+  - IDs 42,76,77,78 = red bands → M.red
+  - Other walls → gray CMU block texture, semi-transparent (opacity 0.5)
+
+### FOODMART Storefront (lines ~1475-1520)
+- Red fascia with "FOODMART" + Texaco star (canvas texture, glow material)
+- "WE APPRECIATE YOUR BUSINESS" band
+- Neon window signs: CBD, E-CIGS, 10 THC, DELTA 8
+- Front double doors, OPEN neon sign
+
+### Interior Fit-Out (lines ~1580-1695)
+- Tiled floor, back-wall coolers, left/right snack aisles, centre island
+- Checkout counter with register
+- Slot machines (inside, near checkout)
+- ATM + Bitcoin ATM
+
+### Pumps & Canopy (`scripts/reference-design.js`)
+- Texaco "with TECHRON" pump headers with star badge
+- Canopy with red/white branding, TEXACO letters, star roundels, perimeter LED edge lighting
+
+### Sidewalks (lines ~820-845)
+- Front walk along store facade, canopy apron walks, connector walks, side property walk, driveway aprons
+
+## Key Technical Details
+
+- **Module type**: `<script type="module">` with importmap pointing to `./vendor/three.module.js`
+- **Top-level await**: Used for FontLoader and GLTFLoader (async at module top level)
+- **Error handling**: `__station3dFail()` / `__station3dComplete()` manage the loading UI
+- **Camera views**: overview, pumps, store, grounds, road, site, reference (toggle via `[data-view]` buttons)
+- **Coordinate system**: Site-local frame; `stationLayout` rotated by `BUILDING_ANGLE`, `world` rotated by `SITE_HEADING`
+- **Canvas textures**: All signs made with HTML5 Canvas API (`ctex()` helper) → Three.js textures
+- **No external assets needed for signage**: All text generated procedurally
+
+## Common Pitfalls to Avoid
+
+1. **Duplicate `let` declarations** — `canopyGlowMaterials` was declared twice; caused a SyntaxError that prevented the entire module from running
+2. **Variable ordering** — `canopyGlowMaterials` must be declared before the pump-island code pushes to it
+3. **Top-level await** — FontLoader must complete before `createReferenceDesign()` is called
+4. **GLB node names** — station.glb nodes are named like `40_obj(4002336)`; access via `gltf.scene.getObjectByName('40_obj(4002336)')`
+5. **Transparent materials** — Need `transparent: true` and proper opacity for glazing/walls
+
+## Testing
+
+- Start server: `python3 scripts/preview-server.py --port 8081`
+- Open: `http://localhost:8081/index.html`
+- Hard refresh (Ctrl+Shift+R) after changes
+- Toggle time-of-day with Day/Golden/Night buttons to verify night lighting
+
+## Branch
+
+All work is on `arena/96e6d5cb-shortstop-35`. Commit changes to this branch only.

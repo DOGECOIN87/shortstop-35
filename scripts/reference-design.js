@@ -39,10 +39,12 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
   });
   const starMaterial=new THREE.MeshStandardMaterial({map:starMap,transparent:true,roughness:0.4,emissive:0xffffff,emissiveMap:starMap,emissiveIntensity:0});
   // Illuminated new-design canopy branding: red band, TEXACO letters and star
-  // badges glow after dark (driven by the time-of-day presets).
+  // badges glow after dark (driven by the time-of-day presets). Brushed to
+  // match the owner's night reference — the TEXACO sign and star roundels
+  // glow brightly like the real station.
   const canopyBand=M.red.clone();canopyBand.emissive=new THREE.Color(0xff2236);canopyBand.emissiveIntensity=0;
   const litLetters=white.clone();litLetters.emissive=new THREE.Color(0xffffff);litLetters.emissiveIntensity=0;
-  const canopyGlow=[{material:canopyBand,night:1.1,golden:0.35},{material:litLetters,night:0.9,golden:0.3},{material:starMaterial,night:0.75,golden:0.25}];
+  const canopyGlow=[{material:canopyBand,night:1.6,golden:0.5},{material:litLetters,night:1.4,golden:0.45},{material:starMaterial,night:1.2,golden:0.4}];
   function box(parent,w,h,d,material,x,y,z,name=''){
     const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),material);m.position.set(x,y,z);m.name=name;m.castShadow=m.receiveShadow=true;parent.add(m);return m;
   }
@@ -118,6 +120,16 @@ export function createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font}) 
       logo.name='Upright-canopy-star-face';logo.position.z=0.092;emblem.add(logo);
       g.add(emblem);
     });
+    // Perimeter LED edge lighting along the canopy fascia — on at night like
+    // the owner's night reference (red glowing edge under the soffit).
+    const edgeLed = new THREE.MeshStandardMaterial({ color:0xff2236, emissive:0xff2236, emissiveIntensity:0 });
+    canopyGlow.push({material:edgeLed,night:0.9,golden:0.3});
+    const ledStrip = new THREE.Mesh(new THREE.BoxGeometry(W,0.05,0.04),edgeLed);
+    ledStrip.position.set(0,C.fasciaBottom-0.03,cz);ledStrip.name='Canopy-edge-LED';g.add(ledStrip);
+    const ledStripEnd = new THREE.Mesh(new THREE.BoxGeometry(0.04,0.05,L),edgeLed);
+    ledStripEnd.position.set(-half-0.02,C.fasciaBottom-0.03,cz);ledStripEnd.name='Canopy-edge-LED-end';g.add(ledStripEnd);
+    const ledStripEnd2 = ledStripEnd.clone();ledStripEnd2.position.set(half+0.02,C.fasciaBottom-0.03,cz);g.add(ledStripEnd2);
+
     // "with TECHRON" graphic printed on the white soffit along both long sides,
     // read from the pump lanes (new-design reference).
     const techronMap=ctex(1024,128,(c,w,h)=>{

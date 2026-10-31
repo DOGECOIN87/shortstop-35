@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Texaco ShortStop | Gas Station & Convenience Store on I-35 in New Braunfels, TX</title>
-<meta name="description" content="Texaco Short Stop in New Braunfels, Texas, is your go-to convenience store. Explore our station in interactive 3D — fuel with Techron, cold drinks, snacks and road-trip essentials at 1185 Interstate 35 N, New Braunfels, TX 78130 · (830) 606-1892">
+<title>FoodMart | Convenience Store & Car Wash — Interactive 3D</title>
+<meta name="description" content="FoodMart convenience store in New Braunfels, Texas. Explore the storefront and interior in interactive 3D — cold drinks, snacks, slot machines, ATM and road-trip essentials.">
 <link rel="canonical" href="https://shortstop35.store/">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Texaco ShortStop — New Braunfels, TX">
@@ -212,6 +212,7 @@
         <button type="button" class="btn btn-red btn-sm" data-retry-3d>Retry 3D</button>
         <a class="btn btn-glass btn-sm" href="classic.html">View simple site</a>
       </div>
+      <div id="loaderr" hidden style="color:#ff6b6b;background:rgba(0,0,0,.45);border:1px solid #ff6b6b;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px"></div>
     </div>
 
     <div class="fallback3d" id="fallback3d">
@@ -408,6 +409,15 @@
     window.__station3dStatus = 'ready';
     document.getElementById('fallback3d').classList.remove('show');
     document.getElementById('loading3d').classList.add('done');
+  };
+  // Show a visible error banner if a specific 3D subsystem fails.
+  window.show3dError = function (msg) {
+    const el = document.getElementById('loaderr');
+    if (el) {
+      el.textContent = '3D error: ' + msg;
+      el.hidden = false;
+    }
+    console.error('[3D]', msg);
   };
   window.addEventListener('error', function (event) {
     if (event.message || (event.target && event.target.tagName === 'SCRIPT')) window.__station3dFail();
@@ -785,6 +795,7 @@ const pumpSpots = [];
 const canopySpots = [];
 const islandZ = [-14, -5, 4, 13];
 const binGrey = new THREE.MeshStandardMaterial({ color:0x8c9296, roughness:0.6, metalness:0.2 });
+let canopyGlowMaterials = []; // declared early; island base lights push to it at module load
 // Canopy footprint is measured (lidar/OSM: 32.4 x 12.8 m, see station-geometry.js).
 for (const lz of canopyLightRows()) for (let cix = 0; cix < 2; cix++) {
   const panel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, 1.05), canopyLightMat);
@@ -809,6 +820,14 @@ islandZ.forEach((z, idx) => {
   lamp.position.set(0,CANOPY.clearance-0.1,z); lamp.target.position.set(0,0,z);
   lamp.castShadow=true; lamp.shadow.mapSize.set(512,512);
   fuelGroup.add(lamp, lamp.target); canopySpots.push(lamp);
+
+  // Pump-island base lights — glow up the curb at night like the reference.
+  const islandBaseMat = new THREE.MeshStandardMaterial({ color:0xff2236, emissive:0xff2236, emissiveIntensity:0 });
+  canopyGlowMaterials.push({material:islandBaseMat,night:0.7,golden:0.25});
+  [-5.05,5.05].forEach(x => [-0.64,0.64].forEach(dz => {
+    const baseLight = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.1,0.05,16),islandBaseMat);
+    baseLight.position.set(x,0.16,z+dz);baseLight.castShadow=true;fuelGroup.add(baseLight);
+  }));
 });
 const atmTex = ctex(256,96,(x,w,h)=>{x.fillStyle='#087c3a';x.fillRect(0,0,w,h);x.fillStyle='white';x.font='bold 62px Arial';x.textAlign='center';x.fillText('ATM',w/2,68)});
 const atm = new THREE.Mesh(new THREE.PlaneGeometry(1.3,0.48),new THREE.MeshStandardMaterial({map:atmTex,emissive:0x087c3a,emissiveIntensity:0.15}));
@@ -817,6 +836,27 @@ atm.position.set(-23.0,2.9,-7); atm.rotation.y=Math.PI/2; storeGroup.add(atm);
 // Photo-led fine detail pass; no extra network assets or light/shadow sources.
 addStationDetails({fuelGroup,storeGroup,islandZ,M,ctex,glowMat});
 const sideLandscape=addStoreSideLandscape({stationLayout,M,ctex});
+
+// ===== Station-property sidewalks (concrete, local station frame) =====
+// Front sidewalk along the store facade — customer walkway from canopy to store.
+const sidewalkMat = M.concrete.clone();
+const frontWalk = new THREE.Group(); frontWalk.name='Station-front-sidewalk';
+// Walk along front of store (local frame: store front faces roughly -X, walk runs along Z)
+box(24,0.02,3.6,sidewalkMat,-28,0.03,0,frontWalk);           // main front walk
+box(24,0.02,1.4,sidewalkMat,-28,0.03,3.4,frontWalk);         // wider apron near entrance
+// Sidewalk along canopy apron edge (front side, toward frontage road)
+box(14,0.02,3.2,sidewalkMat,0,0.03,16.5,frontWalk);          // canopy front walk
+box(14,0.02,3.2,sidewalkMat,0,0.03,-18,frontWalk);           // canopy rear walk
+// Sidewalk connecting canopy to store front
+box(3.2,0.02,8,sidewalkMat,-16,0.03,-1,frontWalk);           // connector walk
+// Sidewalk along side of property (north side)
+box(3.6,0.02,24,sidewalkMat,-31.3,0.03,0,frontWalk);         // north side walk
+stationLayout.add(frontWalk);
+
+// Curb cuts / driveway aprons where sidewalks meet the frontage road.
+const apronMat = M.concrete.clone();
+box(6,0.025,5,apronMat,-25,0.035,18,frontWalk);              // frontage driveway apron
+box(6,0.025,5,apronMat,25,0.035,18,frontWalk);               // other side apron
 
 /* ================= DETACHED CAR WASH ================= */
 // Small separate building north of the store, west of the canopy. Position and
@@ -1165,7 +1205,7 @@ const TIMES = {
 };
 let pumpPanelMaterial;
 let canopyUndersideMaterial;
-let canopyGlowMaterials = [];
+// canopyGlowMaterials declared above (line ~798); reused here
 let activeTime = 'day';
 const sunDate = (() => { const q = new URLSearchParams(location.search).get('date'); const d = q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? new Date(q + 'T12:00:00Z') : new Date(); return isNaN(d) ? new Date() : d; })();
 function applyTime(name) {
@@ -1386,32 +1426,47 @@ const stationLoader = new GLTFLoader();
 // The source atlas depicts generic white siding, not the stone visible in
 // the owner's street reference. Use a restrained limestone course material.
 const stationWallMap = ctex(512,256,(c,w,h)=>{
+  // Gray concrete block / CMU wall like the owner's FoodMart facade.
   c.fillStyle='#a8a69c';c.fillRect(0,0,w,h);
-  const tones=['#c4c0b3','#bab8ac','#cbc6b8','#b3b1a6','#c0bdae'];
+  const tones=['#9aa3a8','#a8a69c','#b3b1a9','#94989e','#a2a1a6'];
   for(let row=0;row<8;row++) for(let col=-1;col<7;col++){
-    const x=col*88+(row%2)*44,y=row*32;
-    c.fillStyle=tones[((row*7+col+7)%tones.length)];c.fillRect(x+1,y+1,85,29);
-    c.strokeStyle='rgba(238,232,213,.22)';c.lineWidth=1;c.strokeRect(x+3,y+3,80,24);
+    const x=col*96+(row%2)*48,y=row*32;
+    c.fillStyle=tones[((row*7+col+7)%tones.length)];c.fillRect(x+2,y+2,91,28);
+    c.strokeStyle='rgba(120,124,128,.3)';c.lineWidth=1.5;c.strokeRect(x+4,y+4,86,23);
   }
+  // Mortar joints between block rows
+  c.strokeStyle='rgba(130,134,138,.45)';c.lineWidth=2;
+  for(let row=1;row<8;row++){ c.beginPath();c.moveTo(0,row*32);c.lineTo(w,row*32);c.stroke(); }
 },4,2);
 const storefrontFrameMat=new THREE.MeshStandardMaterial({color:0xb8bfbe,roughness:0.48,metalness:0.18});
 
 function makeHeaderMaterial(number) {
-const headerTexture = ctex(512,192,(x,w,h)=>{
-  x.fillStyle='#f4f4ee';x.fillRect(0,0,w,h);x.fillStyle='#c8102e';
-  x.beginPath();x.moveTo(0,105);x.lineTo(w,40);x.lineTo(w,h);x.lineTo(0,h);x.closePath();x.fill();
-  x.fillStyle='#fff';x.beginPath();x.arc(60,92,38,0,Math.PI*2);x.fill();x.fillStyle='#c8102e';starPath(x,60,92,29);x.fill();
-  x.fillStyle='#fff';x.textAlign='center';x.font='900 40px Arial';x.fillText('T',60,107);x.font='bold 22px Arial';x.fillText('with',260,118);x.font='bold 36px Arial';x.fillText('TECHRON',260,151);
-  x.font='bold 40px Arial'; x.fillText(String(number),455,145);
-});
-const material = new THREE.MeshStandardMaterial({map:headerTexture,emissive:0xffffff,emissiveMap:headerTexture,emissiveIntensity:0.18});
-signGlowMats.push(material);return material;
+  // Texaco "with TECHRON" pump header, matching the owner's reference photo:
+  // white field, red diagonal band, star/T badge, "with TECHRON" and pump number.
+  const headerTexture = ctex(512,192,(x,w,h)=>{
+    x.fillStyle='#f5f5f0';x.fillRect(0,0,w,h);
+    // Red diagonal band sweeping across the top (matches reference photo).
+    x.fillStyle='#c8102e';
+    x.beginPath();x.moveTo(0,0);x.lineTo(w*0.62,0);x.lineTo(w,95);x.lineTo(0,95);x.closePath();x.fill();
+    // Star badge in white circle on the left side of the band.
+    x.fillStyle='#fff';x.beginPath();x.arc(78,104,40,0,Math.PI*2);x.fill();
+    x.fillStyle='#c8102e';starPath(x,78,104,32);x.fill();
+    x.fillStyle='#fff';x.font='bold 42px Arial';x.textAlign='center';x.textBaseline='middle';x.fillText('T',78,108);
+    // "with TECHRON" in white on the red band.
+    x.fillStyle='#fff';x.font='bold 26px Arial';x.fillText('with',285,100);x.font='bold 44px Arial';x.fillText('TECHRON',350,100);
+    // Pump number large on the right.
+    x.font='bold 72px Arial';x.fillText(String(number),w-110,148);
+  });
+  const material = new THREE.MeshStandardMaterial({map:headerTexture,emissive:0xffffff,emissiveMap:headerTexture,emissiveIntensity:0.2});
+  signGlowMats.push(material);return material;
 }
-const referenceFont=await new FontLoader().loadAsync('./assets/fonts/helvetiker_bold.typeface.json');
+let referenceFont=null;
+try { referenceFont=await new FontLoader().loadAsync('./assets/fonts/helvetiker_bold.typeface.json'); }
+catch(e){ console.warn('Font load failed; canopy lettering will use fallback:', e); }
 const referenceDesign=createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font:referenceFont});
 pumpPanelMaterial=referenceDesign.panelMaterial;
 canopyUndersideMaterial=referenceDesign.underside;
-canopyGlowMaterials=referenceDesign.canopyGlow;
+canopyGlowMaterials.push(...referenceDesign.canopyGlow);
 const stationPromise = new Promise((resolve,reject) => stationLoader.load('./assets/web-station/station.glb', gltf => {
   const node = n => gltf.scene.getObjectByName(n+'_obj(4002336)');
   const building = new THREE.Group();
@@ -1434,9 +1489,13 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
     const id=parseInt(m.name,10);
     if(id===49) m.material = glassMat;
     else if(id===42 || id===76 || id===77 || id===78) m.material=M.red;
-    else if([62,63,64].includes(id)) m.material=new THREE.MeshStandardMaterial({map:stationWallMap,roughness:0.85});
+    else if([62,63,64].includes(id)) {
+      // Front glazing — fully transparent so the interior fit-out shows through,
+      // matching the owner's straight-on storefront photo.
+      m.material = new THREE.MeshPhysicalMaterial({ color:0x2c4256, roughness:0.04, metalness:0.08, transparent:true, opacity:0.35, clearcoat:0.5 });
+    }
     else if([50,51,52,53,54,55,56,57,58].includes(id)) m.material=storefrontFrameMat;
-    else m.material=M.wallWhite;
+    else m.material=new THREE.MeshStandardMaterial({color:0xdcd9d2,roughness:0.85,transparent:true,opacity:0.5});
   });
   // Equipment is seated on the fitted source roof, not floating at a guessed Y.
   const roofY=storeBounds.max.y;
@@ -1448,32 +1507,262 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
     fan.rotation.x=-Math.PI/2;fan.position.set(-31,roofY+0.775,z);storeGroup.add(fan);
     for(let j=0;j<5;j++)box(0.025,0.035,0.72,M.steel,-31-0.28+j*0.14,roofY+0.8,z,storeGroup);
   }
-  // Reference-led store name band. Opening dimensions remain the source model's
-  // estimates until a straight-on storefront photo is available.
-  const storeSignTex=ctex(1024,128,(c,w,h)=>{
-    c.fillStyle='#b90e28';c.fillRect(0,0,w,h);c.fillStyle='#fff';
-    c.font='italic bold 86px Arial';c.textAlign='center';c.textBaseline='middle';
-    c.fillText('Short Stop',w/2,h/2);
+  // ===== FOODMART storefront (redesigned to match owner's FoodMart references) =====
+  // Wrapped in try/catch so a storefront-detail error never prevents the
+  // rest of the 3D scene from rendering.
+  try {
+  // Red fascia band with white "FOODMART" lettering and the Texaco-style star,
+  // matching the owner's straight-on storefront photo.
+  function starPath(x, cx, cy, r) {
+    x.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + i * (Math.PI * 2 / 5), a2 = a + Math.PI / 5;
+      x.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+      x.lineTo(cx + Math.cos(a2) * r * 0.42, cy + Math.sin(a2) * r * 0.42);
+    }
+    x.closePath();
+  }
+  const foodmartTex = ctex(1024, 160, (c, w, h) => {
+    c.fillStyle = '#d9232e'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#fff'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = '900 110px Arial'; c.fillText('FOOD', w * 0.42, h * 0.52);
+    c.font = '900 110px Arial'; c.fillText('MART', w * 0.70, h * 0.52);
+    // Star logo to the right of the wordmark
+    c.fillStyle = '#fff'; c.beginPath(); c.arc(w * 0.885, h * 0.5, 42, 0, Math.PI * 2); c.fill();
+    c.fillStyle = '#d9232e'; c.lineWidth = 8; c.beginPath(); c.arc(w * 0.885, h * 0.5, 38, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = '#d9232e'; starPath(c, w * 0.885, h * 0.5, 30); c.fill();
+    c.fillStyle = '#fff'; c.font = '700 34px Arial'; c.fillText('T', w * 0.885, h * 0.52);
   });
-  const storeName=new THREE.Mesh(new THREE.PlaneGeometry(7,0.72),glowMat(storeSignTex));
-  storeName.name='Store-name-fascia';storeName.position.set(-22.26,4.65*building.scale.y,-1.4);storeName.scale.y=building.scale.y; // stays on the shell's red band
-  storeName.rotation.y=Math.PI/2;storeGroup.add(storeName);
+  const storeName = new THREE.Mesh(new THREE.PlaneGeometry(7.2, 1.6), glowMat(foodmartTex));
+  storeName.name = 'Store-name-fascia';
+  storeName.position.set(-22.26, 4.65 * building.scale.y, -1.4);
+  storeName.scale.y = building.scale.y;
+  storeName.rotation.y = Math.PI / 2;
+  storeGroup.add(storeName);
+
+  // "WE APPRECIATE YOUR BUSINESS" band on the front wall below the windows.
+  const appreciateTex = ctex(1024, 120, (c, w, h) => {
+    c.fillStyle = '#fff'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#d9232e'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.font = '900 64px Arial'; c.fillText('WE APPRECIATE YOUR BUSINESS', w / 2, h / 2);
+  });
+  const appreciateSign = new THREE.Mesh(new THREE.PlaneGeometry(6.6, 1.1), new THREE.MeshStandardMaterial({
+    map: appreciateTex, transparent: true, opacity: 0.95
+  }));
+  appreciateSign.position.set(-22.26, 3.3 * building.scale.y, -1.39);
+  appreciateSign.scale.y = building.scale.y;
+  appreciateSign.rotation.y = Math.PI / 2;
+  storeGroup.add(appreciateSign);
+
+  // Window neon signs along the front glazing: CBD, E-CIGS, 10 THC, DELTA 8.
+  const neonTex = (label, accent) => ctex(256, 96, (c, w, h) => {
+    c.fillStyle = '#050508'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = accent; c.lineWidth = 6; c.lineJoin = 'round';
+    c.strokeRect(4, 4, w - 8, h - 8);
+    c.fillStyle = '#0f0'; c.font = 'bold 44px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(label, w / 2, h / 2);
+  });
+  const neonMats = {
+    CBD:   glowMat(neonTex('CBD  ', '#0f0')),
+    ECIGS: glowMat(neonTex('E-CIGS', '#0ff')),
+    THC:   glowMat(neonTex('10THC ', '#0f0')),
+    DELTA: glowMat(neonTex('DELTA 8', '#f0f')),
+  };
+  // Four window decals spaced across the front of the store (store local frame).
+  const neonZs = [-3.4, -1.2, 1.0, 3.2];
+  const neonKeys = ['CBD', 'ECIGS', 'THC', 'DELTA'];
+  neonZs.forEach((z, i) => {
+    const neon = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.6), neonMats[neonKeys[i]]);
+    neon.position.set(-22.26, 3.9 * building.scale.y, z);
+    neon.scale.y = building.scale.y;
+    neon.rotation.y = Math.PI / 2;
+    storeGroup.add(neon);
+  });
+
+  // ===== Interior fit-out (visible through the front glazing) =====
+  // Matches the owner's floor plan: 40 ft x 26.5 ft, coolers along walls,
+  // 24 ft long centre shelf, slot machines + ATM near the entrance, coolers.
+  // ===== Interior fit-out (matches the owner's interior photos) =====
+  // Back-wall beverage coolers, snack aisles, centre island, BeatBox, ICE,
+  // slot machines, ATM / Bitcoin ATM, checkout counter.
+  const interior = new THREE.Group(); interior.name = 'FoodMart-interior';
+  const shelfMat = new THREE.MeshStandardMaterial({ color: 0x5d4a3a, roughness: 0.8 });
+  const shelfFaceMat = new THREE.MeshStandardMaterial({ color: 0x2a1e15, roughness: 0.9 });
+  const coolerMat = new THREE.MeshStandardMaterial({ color: 0x1d3a5a, roughness: 0.3, metalness: 0.2 });
+  const coolerGlass = new THREE.MeshPhysicalMaterial({ color: 0x2c4256, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.6 });
+  const floorTile = new THREE.MeshStandardMaterial({ color: 0xd9d6d0, roughness: 0.6 });
+
+  // Tiled sales floor.
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(12, 8), floorTile);
+  floor.rotation.x = -Math.PI / 2; floor.position.set(0, 0, 0); floor.receiveShadow = true;
+  interior.add(floor);
+
+  // ---- Back wall: row of glass-door beverage coolers (photos 8, 9, 10) ----
+  const backCooler = new THREE.Group();
+  const coolerCount = 5;
+  for (let i = 0; i < coolerCount; i++) {
+    const cx = -2.6 + i * 1.35;
+    // cooler body
+    box(1.25, 1.9, 0.75, coolerMat, cx, 0.95, 3.6, backCooler);
+    // glass door
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(1.15, 1.75), coolerGlass);
+    glass.position.set(cx, 0.95, 3.98); backCooler.add(glass);
+    // shelves + drinks inside
+    const drinkCols = [0x10a37a, 0xff4444, 0x4a90e2, 0x00d2ff, 0xffd700];
+    for (let r = 0; r < 3; r++) {
+      box(0.95, 0.32, 0.25, new THREE.MeshStandardMaterial({ color: drinkCols[(i + r) % drinkCols.length], emissive: 0x222222, emissiveIntensity: 0.2 }), cx, 0.95 + r * 0.5, 4.06, backCooler);
+    }
+    // top vent / trim
+    box(1.3, 0.1, 0.8, new THREE.MeshStandardMaterial({ color: 0x111111 }), cx, 1.92, 3.7, backCooler);
+  }
+  interior.add(backCooler);
+
+  // ---- Left aisle shelving (snacks, chips, candy) ----
+  const leftAisle = new THREE.Group();
+  for (let i = 0; i < 5; i++) {
+    const z = -3.0 + i * 1.55;
+    box(0.35, 2.0, 1.35, shelfMat, -5.9, 1.0, z, leftAisle);
+    box(0.38, 0.1, 1.45, shelfFaceMat, -5.9, 1.95, z, leftAisle);
+    // products on shelves (3 levels)
+    for (let r = 0; r < 3; r++) {
+      const pcol = [0xe9c46a, 0x457b9d, 0xbc6c25, 0x6a4c93, 0xf4a261][(i + r) % 5];
+      box(0.25, 0.3, 0.42, new THREE.MeshStandardMaterial({ color: pcol, roughness: 0.6 }), -5.85, 0.75 + r * 0.55, z + 0.3, leftAisle);
+      box(0.25, 0.3, 0.42, new THREE.MeshStandardMaterial({ color: pcol, roughness: 0.6 }), -5.85, 0.75 + r * 0.55, z - 0.3, leftAisle);
+    }
+  }
+  interior.add(leftAisle);
+
+  // ---- Right aisle shelving ----
+  const rightAisle = new THREE.Group();
+  for (let i = 0; i < 5; i++) {
+    const z = -3.0 + i * 1.55;
+    box(0.35, 2.0, 1.35, shelfMat, 5.9, 1.0, z, rightAisle);
+    box(0.38, 0.1, 1.45, shelfFaceMat, 5.9, 1.95, z, rightAisle);
+    for (let r = 0; r < 3; r++) {
+      const pcol = [0x2a9d8f, 0xe76f51, 0xf4a261, 0x264653, 0xe9c46a][(i + r) % 5];
+      box(0.25, 0.3, 0.42, new THREE.MeshStandardMaterial({ color: pcol, roughness: 0.6 }), 5.85, 0.75 + r * 0.55, z + 0.3, rightAisle);
+      box(0.25, 0.3, 0.42, new THREE.MeshStandardMaterial({ color: pcol, roughness: 0.6 }), 5.85, 0.75 + r * 0.55, z - 0.3, rightAisle);
+    }
+  }
+  interior.add(rightAisle);
+
+  // ---- Centre island: grab-and-go drinks + snacks (photo 9) ----
+  const centreIsland = new THREE.Group();
+  box(5.4, 1.0, 1.0, shelfMat, 0, 0.5, 0, centreIsland);
+  box(5.6, 0.1, 1.15, shelfFaceMat, 0, 1.02, 0, centreIsland);
+  // drink bottles/cans on centre island
+  for (let i = 0; i < 10; i++) {
+    const px = -2.4 + i * 0.55;
+    box(0.18, 0.45, 0.18, new THREE.MeshStandardMaterial({ color: [0x10a37a, 0xff4444, 0x4a90e2][i % 3], emissive: 0x111111, emissiveIntensity: 0.2 }), px, 0.85, 0.15, centreIsland);
+    box(0.18, 0.45, 0.18, new THREE.MeshStandardMaterial({ color: [0x00d2ff, 0xffd700, 0xe76f51][i % 3], emissive: 0x111111, emissiveIntensity: 0.2 }), px, 0.85, -0.15, centreIsland);
+  }
+  interior.add(centreIsland);
+
+  // ---- Front checkout counter ----
+  const counter = new THREE.Group();
+  box(3.6, 0.9, 0.75, new THREE.MeshStandardMaterial({ color: 0x5d4a3a }), -1.4, 0.45, -2.4, counter);
+  box(3.8, 0.1, 0.9, shelfFaceMat, -1.4, 0.92, -2.4, counter);
+  // register / screen on counter
+  box(0.35, 0.35, 0.15, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), -0.6, 0.98, -2.75, counter);
+  box(0.3, 0.2, 0.1, new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.5 }), -0.6, 1.08, -2.76, counter);
+  interior.add(counter);
+
+  // ---- Slot machines inside the store (near checkout) ----
+  const slots = new THREE.Group();
+  const slotColors = [0xffd700, 0x00d2ff, 0xff4444, 0x9b5de5];
+  slotColors.forEach((col, i) => {
+    const s = new THREE.Group();
+    box(0.45, 1.7, 0.5, new THREE.MeshStandardMaterial({ color: 0x222222 }), 0, 0.85, 0, s);
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.9 }));
+    screen.position.set(0, 1.3, 0.26); s.add(screen);
+    s.position.set(-1.2 + i * 0.7, 0, -2.6); s.rotation.y = Math.PI / 6;
+    slots.add(s);
+  });
+  interior.add(slots);
+
+  // ---- ATM near the entrance ----
+  const atmIn = new THREE.Group();
+  box(0.5, 1.5, 0.35, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.75, 0, atmIn);
+  const atmScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.5), new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.6 }));
+  atmScreen.position.set(0, 1.1, 0.18); atmIn.add(atmScreen);
+  atmIn.position.set(-1.6, 0, -3.2); atmIn.rotation.y = Math.PI / 6;
+  interior.add(atmIn);
+
+  // ---- Bitcoin ATM (Btc atm on the floor plan) ----
+  const btcAtm = new THREE.Group();
+  box(0.45, 1.6, 0.35, new THREE.MeshStandardMaterial({ color: 0x0a0a0a }), 0, 0.8, 0, btcAtm);
+  const btcScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.38, 0.55), new THREE.MeshStandardMaterial({ color: 0xf7931a, emissive: 0xf7931a, emissiveIntensity: 0.8 }));
+  btcScreen.position.set(0, 1.15, 0.18); btcAtm.add(btcScreen);
+  const btcLogo = new THREE.Mesh(new THREE.PlaneGeometry(0.22, 0.22), new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xffffff, emissiveIntensity: 0.4 }));
+  btcLogo.position.set(0, 1.45, 0.19); btcAtm.add(btcLogo);
+  btcAtm.position.set(-2.2, 0, -3.2); btcAtm.rotation.y = Math.PI / 6;
+  interior.add(btcAtm);
+
+  interior.position.set(-1.0, 0, 0.2);
+  interior.rotation.y = Math.PI / 2;
+  storeGroup.add(interior);
+
+  // ---- Front entrance double doors (center of the front facade) ----
+  const doorFrame = new THREE.Group();
+  box(0.1, 2.4, 0.08, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), -0.55, 1.2, 0, doorFrame);
+  box(0.1, 2.4, 0.08, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0.55, 1.2, 0, doorFrame);
+  box(1.2, 0.08, 0.08, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 2.44, 0, doorFrame);
+  const doorL = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 2.2), new THREE.MeshPhysicalMaterial({ color: 0x1d3a5a, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.75 }));
+  doorL.position.set(-0.28, 1.1, 0.05); doorFrame.add(doorL);
+  const doorR = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 2.2), new THREE.MeshPhysicalMaterial({ color: 0x1d3a5a, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.75 }));
+  doorR.position.set(0.28, 1.1, 0.05); doorFrame.add(doorR);
+  doorFrame.position.set(-22.24, 0, 0);
+  doorFrame.rotation.y = Math.PI / 2;
+  storeGroup.add(doorFrame);
+
+  // ---- "OPEN" neon sign in the front window ----
+  const openTex = ctex(256, 96, (c, w, h) => {
+    c.fillStyle = '#050508'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#ff0'; c.lineWidth = 6; c.lineJoin = 'round';
+    c.strokeRect(4, 4, w - 8, h - 8);
+    c.fillStyle = '#ff0'; c.font = 'bold 44px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('OPEN', w / 2, h / 2);
+  });
+  const openSign = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.45), glowMat(openTex));
+  openSign.position.set(-22.24, 3.6 * building.scale.y, 2.6);
+  openSign.scale.y = building.scale.y;
+  openSign.rotation.y = Math.PI / 2;
+  storeGroup.add(openSign);
+  } catch (e) {
+    console.warn('FoodMart storefront detail failed to render:', e);
+  }
   // New reference canopy replaces the old imported roof and silver columns.
-  fuelGroup.add(referenceDesign.canopy(islandZ));
-  applyTime(activeTime);
-  resolve();
+  try {
+    fuelGroup.add(referenceDesign.canopy(islandZ));
+    applyTime(activeTime);
+    resolve();
+  } catch (e) {
+    console.error('Station store/canopy setup failed:', e);
+    show3dError('Station setup failed: ' + e.message);
+    resolve(); // still resolve so the page doesn't hang
+  }
 }, undefined, reject));
 // Procedural, reference-specific dispensers replace the generic OBJ geometry.
 const pumpPromise=Promise.resolve().then(()=>{
-  for(const spot of pumpSpots){
-    const dispenser=referenceDesign.pump(spot.number);
-    dispenser.position.set(spot.x,0,spot.z);
-    fuelGroup.add(dispenser);
+  try {
+    for(const spot of pumpSpots){
+      const dispenser=referenceDesign.pump(spot.number);
+      dispenser.position.set(spot.x,0,spot.z);
+      fuelGroup.add(dispenser);
+    }
+    applyTime(activeTime);
+  } catch (e) {
+    console.error('Pump setup failed:', e);
+    show3dError('Pump setup failed: ' + e.message);
   }
-  applyTime(activeTime);
 });
 try { await Promise.all([stationPromise,pumpPromise,carsPromise]); }
-catch(err){ console.error('Station source failed to load',err); window.__station3dFail(); throw err; }
+catch(err){
+  console.error('Station source failed to load',err);
+  show3dError('Station failed to load: ' + (err.message||err));
+  window.__station3dFail();
+  window.__station3dComplete(); // still mark complete so the scene attempts to render
+}
 
 // Fit asset dimensions before applying either rotation. The road grid and inn
 // keep their own alignment; only the forecourt buildings/parking turn diagonally.
