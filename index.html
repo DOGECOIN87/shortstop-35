@@ -1667,19 +1667,6 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
   box(0.3, 0.2, 0.1, new THREE.MeshStandardMaterial({ color: 0x00ff88, emissive: 0x00ff88, emissiveIntensity: 0.5 }), -0.6, 1.08, -2.76, counter);
   interior.add(counter);
 
-  // ---- Slot machines near the front (floor plan) ----
-  const slots = new THREE.Group();
-  const slotColors = [0xffd700, 0x00d2ff, 0xff4444, 0x9b5de5];
-  slotColors.forEach((col, i) => {
-    const s = new THREE.Group();
-    box(0.45, 1.7, 0.5, new THREE.MeshStandardMaterial({ color: 0x222222 }), 0, 0.85, 0, s);
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 1.0), new THREE.MeshStandardMaterial({ color: col, emissive: col, emissiveIntensity: 0.9 }));
-    screen.position.set(0, 1.3, 0.26); s.add(screen);
-    s.position.set(-2.6 + i * 0.62, 0, -3.4); s.rotation.y = Math.PI / 6;
-    slots.add(s);
-  });
-  interior.add(slots);
-
   // ---- ATM near the entrance ----
   const atmIn = new THREE.Group();
   box(0.5, 1.5, 0.35, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.75, 0, atmIn);
@@ -1701,35 +1688,6 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
   interior.position.set(-1.0, 0, 0.2);
   interior.rotation.y = Math.PI / 2;
   storeGroup.add(interior);
-
-  // ---- BeatBox party punch cooler (front window, photos 9, 11) ----
-  const beatboxTex = ctex(512, 256, (c, w, h) => {
-    c.fillStyle = '#8a1c2e'; c.fillRect(0, 0, w, h);
-    c.fillStyle = '#ffd700'; c.font = 'bold 70px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('BEATBOX', w / 2, h / 2 - 22);
-    c.fillStyle = '#fff'; c.font = '30px Arial'; c.fillText('THE ORIGINAL PARTY PUNCH', w / 2, h / 2 + 28);
-  });
-  const beatbox = new THREE.Mesh(new THREE.PlaneGeometry(2.4, 1.2), glowMat(beatboxTex));
-  beatbox.name = 'BeatBox-display';
-  beatbox.position.set(-22.26, 2.55 * building.scale.y, -4.4);
-  beatbox.scale.y = building.scale.y;
-  beatbox.rotation.y = Math.PI / 2;
-  storeGroup.add(beatbox);
-
-  // ---- ICE freezer at the front (photos 11, 12) ----
-  const iceTex = ctex(512, 256, (c, w, h) => {
-    c.fillStyle = '#0033ff'; c.fillRect(0, 0, w, h);
-    c.fillStyle = '#fff'; c.font = 'bold 84px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('ICE', w / 2, h / 2);
-  });
-  const iceFreezer = new THREE.Group();
-  box(2.2, 1.1, 1.0, new THREE.MeshStandardMaterial({ color: 0x2a2a2a }), 0, 0.55, 0, iceFreezer);
-  const iceGlass = new THREE.Mesh(new THREE.PlaneGeometry(2.0, 0.8), coolerGlass);
-  iceGlass.position.set(0, 0.55, 0.51); iceFreezer.add(iceGlass);
-  const iceSign = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 0.5), glowMat(iceTex));
-  iceSign.position.set(0, 1.1, 0.52); iceFreezer.add(iceSign);
-  iceFreezer.position.set(-2.0, 0, 2.6); iceFreezer.rotation.y = Math.PI / 4;
-  storeGroup.add(iceFreezer);
 
   // ---- Front entrance double doors (center of the front facade) ----
   const doorFrame = new THREE.Group();
