@@ -212,6 +212,7 @@
         <button type="button" class="btn btn-red btn-sm" data-retry-3d>Retry 3D</button>
         <a class="btn btn-glass btn-sm" href="classic.html">View simple site</a>
       </div>
+      <div id="loaderr" hidden style="color:#ff6b6b;background:rgba(0,0,0,.45);border:1px solid #ff6b6b;border-radius:10px;padding:10px 14px;margin-top:10px;font-size:13px"></div>
     </div>
 
     <div class="fallback3d" id="fallback3d">
@@ -408,6 +409,15 @@
     window.__station3dStatus = 'ready';
     document.getElementById('fallback3d').classList.remove('show');
     document.getElementById('loading3d').classList.add('done');
+  };
+  // Show a visible error banner if a specific 3D subsystem fails.
+  window.show3dError = function (msg) {
+    const el = document.getElementById('loaderr');
+    if (el) {
+      el.textContent = '3D error: ' + msg;
+      el.hidden = false;
+    }
+    console.error('[3D]', msg);
   };
   window.addEventListener('error', function (event) {
     if (event.message || (event.target && event.target.tagName === 'SCRIPT')) window.__station3dFail();
@@ -1751,21 +1761,37 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
     console.warn('FoodMart storefront detail failed to render:', e);
   }
   // New reference canopy replaces the old imported roof and silver columns.
-  fuelGroup.add(referenceDesign.canopy(islandZ));
-  applyTime(activeTime);
-  resolve();
+  try {
+    fuelGroup.add(referenceDesign.canopy(islandZ));
+    applyTime(activeTime);
+    resolve();
+  } catch (e) {
+    console.error('Station store/canopy setup failed:', e);
+    show3dError('Station setup failed: ' + e.message);
+    resolve(); // still resolve so the page doesn't hang
+  }
 }, undefined, reject));
 // Procedural, reference-specific dispensers replace the generic OBJ geometry.
 const pumpPromise=Promise.resolve().then(()=>{
-  for(const spot of pumpSpots){
-    const dispenser=referenceDesign.pump(spot.number);
-    dispenser.position.set(spot.x,0,spot.z);
-    fuelGroup.add(dispenser);
+  try {
+    for(const spot of pumpSpots){
+      const dispenser=referenceDesign.pump(spot.number);
+      dispenser.position.set(spot.x,0,spot.z);
+      fuelGroup.add(dispenser);
+    }
+    applyTime(activeTime);
+  } catch (e) {
+    console.error('Pump setup failed:', e);
+    show3dError('Pump setup failed: ' + e.message);
   }
-  applyTime(activeTime);
 });
 try { await Promise.all([stationPromise,pumpPromise,carsPromise]); }
-catch(err){ console.error('Station source failed to load',err); window.__station3dFail(); throw err; }
+catch(err){
+  console.error('Station source failed to load',err);
+  show3dError('Station failed to load: ' + (err.message||err));
+  window.__station3dFail();
+  window.__station3dComplete(); // still mark complete so the scene attempts to render
+}
 
 // Fit asset dimensions before applying either rotation. The road grid and inn
 // keep their own alignment; only the forecourt buildings/parking turn diagonally.
