@@ -1,0 +1,379 @@
+import * as THREE from '../vendor/three.module.js';
+
+// FoodMart storefront rebuilt from the owner's two night photos (Nov 2026):
+// split-face grey block pier with the emergency pump shut-off, vape poster,
+// fire-extinguisher cabinet and square trash can beside the Amazon Hub locker;
+// clear-anodised storefront with decal kick panels (Reddy Ice, Geek Bar, candy,
+// vape art), single entry door, maroon fascia with a white LED strip and
+// "FoodMart" lettering, and orange flexible delineators along the curb.
+//
+// Everything is in the detailed Blender model's store frame: the glTF root
+// turned by STOREFRONT.heading, so +X points out of the storefront (toward the
+// pumps), +Z runs along it to the south, Y is up. Positions were measured from
+// shortstop_detailed.glb; the photo-only dimensions are estimates.
+export const STOREFRONT = Object.freeze({
+  // The model's store (and its Amazon locker) is turned 2.25 deg in the glTF frame.
+  heading: 2 * Math.asin(0.019633694752808857),
+  wallX: 10.03,          // face of the block wall (model wall plane ~10.00)
+  glassX: 9.9,           // storefront glass plane, recessed like the model's
+  floorY: 0.5,           // store floor / sill
+  walkY: 0.47,           // sidewalk top at the storefront
+  storeZ: [-10.0, 10.2], // north and south corners of the front wall
+  pierZ: [-7.4, -5.45],  // block pier between the glazing and the Amazon locker
+  glazingZ: [-5.45, 7.42],
+  doorZ: [0.95, 2.05],
+  railY: 1.45,           // kick-panel rail (decal panels below, clear glass above)
+  headY: 3.5,
+  fasciaY: [3.56, 4.98],
+  fasciaDepth: 0.24,
+  // Bays from the pier southward. `art` names the kick-panel decal in the photos.
+  bays: Object.freeze([
+    { z: [-5.45, -3.35], art: 'reddy-ice' },
+    { z: [-3.35, -1.7], art: 'geek-bar' },
+    { z: [-1.7, -0.15], art: 'candy' },
+    { z: [-0.15, 0.95], art: 'vape-art' },
+    { z: [2.05, 3.45], art: 'tint', neon: true },
+    { z: [3.45, 4.75], art: 'tint' },
+    { z: [4.75, 6.05], art: 'tint' },
+    { z: [6.05, 7.42], art: 'tint' }
+  ]),
+  // Model parts replaced here: [x0, y0, z0, x1, y1, z1] in this frame.
+  cutBoxes: Object.freeze([
+    [9.6, 0.49, -7.45, 10.15, 3.6, 7.46],    // black mullions, door and glass
+    [10.075, 3.9, -6.5, 10.6, 4.9, 6.5],     // raised "SHORT STOP" letters on the old fascia
+    [10.6, 0.49, -0.5, 11.7, 1.6, 1.0],      // red-lid bins (not in the photos)
+    [10.6, 0.49, 2.2, 11.7, 1.6, 3.6]
+  ]),
+  hideInstances: Object.freeze([
+    { name: /^Storefront_mullion/, box: [9.5, 0, -7.6, 10.2, 4, 7.6] },
+    { name: /^Transom_glass/, box: [9.5, 0, -7.6, 10.2, 4, 7.6] },
+    { name: /^Wall_pack_0/, box: [9.9, 3, -9.6, 10.4, 4.2, 9.6] },
+    // Yellow steel bollards become the photo's orange delineators.
+    { name: /^Storefront_bollard/, box: [11, -1, -14, 12.5, 2, 12], post: true }
+  ])
+});
+
+const S = STOREFRONT;
+
+// Matrix from the glTF root frame into the storefront frame.
+export function storefrontFrame() {
+  return new THREE.Matrix4().makeRotationY(-S.heading);
+}
+
+function scaleUV(geometry, su, sv) {
+  const uv = geometry.attributes.uv;
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
+  return geometry;
+}
+
+export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
+  const group = new THREE.Group();
+  group.name = 'FoodMart-storefront';
+  group.rotation.y = S.heading;
+  const add = (mesh, name, parent = group) => {
+    mesh.name = name; mesh.castShadow = true; mesh.receiveShadow = true; parent.add(mesh); return mesh;
+  };
+  const box = (name, [x0, y0, z0, x1, y1, z1], mat, parent) => {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat);
+    m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
+    return add(m, name, parent);
+  };
+  // A vertical panel facing +X (out of the store); texture reads left-to-right
+  // for someone standing in the lot.
+  const face = (name, w, h, mat, x, y, z, parent) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat);
+    m.rotation.y = Math.PI / 2; m.position.set(x, y, z);
+    return add(m, name, parent);
+  };
+  const cyl = (name, r0, r1, h, mat, x, y, z, parent, seg = 18) => {
+    const m = new THREE.Mesh(new THREE.CylinderGeometry(r0, r1, h, seg), mat);
+    m.position.set(x, y, z); return add(m, name, parent);
+  };
+  const std = (color, roughness = 0.6, metalness = 0, extra = {}) =>
+    new THREE.MeshStandardMaterial({ color, roughness, metalness, ...extra });
+
+  // ---------- materials ----------
+  const BLOCK_W = 1.6, BLOCK_H = 0.8; // one texture tile: 4 blocks x 4 courses
+  const blockTex = ctex(512, 256, (c, w, h) => {
+    c.fillStyle = '#9a9d9f'; c.fillRect(0, 0, w, h);
+    const tones = ['#b9bbbb', '#b1b4b5', '#c0c1c0', '#aeb1b3', '#b6b7b5'];
+    for (let r = 0; r < 4; r++) for (let k = -1; k < 5; k++) {
+      const x = k * 128 + (r % 2) * 64, y = r * 64;
+      c.fillStyle = tones[(r * 3 + k + 5) % tones.length]; c.fillRect(x + 3, y + 3, 122, 58);
+      // split-face texture: chipped light and dark flecks
+      for (let i = 0; i < 70; i++) {
+        c.fillStyle = (i * 7 + r + k) % 3 ? 'rgba(255,255,255,0.18)' : 'rgba(60,64,66,0.22)';
+        const fx = x + 4 + ((i * 37 + r * 13 + k * 29) % 118), fy = y + 4 + ((i * 23 + k * 11) % 54);
+        c.fillRect(fx, fy, 2 + (i % 4), 1 + (i % 3));
+      }
+    }
+  });
+  const blockMat = std(0xffffff, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  const blockFace = (name, [z0, z1], [y0, y1], x = S.wallX) => {
+    const w = z1 - z0, h = y1 - y0;
+    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(w, h), w / BLOCK_W, h / BLOCK_H), blockMat);
+    m.rotation.y = Math.PI / 2; m.position.set(x, (y0 + y1) / 2, (z0 + z1) / 2);
+    return add(m, name);
+  };
+  const aluminium = std(0xc4cacb, 0.38, 0.55);
+  const glass = new THREE.MeshPhysicalMaterial({
+    color: 0xc9ddd6, roughness: 0.06, metalness: 0.1, transparent: true, opacity: 0.24, depthWrite: false
+  });
+  // Maroon fascia; it glows faintly after dark, as under the canopy lights in photo 1.
+  const solid = col => ctex(4, 4, (c, w, h) => { c.fillStyle = col; c.fillRect(0, 0, w, h); });
+  const fasciaMat = glowMat(solid('#7e1a22'));
+  fasciaMat.emissiveMap = solid('#55121a'); fasciaMat.metalness = 0.1;
+
+  // ---------- block wall: pier by the locker and the south end ----------
+  const wallTop = S.fasciaY[0];
+  blockFace('Block-pier', [S.storeZ[0], S.glazingZ[0]], [S.walkY, wallTop]);
+  blockFace('Block-wall-south', [S.glazingZ[1], S.storeZ[1]], [S.walkY, wallTop]);
+  // Jamb returns down to the recessed glass line.
+  for (const z of S.glazingZ) {
+    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(S.wallX - S.glassX + 0.04, wallTop - S.walkY), 0.1, (wallTop - S.walkY) / BLOCK_H), blockMat);
+    m.rotation.y = z === S.glazingZ[0] ? Math.PI : 0;
+    m.position.set((S.wallX + S.glassX - 0.04) / 2, (S.walkY + wallTop) / 2, z);
+    add(m, 'Block-jamb');
+  }
+
+  // ---------- storefront framing ----------
+  const frame = new THREE.Group(); frame.name = 'Storefront-frame'; group.add(frame);
+  const [gz0, gz1] = S.glazingZ, fx0 = S.glassX - 0.05, fx1 = S.glassX + 0.08;
+  box('Sill', [fx0, S.floorY, gz0, fx1 + 0.02, S.floorY + 0.06, gz1], aluminium, frame);
+  box('Head', [fx0, S.headY - 0.09, gz0, fx1, S.headY, gz1], aluminium, frame);
+  const verticals = new Set([gz0, gz1, ...S.bays.flatMap(b => b.z), ...S.doorZ]);
+  for (const z of verticals) box('Mullion', [fx0, S.floorY, z - 0.03, fx1, S.headY, z + 0.03], aluminium, frame);
+
+  // ---------- bays: clear upper glass, decal kick panels ----------
+  const art = artTextures(ctex);
+  const tint = std(0x1a2226, 0.35, 0.2);
+  for (const bay of S.bays) {
+    const [z0, z1] = bay.z, w = z1 - z0 - 0.06, zc = (z0 + z1) / 2;
+    box('Kick-rail', [fx0, S.railY - 0.03, z0, fx1, S.railY + 0.03, z1], aluminium, frame);
+    face('Upper-glass', w, S.headY - 0.09 - S.railY - 0.03, glass, S.glassX + 0.01, (S.railY + 0.03 + S.headY - 0.09) / 2, zc);
+    const lowH = S.railY - 0.03 - S.floorY - 0.06;
+    const lowMat = bay.art === 'tint' ? tint : std(0xffffff, 0.35, 0.05, { map: art[bay.art] });
+    face(`Kick-panel-${bay.art}`, w, lowH, lowMat, S.glassX, S.floorY + 0.06 + lowH / 2, zc);
+    face('Kick-glass', w, lowH, glass, S.glassX + 0.012, S.floorY + 0.06 + lowH / 2, zc);
+  }
+  // Alarm-company sticker in the Reddy Ice bay's corner (photo 2).
+  const aegis = new THREE.Mesh(new THREE.CircleGeometry(0.055, 20), std(0xf08a1c, 0.5));
+  aegis.rotation.y = Math.PI / 2; aegis.position.set(S.glassX + 0.02, S.railY + 0.13, S.bays[0].z[0] + 0.12);
+  add(aegis, 'Alarm-sticker');
+
+  // "OPEN" neon hung in the glass beside the door.
+  const neonBay = S.bays.find(b => b.neon);
+  const openTex = ctex(256, 112, (c, w, h) => {
+    c.fillStyle = '#07070c'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#4a5cff'; c.lineWidth = 7; c.strokeRect(8, 8, w - 16, h - 16);
+    c.fillStyle = '#ff3340'; c.font = 'bold 62px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('OPEN', w / 2, h / 2 + 3);
+  });
+  face('Open-neon', 0.72, 0.32, glowMat(openTex), S.glassX - 0.04, S.headY - 0.42, neonBay.z[0] + 0.5);
+
+  // ---------- entry door ----------
+  const door = new THREE.Group(); door.name = 'Entry-door'; group.add(door);
+  const [dz0, dz1] = S.doorZ, doorTop = S.floorY + 2.14, dw = dz1 - dz0;
+  box('Door-stile', [S.glassX - 0.02, S.floorY, dz0 + 0.03, S.glassX + 0.06, doorTop, dz0 + 0.13], aluminium, door);
+  box('Door-stile', [S.glassX - 0.02, S.floorY, dz1 - 0.13, S.glassX + 0.06, doorTop, dz1 - 0.03], aluminium, door);
+  box('Door-bottom-rail', [S.glassX - 0.02, S.floorY, dz0 + 0.03, S.glassX + 0.06, S.floorY + 0.25, dz1 - 0.03], aluminium, door);
+  box('Door-top-rail', [S.glassX - 0.02, doorTop - 0.1, dz0 + 0.03, S.glassX + 0.06, doorTop + 0.05, dz1 - 0.03], aluminium, door);
+  face('Door-glass', dw - 0.26, doorTop - 0.1 - S.floorY - 0.25, glass, S.glassX + 0.02, (doorTop - 0.1 + S.floorY + 0.25) / 2, (dz0 + dz1) / 2, door);
+  box('Door-push-bar', [S.glassX + 0.06, S.floorY + 0.98, dz0 + 0.18, S.glassX + 0.1, S.floorY + 1.03, dz1 - 0.18], aluminium, door);
+  const redBull = ctex(64, 320, (c, w, h) => {
+    c.fillStyle = '#f4f4f2'; c.fillRect(0, 0, w, h);
+    c.save(); c.translate(w / 2, h / 2); c.rotate(Math.PI / 2);
+    c.fillStyle = '#d0202f'; c.font = 'bold 40px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('Red Bull', 0, 2); c.restore();
+  });
+  face('Door-decal', 0.13, 0.66, std(0xffffff, 0.5, 0, { map: redBull }), S.glassX + 0.03, S.floorY + 1.55, dz1 - 0.23, door);
+  // Transom with the street number above the door (photo 1).
+  box('Door-head', [fx0, doorTop + 0.05, dz0, fx1, doorTop + 0.11, dz1], aluminium, frame);
+  face('Transom-glass', dw - 0.06, S.headY - 0.09 - doorTop - 0.11, glass, S.glassX + 0.01, (doorTop + 0.11 + S.headY - 0.09) / 2, (dz0 + dz1) / 2);
+  const numTex = ctex(256, 96, (c, w, h) => {
+    c.clearRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.font = 'bold 70px Arial';
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('1185', w / 2, h / 2 + 4);
+  });
+  face('Street-number', 0.36, 0.13, std(0xffffff, 0.5, 0, { map: numTex, transparent: true, alphaTest: 0.3 }),
+    S.glassX + 0.025, doorTop + 0.32, (dz0 + dz1) / 2);
+  const mat = box('Entry-mat', [S.wallX + 0.05, S.walkY, dz0 + 0.05, S.wallX + 0.85, S.walkY + 0.015, dz1 - 0.05], std(0x1b1d1f, 0.95));
+  mat.castShadow = false;
+
+  // ---------- fascia, LED strip and lettering ----------
+  const [fy0, fy1] = S.fasciaY, fxOut = S.wallX - 0.03 + S.fasciaDepth;
+  box('Fascia', [S.wallX - 0.03, fy0, S.storeZ[0] - 0.03, fxOut, fy1, S.storeZ[1] + 0.03], fasciaMat);
+  box('Fascia-cap', [S.wallX - 0.03, fy1, S.storeZ[0] - 0.05, fxOut + 0.03, fy1 + 0.04, S.storeZ[1] + 0.05], std(0x2a2c2e, 0.6, 0.3));
+  const led = glowMat(solid('#ffffff')); led.color.set(0xeef2f4);
+  box('LED-light-strip', [S.wallX - 0.03, fy0 - 0.06, S.storeZ[0], fxOut - 0.02, fy0, S.storeZ[1]], led);
+  box('Head-flashing', [S.glassX - 0.05, S.headY, gz0, S.wallX, fy0 - 0.06, gz1], aluminium);
+  const nameTex = ctex(1024, 192, (c, w, h) => {
+    c.clearRect(0, 0, w, h); c.fillStyle = '#fff4f2';
+    c.font = 'bold 150px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('FoodMart', w / 2, h / 2 + 8);
+  });
+  const nameMat = glowMat(nameTex); nameMat.transparent = true; nameMat.alphaTest = 0.25;
+  face('FoodMart-lettering', 3.6, 0.68, nameMat, fxOut + 0.006, (fy0 + fy1) / 2, (dz0 + dz1) / 2);
+
+  // ---------- pier: shut-off, switch, extinguisher, poster, trash can ----------
+  const pier = new THREE.Group(); pier.name = 'Storefront-pier'; group.add(pier);
+  const d = dist => S.pierZ[1] - dist; // distance north from the glazing edge
+  const shutTex = ctex(256, 96, (c, w, h) => {
+    c.fillStyle = '#9a6858'; c.fillRect(0, 0, w, h);
+    c.strokeStyle = '#d9b3a2'; c.lineWidth = 4; c.strokeRect(5, 5, w - 10, h - 10);
+    c.fillStyle = '#f1dcd0'; c.textAlign = 'center'; c.font = 'bold 22px Arial';
+    c.fillText('Emergency Pump', w / 2, 30); c.fillText('Shut-Off', w / 2, 54);
+    c.font = 'bold 26px Arial'; c.fillText('All Pumps', w / 2, 84);
+  });
+  face('Emergency-shutoff-sign', 0.34, 0.13, std(0xffffff, 0.45, 0.35, { map: shutTex }), S.wallX + 0.012, 1.83, d(0.35), pier);
+  box('Shutoff-key-switch', [S.wallX, 2.3, d(0.57), S.wallX + 0.03, 2.38, d(0.51)], std(0x8a8f92, 0.4, 0.6), pier);
+  box('Switch-box', [S.wallX, 1.56, d(0.72), S.wallX + 0.06, 1.76, d(0.58)], std(0xd6cfae, 0.6), pier);
+  box('Switch-plate', [S.wallX + 0.06, 1.62, d(0.68), S.wallX + 0.07, 1.7, d(0.62)], std(0xb9b29a, 0.5), pier);
+  box('Outlet-box', [S.wallX, 1.15, d(0.25), S.wallX + 0.06, 1.26, d(0.13)], std(0xa9adb0, 0.5, 0.4), pier);
+  const cord = cyl('Outlet-cord', 0.008, 0.008, 1.15 - S.walkY, std(0xe9e9e6, 0.6), S.wallX + 0.03, (1.15 + S.walkY) / 2, d(0.19), pier, 6);
+  cord.castShadow = false;
+  // Open-front white cabinet with the extinguisher (photo 2).
+  const cab = new THREE.Group(); cab.name = 'Extinguisher-cabinet'; pier.add(cab);
+  const white = std(0xeeeeeb, 0.5, 0.1), [cz0, cz1] = [d(0.65), d(0.28)], cy0 = S.walkY + 0.02, cy1 = S.walkY + 0.86, cx1 = S.wallX + 0.19;
+  box('Cabinet-back', [S.wallX, cy0, cz0, S.wallX + 0.01, cy1, cz1], white, cab);
+  box('Cabinet-side', [S.wallX, cy0, cz0, cx1, cy1, cz0 + 0.03], white, cab);
+  box('Cabinet-side', [S.wallX, cy0, cz1 - 0.03, cx1, cy1, cz1], white, cab);
+  box('Cabinet-top', [S.wallX, cy1 - 0.03, cz0, cx1, cy1, cz1], white, cab);
+  box('Cabinet-bottom', [S.wallX, cy0, cz0, cx1, cy0 + 0.03, cz1], white, cab);
+  box('Cabinet-lock', [cx1 - 0.01, cy1 - 0.12, cz1 - 0.05, cx1 + 0.01, cy1 - 0.08, cz1 - 0.02], std(0x9a9ea0, 0.4, 0.6), cab);
+  const red = std(0xb5161e, 0.35, 0.15), ex = (cz0 + cz1) / 2, exX = S.wallX + 0.1;
+  cyl('Extinguisher', 0.075, 0.075, 0.5, red, exX, cy0 + 0.03 + 0.25, ex, cab);
+  cyl('Extinguisher-dome', 0.06, 0.075, 0.05, red, exX, cy0 + 0.555, ex, cab);
+  cyl('Extinguisher-valve', 0.022, 0.022, 0.08, std(0x2b2b2b, 0.4, 0.6), exX, cy0 + 0.62, ex, cab, 8);
+  box('Extinguisher-handle', [exX - 0.02, cy0 + 0.65, ex - 0.07, exX + 0.02, cy0 + 0.67, ex + 0.05], std(0x1d1d1d, 0.5), cab);
+  cyl('Extinguisher-hose', 0.012, 0.012, 0.4, std(0x151515, 0.7), exX + 0.06, cy0 + 0.42, ex + 0.07, cab, 6);
+  face('Extinguisher-label', 0.07, 0.1, std(0xf3f0e4, 0.6), exX + 0.076, cy0 + 0.3, ex, cab);
+  // Framed vape poster with the Short Stop roundel.
+  const posterTex = ctex(360, 540, posterArt);
+  const pz = d(1.1), py0 = 1.83, py1 = 2.95, pw = 0.73;
+  box('Poster-frame', [S.wallX, py0, pz - pw / 2, S.wallX + 0.025, py1, pz + pw / 2], std(0xdfe2e3, 0.3, 0.6), pier);
+  face('Vape-poster', pw - 0.05, py1 - py0 - 0.05, std(0xffffff, 0.45, 0, { map: posterTex }), S.wallX + 0.027, (py0 + py1) / 2, pz, pier);
+  if (logoMap) {
+    const logo = new THREE.Mesh(new THREE.CircleGeometry(0.085, 32), std(0xffffff, 0.5, 0, { map: logoMap }));
+    logo.rotation.y = Math.PI / 2; logo.position.set(S.wallX + 0.03, py0 + 0.13, pz); add(logo, 'Poster-logo', pier);
+  }
+  // Square grey-taupe receptacle with a domed, open-mouth lid.
+  const can = new THREE.Group(); can.name = 'Trash-receptacle'; pier.add(can);
+  const taupe = std(0x7c7774, 0.8), tx = S.wallX + 0.4, tz = d(1.32);
+  box('Receptacle-body', [tx - 0.28, S.walkY, tz - 0.28, tx + 0.28, S.walkY + 0.82, tz + 0.28], taupe, can);
+  box('Receptacle-lid', [tx - 0.31, S.walkY + 0.82, tz - 0.31, tx + 0.31, S.walkY + 0.9, tz + 0.31], taupe, can);
+  box('Receptacle-top', [tx - 0.25, S.walkY + 0.9, tz - 0.25, tx + 0.25, S.walkY + 1.0, tz + 0.25], taupe, can);
+  cyl('Receptacle-opening', 0.15, 0.15, 0.012, std(0x101010, 0.9), tx, S.walkY + 1.004, tz, can, 20);
+
+  // A-frame sidewalk sign by the door (photo 1).
+  const aTex = ctex(160, 240, (c, w, h) => {
+    c.fillStyle = '#c8202c'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffd21f'; c.fillRect(10, 10, w - 20, h * 0.42);
+    c.fillStyle = '#c8202c'; c.font = 'bold 36px Arial'; c.textAlign = 'center'; c.fillText('DAILY', w / 2, 56); c.fillText('DEALS', w / 2, 96);
+    c.fillStyle = '#fff'; c.font = 'bold 26px Arial'; c.fillText('COLD', w / 2, 160); c.fillText('DRINKS', w / 2, 192);
+  });
+  const sign = new THREE.Group(); sign.name = 'A-frame-sign'; group.add(sign);
+  const signMat = std(0xffffff, 0.5, 0, { map: aTex }), black = std(0x161616, 0.6);
+  for (const s of [-1, 1]) {
+    const leaf = new THREE.Group(); leaf.rotation.z = s * 0.17; leaf.position.set(S.wallX + 0.75 + s * 0.16, S.walkY, dz1 + 0.62); sign.add(leaf);
+    // Each board leans in from its foot so the two tops meet.
+    const board = box('A-frame-board', [-0.02, 0, -0.29, 0.02, 0.9, 0.29], black, leaf);
+    board.position.set(s * 0.02, 0.45, 0);
+    const art2 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.8), signMat);
+    art2.rotation.y = s * Math.PI / 2; art2.position.set(s * 0.045, 0.47, 0); add(art2, 'A-frame-poster', leaf);
+  }
+
+  // ---------- orange flexible delineators where the model had bollards ----------
+  const orange = std(0xff4a12, 0.45, 0, { emissive: 0x3a0a00 }), band = std(0xf5f5f0, 0.25, 0.2), base = std(0x111111, 0.85);
+  for (const [px, py, pz2] of posts) {
+    const post = new THREE.Group(); post.name = 'Delineator-post'; post.position.set(px, py, pz2); group.add(post);
+    cyl('Delineator-base', 0.13, 0.15, 0.06, base, 0, 0.03, 0, post, 20);
+    cyl('Delineator-tube', 0.04, 0.045, 1.05, orange, 0, 0.58, 0, post, 14);
+    for (const by of [0.86, 0.98]) cyl('Delineator-band', 0.046, 0.046, 0.07, band, 0, by, 0, post, 14);
+    cyl('Delineator-cap', 0.035, 0.04, 0.03, orange, 0, 1.12, 0, post, 14);
+  }
+  return group;
+}
+
+// Kick-panel decal artwork, drawn after the photos (no source artwork used).
+function artTextures(ctex) {
+  const W = 512, H = 300;
+  const flake = (c, x, y, r, col) => {
+    c.strokeStyle = col; c.lineWidth = 3;
+    for (let k = 0; k < 3; k++) {
+      const a = k * Math.PI / 3; c.beginPath();
+      c.moveTo(x - Math.cos(a) * r, y - Math.sin(a) * r); c.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r); c.stroke();
+    }
+  };
+  const rr = (c, x, y, w, h, r) => { c.beginPath(); c.roundRect ? c.roundRect(x, y, w, h, r) : c.rect(x, y, w, h); };
+  return {
+    'reddy-ice': ctex(W, H, (c, w, h) => {
+      const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#0d1a3c'); g.addColorStop(1, '#1d3566');
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      for (let i = 0; i < 16; i++) flake(c, (i * 97) % w, 20 + (i * 53) % (h - 40), 10 + (i % 3) * 5, 'rgba(150,200,255,0.7)');
+      c.font = 'bold 46px Arial'; c.textBaseline = 'middle'; c.textAlign = 'right';
+      c.fillStyle = '#e2323c'; c.fillText('Reddy', w / 2 + 38, 44); c.textAlign = 'left'; c.fillStyle = '#9fd0ff'; c.fillText('Ice', w / 2 + 40, 44);
+      for (let i = 0; i < 5; i++) {
+        const x = 120 + i * 62, y = 110 + Math.abs(2 - i) * 10;
+        c.fillStyle = '#eef3f7'; rr(c, x, y, 64, 150 - Math.abs(2 - i) * 10, 18); c.fill();
+        c.fillStyle = '#c62b35'; c.font = 'bold 13px Arial'; c.save(); c.translate(x + 34, y + 80); c.rotate(-Math.PI / 2);
+        c.textAlign = 'center'; c.fillText('ReddyIce', 0, 0); c.restore();
+      }
+      c.fillStyle = 'rgba(210,235,255,0.85)'; for (let i = 0; i < 8; i++) c.fillRect(90 + i * 46, 262 + (i % 2) * 8, 18, 16);
+    }),
+    'geek-bar': ctex(W, H, (c, w, h) => {
+      const g = c.createRadialGradient(w / 2, h, 20, w / 2, h / 2, w * 0.7); g.addColorStop(0, '#3a5cc8'); g.addColorStop(0.5, '#151a4a'); g.addColorStop(1, '#05060f');
+      c.fillStyle = g; c.fillRect(0, 0, w, h);
+      c.fillStyle = 'rgba(255,255,255,0.8)'; for (let i = 0; i < 60; i++) c.fillRect((i * 151) % w, (i * 67) % h, 2, 2);
+      c.fillStyle = '#ffffff'; c.font = 'bold 30px Arial'; c.textAlign = 'left'; c.fillText('GEEK BAR', 26, 46);
+      c.font = 'bold 20px Arial'; c.fillText('PULSE X', 26, 74);
+      ['#2d7de0', '#d23b2a', '#1f2b33', '#e05a2a', '#2f8f4c', '#7f3fbf'].forEach((col, i) => {
+        const x = 70 + i * 66, y = 120 + (i % 2) * 22; c.save(); c.translate(x, y); c.rotate(-0.12 + i * 0.04);
+        c.fillStyle = col; rr(c, 0, 0, 48, 130, 12); c.fill();
+        c.fillStyle = 'rgba(255,255,255,0.25)'; rr(c, 8, 16, 32, 40, 6); c.fill(); c.restore();
+      });
+    }),
+    candy: ctex(W, H, (c, w, h) => {
+      c.fillStyle = '#1c0f0a'; c.fillRect(0, 0, w, h);
+      const wraps = ['#c4161c', '#5a2d14', '#e8731c', '#c4161c', '#3b2416', '#f2c12e', '#8a1218'];
+      for (let i = 0; i < 9; i++) {
+        c.save(); c.translate(70 + (i % 5) * 92, 70 + Math.floor(i / 5) * 110 + (i % 2) * 18); c.rotate(-0.5 + (i * 0.37) % 1);
+        c.fillStyle = wraps[i % wraps.length]; c.fillRect(-60, -18, 120, 36);
+        c.fillStyle = 'rgba(255,255,255,0.85)'; c.fillRect(-36, -6, 72, 12); c.restore();
+      }
+      c.fillStyle = 'rgba(255,255,255,0.7)'; c.fillRect(150, 268, 210, 6);
+    }),
+    'vape-art': ctex(W, H, (c, w, h) => {
+      c.fillStyle = '#d9e7e2'; c.fillRect(0, 0, w, h * 0.62);
+      for (let i = 0; i < 6; i++) { c.fillStyle = i % 2 ? '#a2774f' : '#b48659'; c.fillRect(0, h * 0.62 + i * 20, w, 20); }
+      ['#f08a4b', '#6fc2b6', '#f2a7b8', '#e8604c'].forEach((col, i) => {
+        const x = 90 + i * 95, y = 60 + (i % 2) * 14; c.fillStyle = col; rr(c, x, y, 58, 150, 14); c.fill();
+        c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(x + 10, y + 150, 38, 10);
+      });
+    })
+  };
+}
+
+function posterArt(c, w, h) {
+  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#2fa6e0'); g.addColorStop(0.55, '#f5d65a'); g.addColorStop(1, '#2f9a5a');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#1e7a3a';
+  for (const [x, y, s] of [[0, h, 1], [w, h, -1], [0, 40, 1], [w, 60, -1]]) {
+    for (let k = 0; k < 5; k++) { c.beginPath(); c.ellipse(x + s * (20 + k * 14), y - 30 - k * 18, 60, 12, s * (0.6 - k * 0.25), 0, Math.PI * 2); c.fill(); }
+  }
+  const outline = (text, x, y, size, fill, stroke = '#1b1b1b', italic = '') => {
+    c.font = `${italic}bold ${size}px Arial`; c.lineJoin = 'round'; c.lineWidth = size / 6;
+    c.strokeStyle = stroke; c.strokeText(text, x, y); c.fillStyle = fill; c.fillText(text, x, y);
+  };
+  c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+  outline('SPECIAL', 26, 96, 62, '#e8262f', '#ffe14a', 'italic ');
+  outline('VAPE', 26, 176, 84, '#ffffff');
+  outline('50K', 26, 262, 92, '#ffd21f');
+  // vape device on the right
+  const dg = c.createLinearGradient(250, 0, 330, 0); dg.addColorStop(0, '#2fd0e0'); dg.addColorStop(0.5, '#6c3fe0'); dg.addColorStop(1, '#e03fa8');
+  c.fillStyle = '#151515'; c.fillRect(256, 110, 72, 40); c.fillStyle = dg; c.fillRect(256, 150, 72, 140);
+  c.fillStyle = '#e8262f'; c.beginPath();
+  for (let i = 0; i < 24; i++) { const a = i / 24 * Math.PI * 2, r = i % 2 ? 70 : 92; c.lineTo(w / 2 + Math.cos(a) * r * 1.7, 370 + Math.sin(a) * r * 0.62); }
+  c.fill();
+  c.textAlign = 'center'; outline('Starting', w / 2, 338, 34, '#ffffff', '#b0141c', 'italic ');
+  outline('$9.99+', w / 2, 400, 64, '#ffffff', '#5a0a0e');
+  c.fillStyle = '#123'; c.beginPath(); c.arc(w / 2, h - 66, 54, 0, Math.PI * 2); c.fill();
+}

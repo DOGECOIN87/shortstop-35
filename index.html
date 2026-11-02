@@ -445,20 +445,21 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=ab9303899d",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=ab9303899d",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=ab9303899d",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=ab9303899d",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=ab9303899d",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=ab9303899d",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=ab9303899d",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=ab9303899d",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=ab9303899d",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=ab9303899d",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=ab9303899d",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=ab9303899d",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=ab9303899d",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=ab9303899d"
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=39db0a5704",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=39db0a5704",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=39db0a5704",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=39db0a5704",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=39db0a5704",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=39db0a5704",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=39db0a5704",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=39db0a5704",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=39db0a5704",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=39db0a5704",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=39db0a5704",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=39db0a5704",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=39db0a5704",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=39db0a5704",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=39db0a5704"
 } }
 </script>
 
@@ -477,6 +478,7 @@ import { OSM_BUILDINGS } from './scripts/osm-roads.js';
 import { TRAFFIC_LANES, TRAFFIC_SIGNALS } from './scripts/traffic-lanes.js';
 import { createSimulation, signalState } from './scripts/traffic-engine.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
+import { STOREFRONT, buildStorefront, storefrontFrame } from './scripts/storefront.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector, solarPosition, skyVector, moonPosition, moonIllumination } from './scripts/sun-position.js';
 import { lightingWeights, blendPresets, lerpHex, weatherAdjust, weatherOverride, fetchWeather, storeTime, weatherSummary } from './scripts/live-conditions.js';
@@ -1990,6 +1992,40 @@ function replaceModelFuelArea(root) {
   });
   console.info(`New canopy and pumps shown; hid ${hidden} model parts and cut ${removed} canopy/pump triangles.`);
 }
+/* ===== FoodMart storefront over the Blender model =====
+   scripts/storefront.js rebuilds the front from the owner's storefront photos
+   (block pier with shut-off, poster, extinguisher and trash can; decal kick
+   panels; maroon fascia with LED strip; orange curb delineators). The model's
+   black mullions, door, glass, red-lid bins, wall packs and yellow bollards
+   are removed; delineators take the bollards' places. */
+function replaceModelStorefront(root) {
+  root.updateMatrixWorld(true);
+  const frame = storefrontFrame().multiply(root.matrixWorld.clone().invert());
+  const inBox = (v, b) => v.x >= b[0] && v.x <= b[3] && v.y >= b[1] && v.y <= b[4] && v.z >= b[2] && v.z <= b[5];
+  const m = new THREE.Matrix4(), v = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0), posts = [];
+  let removed = 0, hidden = 0;
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    if (!o.isInstancedMesh) { if (!/car/i.test(o.name)) removed += cutTriangles(o, frame, STOREFRONT.cutBoxes); return; }
+    const rule = STOREFRONT.hideInstances.find(r => r.name.test(o.name));
+    if (!rule) return;
+    o.geometry.computeBoundingBox();
+    const half = (o.geometry.boundingBox.max.y - o.geometry.boundingBox.min.y) / 2;
+    for (let i = 0; i < o.count; i++) {
+      o.getMatrixAt(i, m); m.premultiply(o.matrixWorld).premultiply(frame);
+      v.setFromMatrixPosition(m);
+      if (!inBox(v, rule.box)) continue;
+      if (rule.post) posts.push([v.x, v.y - half * new THREE.Vector3().setFromMatrixScale(m).y, v.z]);
+      o.setMatrixAt(i, zero); hidden++;
+    }
+    o.instanceMatrix.needsUpdate = true; o.computeBoundingSphere();
+  });
+  const logoMap = new THREE.TextureLoader().load('./assets/logo.jpg');
+  logoMap.colorSpace = THREE.SRGBColorSpace;
+  root.add(buildStorefront({ ctex, glowMat, logoMap, posts }));
+  applyTime(activeTime);
+  console.info(`FoodMart storefront shown; cut ${removed} model triangles, replaced ${hidden} instances (${posts.length} delineators).`);
+}
 
 /* ===== Detailed station model built in Blender (blender/shortstop_station.blend) =====
    Exported to assets/web-station/shortstop_detailed.glb in the same true-north local frame as
@@ -2019,6 +2055,8 @@ try {
   world.children.forEach(c => { if (!keepMoving.has(c)) c.visible = false; });
   try { replaceModelFuelArea(root); }
   catch (err) { console.warn('Could not swap in the new canopy and pumps; showing the model\'s', err); stationLayout.visible = false; }
+  try { replaceModelStorefront(root); }
+  catch (err) { console.warn('Could not rebuild the storefront; showing the model\'s', err); }
   if (detailedFlag) {
     // Wave the flag on the page (the Blender wave is a geometry-nodes effect that glTF cannot carry).
     // The optimised GLB stores the flag as quantised int16 under a scaled node; bake it to float metres in root space.

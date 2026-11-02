@@ -19,6 +19,32 @@ Official website for Texaco ShortStop, 1185 Interstate 35 N, New Braunfels, TX 7
 - Map data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. Used to cross-check building outlines and road bearings.
 - Raw datasets are not stored in this repository.
 
+## Storefront from the owner's photos — 2026-11-02
+
+`scripts/storefront.js` rebuilds the store front on top of the detailed Blender
+model to match the owner's two night photos of the storefront. It works in the
+model's store frame (the store is turned 2.25° in the glTF), removes the model's
+black mullions, door and glass, the red-lid bins, the wall packs and the
+"SHORT STOP" fascia letters, and adds:
+
+- split-face grey block on the pier by the Amazon Hub locker and on the south end;
+- on the pier: the copper "Emergency Pump Shut-Off / All Pumps" plate and key
+  switch, a beige switch box, an outlet with its cord, the open white
+  fire-extinguisher cabinet, the framed "Special Vape 50K, starting $9.99+"
+  poster with the Short Stop roundel, and the square grey trash receptacle;
+- a clear-anodised storefront with decal kick panels drawn after the photos
+  (Reddy Ice, Geek Bar, candy, vape art; the bays past the door are tinted
+  because their decals are not visible), the alarm sticker, an OPEN neon, a
+  single glass door with push bar, Red Bull decal, "1185" on the transom and a mat;
+- a maroon fascia with a white LED strip along its underside and "FoodMart"
+  lettering (both glow at night);
+- orange flexible delineators with white bands where the model had yellow bollards,
+  and an A-frame sign by the door.
+
+The decal and poster artwork is redrawn, not the original print files; the
+A-frame sign's wording, the pier width (~1.95 m) and bay widths are estimates
+from the photos. Test: `node --experimental-default-type=module tests/storefront.mjs`.
+
 ## Live time and weather — 2026-11-02
 
 The 3D scene now starts in **Live** mode: lighting follows the real sun (and
