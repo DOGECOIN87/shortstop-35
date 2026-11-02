@@ -19,6 +19,28 @@ Official website for Texaco ShortStop, 1185 Interstate 35 N, New Braunfels, TX 7
 - Map data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. Used to cross-check building outlines and road bearings.
 - Raw datasets are not stored in this repository.
 
+## Sidewalk levels across the map — 2026-11-02
+
+`scripts/sidewalk-levels.js` corrects the detailed model's walks and curbs when
+the page loads (Blender is not available to fix the source file). Measured in
+the model, the walks sat 0-0.25 m above the paving beside them while the curb
+strips between a walk and the road or lot stood ~0.45 m above the walk, so the
+walks looked sunk behind low walls. Now:
+
+- every walk is at least 6 in (0.152 m) above the paving beside it, raised as a
+  smooth surface per connected walk (median 0.18 m above the lot afterwards);
+- curb strips between a walk and lower ground (road, lot, forecourt) come down
+  flush with the walk, keeping at least 0.1 m of curb face to that ground
+  (median walk-to-curb step 0.03 m afterwards, was 0.46 m);
+- curbs that edge a raised lawn (planters) are left whole; grass and the red
+  stamped islands are told apart from paving by their palette colour;
+- walks against the store are held at the door thresholds (no lift within
+  0.5 m of the walls, full lift from 3.5 m).
+
+Roads, lawns, buildings and other model parts are not moved. The procedural
+fallback scene (shown only if the model fails to load) is unchanged.
+Test: `node --experimental-default-type=module tests/sidewalk-levels.mjs`.
+
 ## Storefront from the owner's photos — 2026-11-02
 
 `scripts/storefront.js` rebuilds the store front on top of the detailed Blender
