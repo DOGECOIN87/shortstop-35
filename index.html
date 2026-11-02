@@ -445,22 +445,22 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=a3940cf45d",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=a3940cf45d",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=a3940cf45d",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=a3940cf45d",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=a3940cf45d",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=a3940cf45d",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=a3940cf45d",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=a3940cf45d",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=a3940cf45d",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=a3940cf45d",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=a3940cf45d",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=a3940cf45d",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=a3940cf45d",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=a3940cf45d",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=a3940cf45d",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=a3940cf45d"
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=81a4183797",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=81a4183797",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=81a4183797",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=81a4183797",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=81a4183797",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=81a4183797",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=81a4183797",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=81a4183797",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=81a4183797",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=81a4183797",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=81a4183797",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=81a4183797",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=81a4183797",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=81a4183797",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=81a4183797",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=81a4183797"
 } }
 </script>
 
@@ -2068,7 +2068,7 @@ try {
       return Math.hypot(dx, dz);
     };
     const lv = levelModelSidewalks(root, { exclude: (x, z) => fromStore(x, z) < 0.25, hold: (x, z) => (fromStore(x, z) - 0.5) / 3 });
-    console.info(`Sidewalks levelled: ${lv.lifted} walk vertices raised to 6 in above the paving, ${lv.lowered} curb vertices brought flush with the walks.`);
+    console.info(`Sidewalks levelled: ${lv.lifted} walk vertices raised and ${lv.sunk} lowered to 6 in above the ground at their edges; ${lv.lowered} curb vertices lowered.`);
   } catch (err) { console.warn('Could not level the sidewalks; showing the model\'s', err); }
   try { replaceModelStorefront(root); }
   catch (err) { console.warn('Could not rebuild the storefront; showing the model\'s', err); }

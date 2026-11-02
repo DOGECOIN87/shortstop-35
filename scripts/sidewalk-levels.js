@@ -1,28 +1,28 @@
 import * as THREE from '../vendor/three.module.js';
 
-// Sidewalk levels for the detailed Blender model (assets/web-station/
+// Sidewalk and curb levels for the detailed Blender model (assets/web-station/
 // shortstop_detailed.glb), corrected when the page loads.
 //
-// Measured in the model (Nov 2026): walks sit 0.0-0.25 m above the lot or road
-// beside them, but the curb strips between a walk and the road/lot stand
-// ~0.45 m above the walk (0.5-0.75 m above the lot), so every walk looks sunk
-// behind a low wall. The fix:
-//  1. Walks: raise any part that is less than 0.152 m (6 in) above the paving
-//     beside it, smoothly per connected walk, never lowering (the storefront
-//     walk stays level with the store floor at the doors).
-//  2. Curbs: where a curb strip borders a walk and the ground on its far side
-//     is lower than the walk (road, lot, forecourt), bring the strip's top down
-//     flush with the walk, keeping at least 0.1 m of curb face to that ground.
-//     Strips with a raised lawn behind them (planter edges) are left alone.
+// Measured in the model (Nov 2026): the raised curb borders stood ~0.5 m above
+// the ground (lawns sit at grade, ~0.5 m below the curb tops), and walks were
+// anywhere from level with the ground to ~0.4 m above it. The fix:
+//  1. Walks: every part stands 6 in (0.152 m) above the ground at its nearest
+//     edge, so each edge drops about 6 in (walks tilt with a cross-slope).
+//     Walks against the store stay level with the door thresholds.
+//  2. Curbs: borders along a walk are flush with the walk; every other raised
+//     border (around lawns, islands) comes down to 6 in above the lower ground
+//     beside it, or flush with the higher side where the ground steps across
+//     it (it never drops below ground it holds back). Only ever lowered there.
 // Lawns, roads, buildings and every other model part are not moved.
 export const WALK_LEVELS = Object.freeze({
-  lift: 0.152,        // walk top above the adjacent paving (6 in)
-  ring: 1.0,          // how far from a walk vertex the adjacent paving is sampled
+  lift: 0.152,        // walk top above the ground at its edges (6 in)
+  reach: 2.5,         // how far out from a walk vertex its edge ground is looked for
+  maxDrop: 0.6,
   cell: 0.5,          // ground height-grid cell (m)
   curbReach: 0.8,     // curb top vertices this close to a walk belong to its edge
-  beyond: 0.9,        // ground sampled this far past a curb vertex (its far side)
-  minCurbFace: 0.1,   // curb face kept above the far-side ground
-  smooth: 3.0,        // walk lift is spread over this radius, so walks stay planar
+  curbRing: [0.4, 0.8], // radii at which the ground beside a curb is sampled
+  curbSmooth: 0.6,    // curb moves are averaged over this radius (both edges of a strip agree)
+  smooth: 1.5,        // walk moves are averaged over this radius, so surfaces stay smooth
   maxLift: 0.6
 });
 
@@ -75,69 +75,81 @@ function pointGrid(xs, zs, ids, cell) {
   };
 }
 
-// Core solve on plain arrays (world metres). walk/curb: {x, y, z, up, comp?}
-// arrays of equal length per mesh; ground: height grid; exclude(x, z) marks
-// ground that must not count as paving (inside the store). Returns new y arrays.
-// onWalk(x, z): true where the walk itself covers the point, so a ring sample
-// there is not the paving beside the walk.
-// hold(x, z) in 0..1 scales the lift (0 where a walk must stay at a door threshold).
-// surface: every ground surface (lawns included), used to tell planter curbs
-// from road-side curbs; ground: paving only, used for the walk lift.
-export function solveWalkLevels({ walk, curb, ground, surface = ground, exclude = () => false, onWalk = () => false, hold = () => 1 }) {
+// Core solve on plain arrays (root-frame metres). walk/curb: {x, y, z, up, comp}
+// per vertex; surface: height grid of every ground surface (lawns included);
+// exclude(x, z): ground that is not an edge to stand above (inside the store);
+// onWalk/onCurb(x, z): the point is on a walk / curb top; hold(x, z) in 0..1
+// scales walk moves (0 where a walk must stay at a door threshold).
+// Returns new y arrays.
+export function solveWalkLevels({ walk, curb, surface, exclude = () => false, onWalk = () => false, onCurb = () => false, hold = () => 1 }) {
   const n = walk.x.length, wy = Float64Array.from(walk.y);
   const tops = []; for (let i = 0; i < n; i++) if (walk.up[i]) tops.push(i);
-  // 1. Lift needed at each walk top vertex: paving within `ring`, at most a
-  // little above the walk (higher surfaces are lawns, roofs or the walk's own
-  // planters, not the paving it should stand above).
-  const need = new Float64Array(n);
+  // 1. Each walk top vertex's edge ground: walk outward in 8 directions past
+  // the walk and any curb strip; the nearest edge found decides (ties are
+  // averaged), so a walk on a cross-slope tilts with the ground and every edge
+  // stands `lift` above the ground right beside it. Ground more than 0.3 m
+  // above the walk is a raised lawn, roof or wall, not an edge to stand above.
+  const want = new Float64Array(n), has = new Uint8Array(n);
   for (const i of tops) {
-    let lot = -Infinity;
+    let bestR = Infinity, sum = 0, cnt = 0;
     for (let k = 0; k < 8; k++) {
-      const a = k * Math.PI / 4, x = walk.x[i] + Math.cos(a) * W.ring, z = walk.z[i] + Math.sin(a) * W.ring;
-      if (exclude(x, z) || onWalk(x, z)) continue;
-      lot = Math.max(lot, ground.query(x, z, walk.y[i] + 0.1));
+      const a = k * Math.PI / 4;
+      for (let r = 0.25; r <= W.reach && r <= bestR + 1e-9; r += 0.25) {
+        const x = walk.x[i] + Math.cos(a) * r, z = walk.z[i] + Math.sin(a) * r;
+        if (exclude(x, z)) break;
+        if (onWalk(x, z) || onCurb(x, z)) continue;
+        const g = surface.query(x, z, walk.y[i] + 0.3);
+        if (g > -Infinity) {
+          if (r < bestR - 1e-9) { bestR = r; sum = 0; cnt = 0; }
+          sum += g; cnt++;
+        }
+        break;
+      }
     }
-    if (lot > -Infinity) need[i] = Math.min(W.maxLift, Math.max(0, lot + W.lift - walk.y[i]));
+    if (cnt) { want[i] = Math.min(W.maxLift, Math.max(-W.maxDrop, sum / cnt + W.lift - walk.y[i])); has[i] = 1; }
   }
-  // Spread each walk's lift (max then mean over `smooth`) so surfaces stay planar.
+  // Spread over each connected walk (mean over `smooth`) so surfaces stay planar.
   const near = pointGrid(walk.x, walk.z, tops, W.smooth);
-  const dil = new Float64Array(n), lift = new Float64Array(n);
-  for (const i of tops) near(walk.x[i], walk.z[i], W.smooth, j => { if (walk.comp[j] === walk.comp[i] && need[j] > dil[i]) dil[i] = need[j]; });
+  const lift = new Float64Array(n);
   for (const i of tops) {
     let s = 0, c = 0;
-    near(walk.x[i], walk.z[i], W.smooth, j => { if (walk.comp[j] === walk.comp[i]) { s += dil[j]; c++; } });
-    lift[i] = Math.max(need[i], c ? s / c : 0) * Math.min(1, Math.max(0, hold(walk.x[i], walk.z[i])));
+    near(walk.x[i], walk.z[i], W.smooth, j => { if (has[j] && walk.comp[j] === walk.comp[i]) { s += want[j]; c++; } });
+    lift[i] = (c ? s / c : 0) * Math.min(1, Math.max(0, hold(walk.x[i], walk.z[i])));
   }
   for (const i of tops) wy[i] = walk.y[i] + lift[i];
 
-  // 2. Curb strips along walks with lower ground behind them come down flush.
-  const m = curb.x.length, cy = Float64Array.from(curb.y);
+  // 2. Curbs. Along a walk: flush with the walk. Elsewhere: 6 in above the
+  // higher ground beside the strip (lawn, island, lot), only ever lowering.
+  const m = curb.x.length, cy = Float64Array.from(curb.y), ctops = [];
+  for (let c = 0; c < m; c++) if (curb.up[c]) ctops.push(c);
   const nearWalk = pointGrid(walk.x, walk.z, tops, W.curbReach);
-  // Votes per connected curb piece: a piece that edges a raised lawn anywhere
-  // is a planter and stays whole, so no curb is half lowered.
-  const plan = new Map(), votes = new Map(), vote = (k, f) => { const v = votes.get(k) || [0, 0]; v[f]++; votes.set(k, v); };
-  for (let c = 0; c < m; c++) {
-    if (!curb.up[c]) continue;
+  const target = new Float64Array(m), set = new Uint8Array(m);
+  for (const c of ctops) {
     let best = -1, bd = Infinity;
-    nearWalk(curb.x[c], curb.z[c], W.curbReach, (i, d) => {
-      const rise = curb.y[c] - wy[i];
-      if (rise > 0.08 && rise < 1.2 && d < bd) { bd = d; best = i; }
-    });
-    if (best < 0 || bd < 1e-3) continue;
-    const dx = (curb.x[c] - walk.x[best]) / bd, dz = (curb.z[c] - walk.z[best]) / bd;
-    const bx = curb.x[c] + dx * W.beyond, bz = curb.z[c] + dz * W.beyond;
-    const far = surface.query(bx, bz, curb.y[c] + 0.05);
-    const k = curb.comp ? curb.comp[c] : 0;
-    if (far === -Infinity || far > wy[best] - 0.05) { vote(k, 1); continue; } // raised lawn behind: a planter edge
-    vote(k, 0); plan.set(c, Math.max(wy[best], far + W.minCurbFace));
+    nearWalk(curb.x[c], curb.z[c], W.curbReach, (i, d) => { if (d < bd && curb.y[c] - wy[i] < 1.2) { bd = d; best = i; } });
+    if (best >= 0) { target[c] = wy[best]; set[c] = 1; continue; }
+    let low = Infinity, high = -Infinity;
+    for (const r of W.curbRing) for (let k = 0; k < 8; k++) {
+      const a = k * Math.PI / 4, x = curb.x[c] + Math.cos(a) * r, z = curb.z[c] + Math.sin(a) * r;
+      if (onCurb(x, z) || onWalk(x, z)) continue;
+      const g = surface.query(x, z, curb.y[c] - 0.02);
+      if (g > -Infinity) { low = Math.min(low, g); high = Math.max(high, g); }
+    }
+    // As low as it can go: 6 in above the lower side, but never below the
+    // ground it holds back on the higher side.
+    if (high > -Infinity) { target[c] = Math.min(curb.y[c], Math.max(low + W.lift, high)); set[c] = 1; }
   }
+  // Average the moves over each strip so both of its edges and the corners agree.
+  const nearCurb = pointGrid(curb.x, curb.z, ctops, W.curbSmooth);
   let lowered = 0;
-  for (const [c, y] of plan) {
-    const [low, planter] = votes.get(curb.comp ? curb.comp[c] : 0);
-    if (planter > 0.1 * (low + planter)) continue;
-    cy[c] = y; lowered++;
+  for (const c of ctops) {
+    let s = 0, k = 0;
+    nearCurb(curb.x[c], curb.z[c], W.curbSmooth, j => { if (set[j] && (!curb.comp || curb.comp[j] === curb.comp[c])) { s += target[j] - curb.y[j]; k++; } });
+    if (!k) continue;
+    cy[c] = curb.y[c] + s / k;
+    if (Math.abs(s / k) > 0.01) lowered++;
   }
-  return { walkY: wy, curbY: cy, lifted: tops.filter(i => lift[i] > 0.005).length, needed: tops.filter(i => need[i] > 0.005).length, lowered };
+  return { walkY: wy, curbY: cy, lifted: tops.filter(i => lift[i] > 0.005).length, sunk: tops.filter(i => lift[i] < -0.005).length, lowered };
 }
 
 // ---- Model plumbing: bake quantised positions to float, solve, write back ----
@@ -186,26 +198,6 @@ function writeBack(mesh, root, P, newY, of) {
   mesh.geometry.computeBoundingBox(); mesh.geometry.computeBoundingSphere();
 }
 
-// The model's lots, lawns and stamped islands share palette materials; a
-// triangle's palette colour (sampled at its UV) tells paving from grass or the
-// red stamped island infill, which a walk does not need to stand above.
-export function isPavingColour([r, g, b]) {
-  if (g > r + 8 && g > b + 15) return false;    // grass
-  if (r > g + 60 && r > b + 60) return false;   // red stamped concrete (islands)
-  return true;
-}
-function paletteSampler() {
-  if (typeof document === 'undefined') return null;
-  const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d', { willReadFrequently: true }), cache = new Map();
-  return (map, u, v) => {
-    const img = map?.image; if (!img || !img.width) return null;
-    let d = cache.get(img);
-    if (!d) { canvas.width = img.width; canvas.height = img.height; ctx.drawImage(img, 0, 0); d = ctx.getImageData(0, 0, img.width, img.height); cache.set(img, d); }
-    const wrap = q => ((q % 1) + 1) % 1, x = Math.min(d.width - 1, Math.floor(wrap(u) * d.width)), y = Math.min(d.height - 1, Math.floor(wrap(v) * d.height));
-    const i = 4 * (y * d.width + x); return [d.data[i], d.data[i + 1], d.data[i + 2]];
-  };
-}
-
 export function levelModelSidewalks(root, { exclude, hold } = {}) {
   root.updateMatrixWorld(true);
   const walks = [], curbs = [], ground = [];
@@ -217,16 +209,16 @@ export function levelModelSidewalks(root, { exclude, hold } = {}) {
     else if (!/car|flag/i.test(o.name) && !/flag/i.test(name)) ground.push(o);
   });
   if (!walks.length) return { lifted: 0, lowered: 0 };
-  // Gather walk data first to bound the ground triangles that matter.
+  // Gather walks and curbs first to bound the ground triangles that matter.
   const walkData = walks.map(m => { const P = bake(m, root), of = coincident(P); return { m, P, of, comp: components(m, of) }; });
-  const box = new THREE.Box3();
-  for (const { P } of walkData) for (let i = 0; i < P.x.length; i++) box.expandByPoint(new THREE.Vector3(P.x[i], P.y[i], P.z[i]));
+  const curbData = curbs.map(m => { const P = bake(m, root), of = coincident(P); return { m, P, of, comp: components(m, of) }; });
+  const box = new THREE.Box3(), pt = new THREE.Vector3();
+  for (const { P } of [...walkData, ...curbData]) for (let i = 0; i < P.x.length; i++) box.expandByPoint(pt.set(P.x[i], P.y[i], P.z[i]));
   box.expandByScalar(3);
-  const sample = paletteSampler(); let skipped = 0;
-  const tris = [], allTris = [], a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
+  const allTris = [], a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), e1 = new THREE.Vector3(), e2 = new THREE.Vector3();
   for (const m of ground) {
     const M = toRoot(m, root);
-    const g = m.geometry, pos = g.attributes.position, uv = g.attributes.uv, idx = g.index ? g.index.array : null, count = idx ? idx.length : pos.count;
+    const g = m.geometry, pos = g.attributes.position, idx = g.index ? g.index.array : null, count = idx ? idx.length : pos.count;
     if (!g.boundingBox) g.computeBoundingBox();
     if (!g.boundingBox.clone().applyMatrix4(M).intersectsBox(box)) continue;
     for (let t = 0; t < count; t += 3) {
@@ -237,15 +229,8 @@ export function levelModelSidewalks(root, { exclude, hold } = {}) {
       e1.subVectors(b, a); e2.subVectors(c, a); e1.cross(e2);
       const len = e1.length(); if (len < 1e-9 || Math.abs(e1.y) / len < 0.7) continue; // up or down faces of slabs
       allTris.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
-      if (sample && uv && m.material?.map) {
-        const i0 = idx ? idx[t] : t, i1 = idx ? idx[t + 1] : t + 1, i2 = idx ? idx[t + 2] : t + 2;
-        const col = sample(m.material.map, (uv.getX(i0) + uv.getX(i1) + uv.getX(i2)) / 3, (uv.getY(i0) + uv.getY(i1) + uv.getY(i2)) / 3);
-        if (col && !isPavingColour(col)) { skipped++; continue; }
-      }
-      tris.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
     }
   }
-  const grid = buildHeightGrid(tris);
   // Footprint of the walks' top faces (fine cells), to skip samples on the walk.
   const walkTris = [];
   for (const { m } of walkData) {
@@ -260,27 +245,41 @@ export function levelModelSidewalks(root, { exclude, hold } = {}) {
     }
   }
   const walkGrid = buildHeightGrid(walkTris, 0.25);
+  const curbTris = [];
+  for (const m of curbs) {
+    const M = toRoot(m, root), g = m.geometry, pos = g.attributes.position, idx = g.index ? g.index.array : null, count = idx ? idx.length : pos.count;
+    for (let t = 0; t < count; t += 3) {
+      a.fromBufferAttribute(pos, idx ? idx[t] : t).applyMatrix4(M);
+      b.fromBufferAttribute(pos, idx ? idx[t + 1] : t + 1).applyMatrix4(M);
+      c.fromBufferAttribute(pos, idx ? idx[t + 2] : t + 2).applyMatrix4(M);
+      e1.subVectors(b, a); e2.subVectors(c, a); e1.cross(e2);
+      const len = e1.length(); if (len < 1e-9 || e1.y / len < 0.7) continue;
+      curbTris.push(a.x, a.y, a.z, b.x, b.y, b.z, c.x, c.y, c.z);
+    }
+  }
+  const curbGrid = buildHeightGrid(curbTris, 0.25);
+  const onCurb = (x, z) => curbGrid.query(x, z, Infinity) > -Infinity;
   const onWalk = (x, z) => walkGrid.query(x, z, Infinity) > -Infinity;
-  const curbData = curbs.map(m => { const P = bake(m, root), of = coincident(P); return { m, P, of, comp: components(m, of) }; });
   // Solve walks and curbs together (curb decisions use the lifted walk heights).
   const cat = list => {
     const o = { x: [], y: [], z: [], up: [], comp: [] };
     list.forEach(({ P, comp }, k) => { for (let i = 0; i < P.x.length; i++) { o.x.push(P.x[i]); o.y.push(P.y[i]); o.z.push(P.z[i]); o.up.push(P.up[i]); o.comp.push(comp ? `${k}:${comp[i]}` : 0); } });
     return o;
   };
-  const res = solveWalkLevels({ walk: cat(walkData), curb: cat(curbData), ground: grid, surface: buildHeightGrid(allTris), exclude, onWalk, hold });
+  const res = solveWalkLevels({ walk: cat(walkData), curb: cat(curbData), surface: buildHeightGrid(allTris), exclude, onWalk, onCurb, hold });
   let off = 0;
   for (const d of walkData) {
-    // Representatives take the max lift of their coincident top vertices.
+    // Representatives take the largest move among their coincident vertices
+    // (top faces move; the skirt faces meeting them follow).
     const y = Float64Array.from(d.P.y);
-    for (let i = 0; i < d.P.x.length; i++) { const r = d.of[i], ny = res.walkY[off + i]; if (ny - d.P.y[i] > y[r] - d.P.y[r]) y[r] = d.P.y[r] + (ny - d.P.y[i]); }
+    for (let i = 0; i < d.P.x.length; i++) { const r = d.of[i], dy = res.walkY[off + i] - d.P.y[i]; if (Math.abs(dy) > Math.abs(y[r] - d.P.y[r])) y[r] = d.P.y[r] + dy; }
     writeBack(d.m, root, d.P, y, d.of); off += d.P.x.length;
   }
   off = 0;
   for (const d of curbData) {
     const y = Float64Array.from(d.P.y);
-    for (let i = 0; i < d.P.x.length; i++) { const r = d.of[i], ny = res.curbY[off + i]; if (ny - d.P.y[i] < y[r] - d.P.y[r]) y[r] = d.P.y[r] + (ny - d.P.y[i]); }
+    for (let i = 0; i < d.P.x.length; i++) { const r = d.of[i], dy = res.curbY[off + i] - d.P.y[i]; if (Math.abs(dy) > Math.abs(y[r] - d.P.y[r])) y[r] = d.P.y[r] + dy; }
     writeBack(d.m, root, d.P, y, d.of); off += d.P.x.length;
   }
-  return { lifted: res.lifted, needed: res.needed, lowered: res.lowered, paving: tris.length / 9, skipped };
+  return { lifted: res.lifted, sunk: res.sunk, lowered: res.lowered };
 }

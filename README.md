@@ -19,26 +19,29 @@ Official website for Texaco ShortStop, 1185 Interstate 35 N, New Braunfels, TX 7
 - Map data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. Used to cross-check building outlines and road bearings.
 - Raw datasets are not stored in this repository.
 
-## Sidewalk levels across the map — 2026-11-02
+## Sidewalk and curb levels across the map — 2026-11-02
 
-`scripts/sidewalk-levels.js` corrects the detailed model's walks and curbs when
-the page loads (Blender is not available to fix the source file). Measured in
-the model, the walks sat 0-0.25 m above the paving beside them while the curb
-strips between a walk and the road or lot stood ~0.45 m above the walk, so the
-walks looked sunk behind low walls. Now:
+`scripts/sidewalk-levels.js` corrects the detailed model's walks and raised
+curb borders when the page loads (Blender is not available to fix the source
+file). Measured in the model, the curb borders stood ~0.5-0.75 m above the
+ground (lawns sit at grade, ~0.5 m below the curb tops) and walks were anywhere
+from level with the ground to ~0.4 m above it. Now:
 
-- every walk is at least 6 in (0.152 m) above the paving beside it, raised as a
-  smooth surface per connected walk (median 0.18 m above the lot afterwards);
-- curb strips between a walk and lower ground (road, lot, forecourt) come down
-  flush with the walk, keeping at least 0.1 m of curb face to that ground
-  (median walk-to-curb step 0.03 m afterwards, was 0.46 m);
-- curbs that edge a raised lawn (planters) are left whole; grass and the red
-  stamped islands are told apart from paving by their palette colour;
-- walks against the store are held at the door thresholds (no lift within
-  0.5 m of the walls, full lift from 3.5 m).
+- every part of a walk stands 6 in (0.152 m) above the ground at its nearest
+  edge, so each edge drops about 6 in; on a cross-slope the walk tilts with the
+  ground (median edge drop afterwards 0.148 m);
+- curb borders along a walk are flush with it;
+- every other raised border (lawn beds, islands) comes down to 6 in above the
+  lower ground beside it, or flush with the higher side where the ground steps
+  across it, so it never drops below ground it holds back (median border height
+  above the lower ground 0.20 m, was 0.57 m);
+- walks against the store are held at the door thresholds (no change within
+  0.5 m of the walls, full change from 3.5 m).
 
-Roads, lawns, buildings and other model parts are not moved. The procedural
-fallback scene (shown only if the model fails to load) is unchanged.
+Where the model's ground falls steeply across a walk (parts of the frontage
+walk drop ~0.5 m over 3 m), one edge still drops more than 6 in. Roads, lawns,
+buildings and other model parts are not moved. The procedural fallback scene
+(shown only if the model fails to load) is unchanged.
 Test: `node --experimental-default-type=module tests/sidewalk-levels.mjs`.
 
 ## Storefront from the owner's photos — 2026-11-02
@@ -65,8 +68,8 @@ black mullions, door and glass, the red-lid bins, the wall packs and the
 
 Follow-up from the owner's straight-on night photo: the entry is a pair of
 glass doors (about 1.8 m) with centre pulls under the "1185" transom; LED letter
-signs (CBD, E-CIGS, 10THC, DELTA 8) hang across the top of the four bays south of
-the door, OPEN moved to the bay north of the door, and an LED screen ("Fifty Bar
+signs (CBD, E-CIGS, 10THC, DELTA 8) hang in the upper glass of the four bays south
+of the door (0.55 m tall, centred 2.85 m up, lit day and night), OPEN moved to the bay north of the door, and an LED screen ("Fifty Bar
 vapes $19.99") is on the south block wall. The band around the store is now
 solid grey on all four sides (the model's red band is sleeved over), with red
 kept only on the FOODMART sign panel and Texaco roundel above the doors.

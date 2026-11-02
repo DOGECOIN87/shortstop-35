@@ -23,6 +23,7 @@ export const STOREFRONT = Object.freeze({
   glazingZ: [-5.45, 7.42],
   doorZ: [0.95, 2.75],  // pair of glass doors (straight-on photo)
   railY: 1.45,           // kick-panel rail (decal panels below, clear glass above)
+  ledY: 2.85,            // centre of the LED window signs (straight-on photo)
   headY: 3.5,
   fasciaY: [3.56, 4.98],
   signZ: [-0.95, 4.7],   // red FOODMART sign panel over the doors (straight-on photo)
@@ -178,10 +179,10 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
 
   // LED letter signs hung behind the upper glass (CBD, E-CIGS, 10THC, DELTA 8).
   // Only round LED dots of the drawn lettering are kept.
-  const ledSign = draw => ctex(512, 128, (c, w, h) => {
-    c.clearRect(0, 0, w, h); draw(c, w, h);
+  const ledSign = draw => ctex(512, 192, (c, w, h) => {
+    c.clearRect(0, 0, w, h); c.save(); c.translate(w / 2, h / 2); c.scale(1.25, 1.25); c.translate(-w / 2, -64); draw(c, w, 128); c.restore();
     c.globalCompositeOperation = 'destination-in'; c.beginPath();
-    for (let y = 3; y < h; y += 6) for (let x = 3; x < w; x += 6) { c.moveTo(x + 2.5, y); c.arc(x, y, 2.5, 0, Math.PI * 2); }
+    for (let y = 3; y < h; y += 6) for (let x = 3; x < w; x += 6) { c.moveTo(x + 2.6, y); c.arc(x, y, 2.6, 0, Math.PI * 2); }
     c.fill(); c.globalCompositeOperation = 'source-over';
   });
   const ledText = (c, text, x, y, col, size = 92) => {
@@ -195,14 +196,20 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
     },
     'E-CIGS': (c, w, h) => ledText(c, 'E-CIGS', w / 2, h / 2 + 4, '#ffffff', 96),
     '10THC': (c, w, h) => {
-      c.strokeStyle = '#35e05a'; c.lineWidth = 9; c.beginPath(); c.moveTo(50, 98); c.lineTo(86, 30); c.lineTo(122, 98); c.closePath(); c.stroke();
-      ledText(c, '10THC', w * 0.6, h / 2 + 4, '#35e05a', 96);
+      c.strokeStyle = '#35e05a'; c.lineWidth = 9; c.beginPath(); c.moveTo(60, 98); c.lineTo(96, 30); c.lineTo(132, 98); c.closePath(); c.stroke();
+      ledText(c, "10THC", w * 0.6, h / 2 + 4, "#35e05a", 84);
     },
     'DELTA 8': (c, w, h) => ledText(c, 'DELTA 8', w / 2, h / 2 + 4, '#e8f6ff', 84)
   };
+  // Sized and placed from the straight-on photo: letters fill most of each
+  // window's width, centred about 0.6 m below the window head (y ~2.9 m), level
+  // with the top of the LED screen. LED boards are lit day and night.
   for (const bay of S.bays.filter(b => b.led)) {
-    const m = glowMat(ledSign(ledArt[bay.led])); m.transparent = true; m.alphaTest = 0.2; m.depthWrite = false;
-    face(`LED-sign-${bay.led}`, bay.z[1] - bay.z[0] - 0.14, 0.3, m, S.glassX - 0.05, S.headY - 0.45, (bay.z[0] + bay.z[1]) / 2);
+    const tex = ledSign(ledArt[bay.led]);
+    const m = std(0xffffff, 0.5, 0, { map: tex, emissive: 0xffffff, emissiveMap: tex, emissiveIntensity: 1.1, transparent: true, alphaTest: 0.2 });
+    const zc = (bay.z[0] + bay.z[1]) / 2, w = bay.z[1] - bay.z[0] - 0.1;
+    face(`LED-sign-${bay.led}`, w, 0.55, m, S.glassX - 0.04, S.ledY, zc);
+    face('LED-sign-backing', w, 0.55, std(0x050506, 0.9), S.glassX - 0.06, S.ledY, zc);
   }
 
   // LED video screen on the south block wall ("Fifty Bar vapes $19.99").
@@ -216,7 +223,7 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
       c.font = `bold ${size}px Arial`; c.strokeText(t, w / 2, y); c.fillStyle = col; c.fillText(t, w / 2, y);
     }
   });
-  const screenZ = 9.25, [sy0, sy1] = [1.98, 2.86];
+  const screenZ = 9.4, [sy0, sy1] = [1.98, 2.86]; // ~2 m from the glazing (straight-on photo)
   box('LED-screen-housing', [S.wallX, sy0, screenZ - 0.66, S.wallX + 0.09, sy1, screenZ + 0.66], std(0x0c0c0e, 0.5, 0.3));
   // Screens are lit day and night, independent of the sign-lighting presets.
   face('LED-screen', 1.2, sy1 - sy0 - 0.1, std(0xffffff, 0.4, 0, { map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 0.85 }),
