@@ -445,22 +445,22 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=81a4183797",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=81a4183797",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=81a4183797",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=81a4183797",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=81a4183797",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=81a4183797",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=81a4183797",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=81a4183797",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=81a4183797",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=81a4183797",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=81a4183797",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=81a4183797",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=81a4183797",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=81a4183797",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=81a4183797",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=81a4183797"
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=d82ce2c8c1",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=d82ce2c8c1",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=d82ce2c8c1",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=d82ce2c8c1",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=d82ce2c8c1",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=d82ce2c8c1",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=d82ce2c8c1",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=d82ce2c8c1",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=d82ce2c8c1",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=d82ce2c8c1",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=d82ce2c8c1",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=d82ce2c8c1",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=d82ce2c8c1",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=d82ce2c8c1",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=d82ce2c8c1",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=d82ce2c8c1"
 } }
 </script>
 
@@ -479,7 +479,7 @@ import { OSM_BUILDINGS } from './scripts/osm-roads.js';
 import { TRAFFIC_LANES, TRAFFIC_SIGNALS } from './scripts/traffic-lanes.js';
 import { createSimulation, signalState } from './scripts/traffic-engine.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
-import { STOREFRONT, buildStorefront, storefrontFrame } from './scripts/storefront.js';
+import { STOREFRONT, buildStorefront, storefrontFrame, settleOnWalk } from './scripts/storefront.js';
 import { levelModelSidewalks } from './scripts/sidewalk-levels.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector, solarPosition, skyVector, moonPosition, moonIllumination } from './scripts/sun-position.js';
@@ -2024,7 +2024,17 @@ function replaceModelStorefront(root) {
   });
   const logoMap = new THREE.TextureLoader().load('./assets/logo.jpg');
   logoMap.colorSpace = THREE.SRGBColorSpace;
-  root.add(buildStorefront({ ctex, glowMat, logoMap, posts }));
+  const front = buildStorefront({ ctex, glowMat, logoMap, posts });
+  // Stand the props on the model's walk, which is not level along the front.
+  const ground = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name)) ground.push(o); });
+  root.add(front); root.updateMatrixWorld(true);
+  const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0), at = new THREE.Vector3();
+  settleOnWalk(front, (x, z) => {
+    at.set(x, STOREFRONT.walkY + 1.5, z);
+    ray.set(root.localToWorld(at.clone()), down); ray.far = 2.5;
+    const hit = ray.intersectObjects(ground, false)[0];
+    return hit ? root.worldToLocal(hit.point.clone()).y : NaN;
+  });
   applyTime(activeTime);
   console.info(`FoodMart storefront shown; cut ${removed} model triangles, replaced ${hidden} instances (${posts.length} delineators).`);
 }

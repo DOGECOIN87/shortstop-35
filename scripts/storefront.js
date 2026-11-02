@@ -21,6 +21,7 @@ export const STOREFRONT = Object.freeze({
   storeZ: [-10.0, 10.2], // north and south corners of the front wall
   pierZ: [-7.4, -5.45],  // block pier between the glazing and the Amazon locker
   glazingZ: [-5.45, 7.42],
+  locker: Object.freeze({ x: [10.03, 10.71], y: [0.62, 2.86], z: [-9.72, -7.33] }), // the model's Amazon Hub locker
   doorZ: [0.95, 2.75],  // pair of glass doors (straight-on photo)
   railY: 1.45,           // kick-panel rail (decal panels below, clear glass above)
   ledY: 2.85,            // centre of the LED window signs (straight-on photo)
@@ -30,12 +31,12 @@ export const STOREFRONT = Object.freeze({
   // The model's red band on the other three walls (y 4.18-4.98): back wall
   // x -6.39, north wall z -9.90, south wall z 10.14. Sleeved in grey.
   band: Object.freeze({ y: [4.16, 5.0], backX: -6.39, northZ: -9.9, southZ: 10.145 }),
-  fasciaDepth: 0.24,
+  fasciaDepth: 0.45,     // projects over the walk; LED strip on its front edge (photo 6)
   // Bays from the pier southward. `art` names the kick-panel decal in the photos.
   bays: Object.freeze([
-    { z: [-5.45, -3.35], art: 'reddy-ice' },
+    { z: [-5.45, -3.35], art: 'reddy-ice', upper: 'frosted' },  // milky green film (photos 4, 5)
     { z: [-3.35, -1.7], art: 'geek-bar' },
-    { z: [-1.7, -0.15], art: 'candy' },
+    { z: [-1.7, -0.15], art: 'candy', upper: 'blinds' },        // horizontal blinds (photos 5, 6)
     { z: [-0.15, 0.95], art: 'vape-art', neon: true },
     // South of the door: LED letter signs across the top of the glass.
     { z: [2.75, 3.92], art: 'tint', led: 'DELTA 8' },
@@ -70,6 +71,20 @@ function scaleUV(geometry, su, sv) {
   const uv = geometry.attributes.uv;
   for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv);
   return geometry;
+}
+
+// Props marked userData.onWalk are built standing at S.walkY; the page drops
+// each onto the model's actual walk surface (the walk is not level).
+export function settleOnWalk(group, heightAt) {
+  group.updateMatrixWorld(true);
+  const box = new THREE.Box3(), c = new THREE.Vector3();
+  group.traverse(o => {
+    if (!o.userData.onWalk) return;
+    box.setFromObject(o).getCenter(c);
+    if (group.parent) group.parent.worldToLocal(c); // heights are asked in the glTF root's frame
+    const y = heightAt(c.x, c.z, o);
+    if (Number.isFinite(y)) o.position.y += y - S.walkY;
+  });
 }
 
 export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
@@ -115,9 +130,18 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
     }
   });
   const blockMat = std(0xffffff, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  // The lower courses read darker grey than the upper split-face (photo 5).
+  const blockLow = std(0xa9adb0, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  const BAND_Y = 1.6;
   const blockFace = (name, [z0, z1], [y0, y1], x = S.wallX) => {
+    blockPart(name + '-lower', [z0, z1], [y0, BAND_Y], x, blockLow);
+    return blockPart(name, [z0, z1], [BAND_Y, y1], x, blockMat);
+  };
+  const blockPart = (name, [z0, z1], [y0, y1], x, mat) => {
     const w = z1 - z0, h = y1 - y0;
-    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(w, h), w / BLOCK_W, h / BLOCK_H), blockMat);
+    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(w, h), w / BLOCK_W, h / BLOCK_H), mat);
+    // keep the courses continuous across the colour change
+    const uv = m.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) + (y0 - S.walkY) / BLOCK_H);
     m.rotation.y = Math.PI / 2; m.position.set(x, (y0 + y1) / 2, (z0 + z1) / 2);
     return add(m, name);
   };
@@ -152,11 +176,22 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
 
   // ---------- bays: clear upper glass, decal kick panels ----------
   const art = artTextures(ctex);
+  const frosted = new THREE.MeshPhysicalMaterial({ color: 0xcfe3d8, roughness: 0.5, metalness: 0, transparent: true, opacity: 0.82, emissive: 0x27352e, emissiveIntensity: 0.4 });
+  const blindsTex = ctex(64, 256, (c, w, h) => {
+    for (let y = 0; y < h; y += 8) { c.fillStyle = '#e9ebec'; c.fillRect(0, y, w, 6); c.fillStyle = '#9fa5a8'; c.fillRect(0, y + 6, w, 2); }
+  });
+  blindsTex.repeat.set(1, 6);
+  const blindsMat = std(0xffffff, 0.7, 0, { map: blindsTex });
   const tint = std(0x1a2226, 0.35, 0.2);
   for (const bay of S.bays) {
     const [z0, z1] = bay.z, w = z1 - z0 - 0.06, zc = (z0 + z1) / 2;
     box('Kick-rail', [fx0, S.railY - 0.03, z0, fx1, S.railY + 0.03, z1], aluminium, frame);
-    face('Upper-glass', w, S.headY - 0.09 - S.railY - 0.03, glass, S.glassX + 0.01, (S.railY + 0.03 + S.headY - 0.09) / 2, zc);
+    const upH = S.headY - 0.09 - S.railY - 0.03, upY = (S.railY + 0.03 + S.headY - 0.09) / 2;
+    face('Upper-glass', w, upH, bay.upper === 'frosted' ? frosted : glass, S.glassX + 0.01, upY, zc);
+    if (bay.upper === 'blinds') {
+      const bh = upH * 0.72; // blinds drawn about three-quarters down
+      face('Window-blinds', w - 0.02, bh, blindsMat, S.glassX - 0.03, S.headY - 0.09 - bh / 2, zc);
+    }
     const lowH = S.railY - 0.03 - S.floorY - 0.06;
     const lowMat = bay.art === 'tint' ? tint : std(0xffffff, 0.35, 0.05, { map: art[bay.art] });
     face(`Kick-panel-${bay.art}`, w, lowH, lowMat, S.glassX, S.floorY + 0.06 + lowH / 2, zc);
@@ -169,13 +204,6 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
 
   // "OPEN" neon hung in the glass beside the door.
   const neonBay = S.bays.find(b => b.neon);
-  const openTex = ctex(256, 112, (c, w, h) => {
-    c.fillStyle = '#07070c'; c.fillRect(0, 0, w, h);
-    c.strokeStyle = '#4a5cff'; c.lineWidth = 7; c.strokeRect(8, 8, w - 16, h - 16);
-    c.fillStyle = '#ff3340'; c.font = 'bold 62px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('OPEN', w / 2, h / 2 + 3);
-  });
-  face('Open-neon', 0.72, 0.32, glowMat(openTex), S.glassX - 0.04, S.headY - 0.42, (neonBay.z[0] + neonBay.z[1]) / 2);
 
   // LED letter signs hung behind the upper glass (CBD, E-CIGS, 10THC, DELTA 8).
   // Only round LED dots of the drawn lettering are kept.
@@ -211,6 +239,22 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
     face(`LED-sign-${bay.led}`, w, 0.55, m, S.glassX - 0.04, S.ledY, zc);
     face('LED-sign-backing', w, 0.55, std(0x050506, 0.9), S.glassX - 0.06, S.ledY, zc);
   }
+
+  // Big LED "OPEN" sign high in the glass beside the door (photos 5, 6): blue
+  // "OP", red-and-white striped "EN", lit day and night.
+  const openTex = ledSign((c, w) => {
+    c.font = 'bold 104px Arial'; c.textBaseline = 'middle'; c.textAlign = 'right';
+    c.fillStyle = '#3d4dff'; c.fillText('OP', w / 2 + 6, 68);
+    c.save(); c.beginPath(); c.rect(w / 2 + 6, 0, w, 128); c.clip();
+    c.textAlign = 'left'; c.fillStyle = '#ff2a3a'; c.fillText('EN', w / 2 + 6, 68);
+    c.globalCompositeOperation = 'source-atop'; c.fillStyle = '#ffffff';
+    for (let y = 22; y < 120; y += 24) c.fillRect(w / 2, y, w, 10);
+    c.restore();
+  });
+  const openMat = std(0xffffff, 0.5, 0, { map: openTex, emissive: 0xffffff, emissiveMap: openTex, emissiveIntensity: 1.2, transparent: true, alphaTest: 0.2 });
+  const openZ = (neonBay.z[0] + neonBay.z[1]) / 2, openW = neonBay.z[1] - neonBay.z[0] - 0.12;
+  face('Open-sign', openW, 0.5, openMat, S.glassX - 0.04, S.headY - 0.42, openZ);
+  face('Open-sign-backing', openW, 0.5, std(0x050506, 0.9), S.glassX - 0.06, S.headY - 0.42, openZ);
 
   // LED video screen on the south block wall ("Fifty Bar vapes $19.99").
   const screenTex = ctex(384, 256, (c, w, h) => {
@@ -268,14 +312,15 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   face('Street-number', 0.5, 0.18, std(0xffffff, 0.5, 0, { map: numTex, transparent: true, alphaTest: 0.3 }),
     S.glassX + 0.025, doorTop + 0.32, (dz0 + dz1) / 2);
   const mat = box('Entry-mat', [S.wallX + 0.05, S.walkY, dz0 + 0.05, S.wallX + 0.85, S.walkY + 0.015, dz1 - 0.05], std(0x1b1d1f, 0.95));
-  mat.castShadow = false;
+  mat.castShadow = false; mat.userData.onWalk = true;
 
   // ---------- fascia, LED strip and lettering ----------
   const [fy0, fy1] = S.fasciaY, fxOut = S.wallX - 0.03 + S.fasciaDepth;
   box('Fascia', [S.wallX - 0.03, fy0, S.storeZ[0] - 0.03, fxOut, fy1, S.storeZ[1] + 0.03], fasciaMat);
   box('Fascia-cap', [S.wallX - 0.03, fy1, S.storeZ[0] - 0.05, fxOut + 0.03, fy1 + 0.04, S.storeZ[1] + 0.05], std(0x2a2c2e, 0.6, 0.3));
   const led = glowMat(solid('#ffffff')); led.color.set(0xeef2f4);
-  box('LED-light-strip', [S.wallX - 0.03, fy0 - 0.06, S.storeZ[0], fxOut - 0.02, fy0, S.storeZ[1]], led);
+  box('Fascia-soffit', [S.wallX - 0.03, fy0 - 0.02, S.storeZ[0] - 0.03, fxOut, fy0, S.storeZ[1] + 0.03], std(0xd8dadb, 0.6, 0.1));
+  box('LED-light-strip', [fxOut - 0.1, fy0 - 0.07, S.storeZ[0], fxOut, fy0 - 0.02, S.storeZ[1]], led);
   box('Head-flashing', [S.glassX - 0.05, S.headY, gz0, S.wallX, fy0 - 0.06, gz1], aluminium);
   // Grey sleeves over the model's red band on the north, south and back walls.
   const B = S.band, sleeve = 0.03;
@@ -324,7 +369,7 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   const cord = cyl('Outlet-cord', 0.008, 0.008, 1.15 - S.walkY, std(0xe9e9e6, 0.6), S.wallX + 0.03, (1.15 + S.walkY) / 2, d(0.19), pier, 6);
   cord.castShadow = false;
   // Open-front white cabinet with the extinguisher (photo 2).
-  const cab = new THREE.Group(); cab.name = 'Extinguisher-cabinet'; pier.add(cab);
+  const cab = new THREE.Group(); cab.name = 'Extinguisher-cabinet'; cab.userData.onWalk = true; pier.add(cab);
   const white = std(0xeeeeeb, 0.5, 0.1), [cz0, cz1] = [d(0.65), d(0.28)], cy0 = S.walkY + 0.02, cy1 = S.walkY + 0.86, cx1 = S.wallX + 0.19;
   box('Cabinet-back', [S.wallX, cy0, cz0, S.wallX + 0.01, cy1, cz1], white, cab);
   box('Cabinet-side', [S.wallX, cy0, cz0, cx1, cy1, cz0 + 0.03], white, cab);
@@ -348,39 +393,97 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
     const logo = new THREE.Mesh(new THREE.CircleGeometry(0.085, 32), std(0xffffff, 0.5, 0, { map: logoMap }));
     logo.rotation.y = Math.PI / 2; logo.position.set(S.wallX + 0.03, py0 + 0.13, pz); add(logo, 'Poster-logo', pier);
   }
-  // Square grey-taupe receptacle with a domed, open-mouth lid.
-  const can = new THREE.Group(); can.name = 'Trash-receptacle'; pier.add(can);
-  const taupe = std(0x7c7774, 0.8), tx = S.wallX + 0.4, tz = d(1.32);
-  box('Receptacle-body', [tx - 0.28, S.walkY, tz - 0.28, tx + 0.28, S.walkY + 0.82, tz + 0.28], taupe, can);
-  box('Receptacle-lid', [tx - 0.31, S.walkY + 0.82, tz - 0.31, tx + 0.31, S.walkY + 0.9, tz + 0.31], taupe, can);
-  box('Receptacle-top', [tx - 0.25, S.walkY + 0.9, tz - 0.25, tx + 0.25, S.walkY + 1.0, tz + 0.25], taupe, can);
-  cyl('Receptacle-opening', 0.15, 0.15, 0.012, std(0x101010, 0.9), tx, S.walkY + 1.004, tz, can, 20);
+  // Square taupe receptacles (photo 4): body flaring slightly to the top, an
+  // overhanging lid band, and a square cap with a round hole on top and a
+  // front mouth showing the black liner.
+  const taupe = std(0x857c77, 0.85), liner = std(0x0e0e0f, 0.9);
+  const receptacle = (tx, tz, parent) => {
+    const can = new THREE.Group(); can.name = 'Trash-receptacle'; can.userData.onWalk = true; parent.add(can);
+    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.36, 0.78, 4, 1), taupe);
+    body.rotation.y = Math.PI / 4; body.position.set(tx, S.walkY + 0.39, tz); add(body, 'Receptacle-body', can);
+    box('Receptacle-lid', [tx - 0.31, S.walkY + 0.78, tz - 0.31, tx + 0.31, S.walkY + 0.86, tz + 0.31], taupe, can);
+    box('Receptacle-cap', [tx - 0.24, S.walkY + 0.86, tz - 0.24, tx + 0.24, S.walkY + 1.02, tz + 0.24], taupe, can);
+    cyl('Receptacle-hole', 0.1, 0.1, 0.01, liner, tx, S.walkY + 1.026, tz, can, 20);
+    face('Receptacle-mouth', 0.32, 0.1, liner, tx + 0.243, S.walkY + 0.94, tz, can);
+    return can;
+  };
+  receptacle(S.wallX + 0.4, d(1.32), pier);
+  receptacle(S.wallX + 0.4, S.glazingZ[1] + 0.55, group); // south end, by the block wall (photo 6)
+
+  // Two security cameras on the top course of the pier with a cable between (photo 4).
+  const camMat = std(0xe8e9e8, 0.5, 0.1);
+  for (const dist of [0.15, 1.85]) {
+    box('Camera-mount', [S.wallX, 3.38, d(dist) - 0.04, S.wallX + 0.05, 3.46, d(dist) + 0.04], camMat, pier);
+    const cam = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), camMat);
+    cam.rotation.z = -Math.PI / 2; cam.position.set(S.wallX + 0.05, 3.42, d(dist)); add(cam, 'Security-camera', pier);
+  }
+  box('Camera-cable', [S.wallX, 3.44, d(1.85), S.wallX + 0.012, 3.452, d(0.15)], std(0xf0f0ee, 0.6), pier);
 
   // A-frame sidewalk sign by the door (photo 1).
-  const aTex = ctex(160, 240, (c, w, h) => {
-    c.fillStyle = '#c8202c'; c.fillRect(0, 0, w, h); c.fillStyle = '#ffd21f'; c.fillRect(10, 10, w - 20, h * 0.42);
-    c.fillStyle = '#c8202c'; c.font = 'bold 36px Arial'; c.textAlign = 'center'; c.fillText('DAILY', w / 2, 56); c.fillText('DEALS', w / 2, 96);
-    c.fillStyle = '#fff'; c.font = 'bold 26px Arial'; c.fillText('COLD', w / 2, 160); c.fillText('DRINKS', w / 2, 192);
-  });
-  const sign = new THREE.Group(); sign.name = 'A-frame-sign'; group.add(sign);
-  const signMat = std(0xffffff, 0.5, 0, { map: aTex }), black = std(0x161616, 0.6);
+  // A-frame by the door carries the same "Special Vape 50K" poster (photo 6).
+  const sign = new THREE.Group(); sign.name = 'A-frame-sign'; sign.userData.onWalk = true; group.add(sign);
+  const signMat = std(0xffffff, 0.5, 0, { map: posterTex }), black = std(0x161616, 0.6);
   for (const s of [-1, 1]) {
     const leaf = new THREE.Group(); leaf.rotation.z = s * 0.17; leaf.position.set(S.wallX + 0.75 + s * 0.16, S.walkY, dz1 + 0.62); sign.add(leaf);
     // Each board leans in from its foot so the two tops meet.
     const board = box('A-frame-board', [-0.02, 0, -0.29, 0.02, 0.9, 0.29], black, leaf);
     board.position.set(s * 0.02, 0.45, 0);
-    const art2 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.8), signMat);
+    const art2 = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.75), signMat);
     art2.rotation.y = s * Math.PI / 2; art2.position.set(s * 0.045, 0.47, 0); add(art2, 'A-frame-poster', leaf);
   }
+
+  // ---------- Amazon Hub locker graphics (photo 4) ----------
+  // The model's locker is a plain black box at x 10.03-10.70, z -9.72..-7.33,
+  // y 0.62-2.86; dress its front and south side as the real slate-blue locker.
+  const L = S.locker, lw = L.z[1] - L.z[0], lh = L.y[1] - L.y[0];
+  const lockerTex = ctex(1024, 960, (c, w, h) => {
+    c.fillStyle = '#3c4654'; c.fillRect(0, 0, w, h);
+    const kioskX = w * 0.78;
+    // door grid
+    c.strokeStyle = '#262d37'; c.lineWidth = 5;
+    const cols = [0, 0.27, 0.53, kioskX / w];
+    for (let k = 0; k < cols.length - 1; k++) {
+      const x0 = cols[k] * w + 6, x1 = cols[k + 1] * w - 6;
+      const rows = k === 0 ? [0, 0.16, 0.38, 0.52, 0.68, 0.84, 1] : [0, 0.12, 0.24, 0.33, 0.42, 0.52, 0.62, 0.74, 0.86, 1];
+      for (let r = 0; r < rows.length - 1; r++) c.strokeRect(x0, rows[r] * h + 6, x1 - x0, (rows[r + 1] - rows[r]) * h - 12);
+    }
+    // kiosk column: screen, card reader and scanner
+    c.fillStyle = '#323a46'; c.fillRect(kioskX + 4, 0, w - kioskX - 4, h);
+    c.fillStyle = '#1b2028'; c.fillRect(kioskX + 30, h * 0.36, w - kioskX - 60, h * 0.16);
+    c.fillStyle = '#d9f1ff'; c.fillRect(kioskX + 44, h * 0.38, w - kioskX - 88, h * 0.12);
+    c.fillStyle = '#111'; c.fillRect(kioskX + 60, h * 0.55, w - kioskX - 120, h * 0.07);
+    c.fillStyle = '#e83a2a'; c.fillRect(kioskX + 100, h * 0.575, 26, 8);
+    // logo and the big white message
+    c.fillStyle = '#ffffff'; c.textAlign = 'left'; c.textBaseline = 'alphabetic';
+    c.font = 'bold 72px Arial'; c.fillText('amazon', 34, 118);
+    c.strokeStyle = '#58a6e8'; c.lineWidth = 7; c.beginPath(); c.moveTo(48, 136); c.quadraticCurveTo(150, 168, 262, 132); c.stroke();
+    c.font = '400 108px Arial';
+    ['Order at', 'Amazon,', 'pick up', 'here'].forEach((t, i) => c.fillText(t, 30, 380 + i * 132));
+  });
+  face('Amazon-locker-front', lw, lh, std(0xffffff, 0.55, 0.15, { map: lockerTex }), L.x[1] + 0.012, (L.y[0] + L.y[1]) / 2, (L.z[0] + L.z[1]) / 2);
+  const sideTex = ctex(160, 640, (c, w, h) => {
+    c.fillStyle = '#3c4654'; c.fillRect(0, 0, w, h);
+    c.save(); c.translate(w / 2 + 10, h * 0.62); c.rotate(-Math.PI / 2);
+    c.fillStyle = '#ffffff'; c.font = 'bold 64px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('amazon hub', 0, 0);
+    c.strokeStyle = '#58a6e8'; c.lineWidth = 6; c.beginPath(); c.moveTo(-150, 36); c.quadraticCurveTo(-40, 62, 70, 30); c.stroke();
+    c.restore();
+  });
+  const side = new THREE.Mesh(new THREE.PlaneGeometry(L.x[1] - L.x[0], lh), std(0xffffff, 0.55, 0.15, { map: sideTex }));
+  side.position.set((L.x[0] + L.x[1]) / 2, (L.y[0] + L.y[1]) / 2, L.z[1] + 0.012); add(side, 'Amazon-locker-side');
+  // Lit hood across the top front.
+  box('Amazon-locker-hood', [L.x[0], L.y[1], L.z[0] - 0.02, L.x[1] + 0.08, L.y[1] + 0.08, L.z[1] + 0.02], std(0x2f3742, 0.5, 0.2));
+  const hoodLight = std(0xffffff, 0.4, 0, { emissive: 0xffffff, emissiveIntensity: 1.0 });
+  box('Amazon-locker-light', [L.x[1] - 0.02, L.y[1] - 0.012, L.z[0] + 0.05, L.x[1] + 0.07, L.y[1], L.z[1] - 0.05], hoodLight);
 
   // ---------- orange flexible delineators where the model had bollards ----------
   const orange = std(0xff4a12, 0.45, 0, { emissive: 0x3a0a00 }), band = std(0xf5f5f0, 0.25, 0.2), base = std(0x111111, 0.85);
   for (const [px, py, pz2] of posts) {
     const post = new THREE.Group(); post.name = 'Delineator-post'; post.position.set(px, py, pz2); group.add(post);
-    cyl('Delineator-base', 0.13, 0.15, 0.06, base, 0, 0.03, 0, post, 20);
-    cyl('Delineator-tube', 0.04, 0.045, 1.05, orange, 0, 0.58, 0, post, 14);
-    for (const by of [0.86, 0.98]) cyl('Delineator-band', 0.046, 0.046, 0.07, band, 0, by, 0, post, 14);
-    cyl('Delineator-cap', 0.035, 0.04, 0.03, orange, 0, 1.12, 0, post, 14);
+    // Black dome base, orange tube, two wide white bands in the upper half (photos 5, 6).
+    cyl('Delineator-base', 0.1, 0.17, 0.07, base, 0, 0.035, 0, post, 20);
+    cyl('Delineator-tube', 0.042, 0.047, 1.05, orange, 0, 0.6, 0, post, 14);
+    for (const by of [0.66, 0.92]) cyl('Delineator-band', 0.049, 0.049, 0.1, band, 0, by, 0, post, 14);
+    cyl('Delineator-cap', 0.035, 0.042, 0.03, orange, 0, 1.14, 0, post, 14);
   }
   return group;
 }

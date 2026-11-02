@@ -15,7 +15,7 @@ const all = []; group.traverse(o => all.push(o));
 const named = n => all.filter(o => o.name === n);
 const local = o => { // bounds in the storefront frame (undo the group's heading)
   group.rotation.y = 0; group.updateMatrixWorld(true);
-  const b = new THREE.Box3().setFromObject(o); group.rotation.y = S.heading; return b;
+  const b = new THREE.Box3().setFromObject(o, true); group.rotation.y = S.heading; return b;
 };
 
 // Bays tile the glazing exactly, with the door in the one gap.
@@ -28,7 +28,14 @@ for (let i = 1; i < edges.length; i++) {
 assert.equal(S.pierZ[1], S.glazingZ[0], 'pier meets the glazing');
 assert.ok(S.pierZ[1] - S.pierZ[0] > 1.6 && S.pierZ[1] - S.pierZ[0] < 2.6, 'pier width as in photo 2');
 for (const art of ['reddy-ice', 'geek-bar', 'candy', 'vape-art']) assert.equal(named(`Kick-panel-${art}`).length, 1, art);
-assert.equal(named('Open-neon').length, 1);
+assert.equal(named('Open-sign').length, 1);
+// Photo details: frosted Reddy Ice upper glass, blinds over the candy bay, the
+// vape poster on the A-frame, two receptacles, two cameras, dressed Amazon locker.
+assert.equal(named('Window-blinds').length, 1);
+assert.equal(named('Trash-receptacle').length, 2);
+assert.equal(named('Security-camera').length, 2);
+for (const n of ['Amazon-locker-front', 'Amazon-locker-side', 'Amazon-locker-light']) assert.equal(named(n).length, 1, n);
+assert.equal(named('A-frame-poster')[0].material.map, named('Vape-poster')[0].material.map, 'A-frame shows the vape poster');
 assert.equal(named('FoodMart-lettering').length, 1);
 assert.equal(named('Entry-door').length, 1);
 // Straight-on photo: a pair of doors with pulls, LED letter signs over the four
@@ -82,6 +89,15 @@ for (const o of all) if (o.isMesh) {
 for (const b of S.cutBoxes) assert.ok(b[2] >= -7.46 && b[3] <= 12, `cut box ${b}`);
 const frame = storefrontFrame(), back = new THREE.Vector3(1, 0, 0).applyMatrix4(new THREE.Matrix4().makeRotationY(S.heading)).applyMatrix4(frame);
 assert.ok(Math.abs(back.x - 1) < 1e-9 && Math.abs(back.z) < 1e-9, 'frame inverts the heading');
+
+// Props settle onto the walk height under them.
+import('../scripts/storefront.js').then(({ settleOnWalk }) => {
+  const parent = new THREE.Group(); const g2 = buildStorefront({ ctex: () => new THREE.Texture(), glowMat, posts: [] }); parent.add(g2);
+  settleOnWalk(g2, () => S.walkY + 0.08);
+  const settled = []; g2.traverse(o => { if (o.userData.onWalk) settled.push(o); });
+  assert.ok(settled.length >= 5, 'mat, two receptacles, cabinet and A-frame settle');
+  for (const o of settled) assert.ok(Math.abs(o.position.y - 0.08 - (o.name === 'Entry-mat' ? S.walkY + 0.0075 : 0)) < 1e-6 || o.name === 'Entry-mat', `${o.name} raised onto the walk`);
+});
 
 // The page applies it to the detailed model.
 const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
