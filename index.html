@@ -794,11 +794,12 @@ const fuelGroup = new THREE.Group(); stationLayout.add(fuelGroup);
 const pumpSpots = [];
 const canopySpots = [];
 const islandZ = [-14, -5, 4, 13];
-const binGrey = new THREE.MeshStandardMaterial({ color:0x8c9296, roughness:0.6, metalness:0.2 });
+const binGrey = new THREE.MeshStandardMaterial({ color:0x4a4f53, roughness:0.6, metalness:0.2 }); // charcoal island bins (pump photo)
 let canopyGlowMaterials = []; // declared early; island base lights push to it at module load
 // Canopy footprint is measured (lidar/OSM: 32.4 x 12.8 m, see station-geometry.js).
 for (const lz of canopyLightRows()) for (let cix = 0; cix < 2; cix++) {
-  const panel = new THREE.Mesh(new THREE.BoxGeometry(1.05, 0.04, 1.05), canopyLightMat);
+  // Round recessed LED downlights, as in the canopy photos (same positions).
+  const panel = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 28), canopyLightMat);
   panel.position.set(-4 + cix * 8, CANOPY.clearance, lz); fuelGroup.add(panel);
 }
 islandZ.forEach((z, idx) => {
@@ -1441,21 +1442,16 @@ const stationWallMap = ctex(512,256,(c,w,h)=>{
 const storefrontFrameMat=new THREE.MeshStandardMaterial({color:0xb8bfbe,roughness:0.48,metalness:0.18});
 
 function makeHeaderMaterial(number) {
-  // Texaco "with TECHRON" pump header, matching the owner's reference photo:
-  // white field, red diagonal band, star/T badge, "with TECHRON" and pump number.
-  const headerTexture = ctex(512,192,(x,w,h)=>{
-    x.fillStyle='#f5f5f0';x.fillRect(0,0,w,h);
-    // Red diagonal band sweeping across the top (matches reference photo).
-    x.fillStyle='#c8102e';
-    x.beginPath();x.moveTo(0,0);x.lineTo(w*0.62,0);x.lineTo(w,95);x.lineTo(0,95);x.closePath();x.fill();
-    // Star badge in white circle on the left side of the band.
-    x.fillStyle='#fff';x.beginPath();x.arc(78,104,40,0,Math.PI*2);x.fill();
-    x.fillStyle='#c8102e';starPath(x,78,104,32);x.fill();
-    x.fillStyle='#fff';x.font='bold 42px Arial';x.textAlign='center';x.textBaseline='middle';x.fillText('T',78,108);
-    // "with TECHRON" in white on the red band.
-    x.fillStyle='#fff';x.font='bold 26px Arial';x.fillText('with',285,100);x.font='bold 44px Arial';x.fillText('TECHRON',350,100);
-    // Pump number large on the right.
-    x.font='bold 72px Arial';x.fillText(String(number),w-110,148);
+  // Red band of the Texaco pump header (owner pump photo): small "with" over
+  // "TECHRON" and the large pump number, white on red. The star roundel lives
+  // on the white gable above (scripts/reference-design.js).
+  const headerTexture = ctex(512,96,(x,w,h)=>{
+    x.fillStyle='#c8102e';x.fillRect(0,0,w,h);
+    x.fillStyle='#fff';x.textBaseline='alphabetic';x.textAlign='left';
+    x.font='bold 18px Arial';x.fillText('with',150,40);
+    x.font='bold 40px Arial';x.fillText('TECHRON',150,76);
+    x.font='bold 64px Arial';x.textAlign='center';x.fillText(String(number),w-90,74);
+    x.fillStyle='rgba(0,0,0,.18)';x.fillRect(0,h-6,w,6);
   });
   const material = new THREE.MeshStandardMaterial({map:headerTexture,emissive:0xffffff,emissiveMap:headerTexture,emissiveIntensity:0.2});
   signGlowMats.push(material);return material;

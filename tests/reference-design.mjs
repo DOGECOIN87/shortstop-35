@@ -24,18 +24,27 @@ for(const name of ['Ad-post-base','Ad-post','Ad-frame','Blank-ad-panel']){
  assert.equal(parts.filter(m=>m.name===name).length,0,`${name} was removed by owner request`);
 }
 canopy.updateMatrixWorld(true);
-const logos=parts.filter(m=>m.name==='Upright-canopy-star-face');assert.equal(logos.length,2);
+const logos=parts.filter(m=>m.name==='Upright-canopy-star-face');assert.equal(logos.length,4);
 for(const logo of logos){
  const rotation=logo.getWorldQuaternion(new THREE.Quaternion());
  const up=new THREE.Vector3(0,1,0).applyQuaternion(rotation);
  assert.ok(up.distanceTo(new THREE.Vector3(0,1,0))<1e-9,'star and T must remain upright on both canopy ends');
  const outward=new THREE.Vector3(0,0,1).applyQuaternion(rotation);
  const center=logo.getWorldPosition(new THREE.Vector3());
- assert.ok(outward.z*(center.z+2)>0,'logo face must point out of its canopy end');
+ assert.ok(outward.x*center.x>0.99*Math.abs(center.x),'logo faces outward from its long side (owner photos)');
+ assert.ok(Math.abs(Math.abs(center.z+2)-16.2)<2,'logo sits at the corner next to a TEXACO end');
+ assert.ok(center.y>5.4,'logo stands proud of the roofline');
  assert.equal(logo.geometry.type,'CircleGeometry','avoid sideways cylinder-cap UVs');
 }
 const source=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 assert.ok(!/function lotLight\(|lotLight\(/.test(source),'removed forecourt poles must not return');
 assert.ok(source.includes('canopySpots.push(lamp)'),'keep recessed canopy lighting');
 canopy.traverse(m=>assert.ok(m.position.toArray().every(Number.isFinite)));
-console.log('PASS: 8 double-faced dispensers, headers, controls, raised lettering, white/red canopy 4 masonry columns, upright outward-facing logos; no ad boards or forecourt light poles');
+assert.equal(parts.filter(m=>m.name==='Column-pump-number-flag').length,8,'red pump-number flag on each side of every column');
+assert.equal(parts.filter(m=>m.name==='Tapered-end-wing').length,4);
+assert.ok(parts.filter(m=>m.name==='Red-neon-halo').length>=6,'red neon halos along canopy LED lines at night');
+const glowNight=design.canopyGlow.filter(g=>g.night>0).length;assert.ok(glowNight>=5,'canopy glow materials light up at night');
+for(const n of [1,3]){const p=[];design.pump(n).traverse(m=>p.push(m));
+ assert.equal(p.filter(m=>m.name==='White-gable-header').length,1);
+ assert.equal(p.filter(m=>m.name==='Header-star-roundel').length,2);}
+console.log('PASS: 8 double-faced dispensers, headers, controls, raised lettering, white/red canopy 4 masonry columns, upright corner roundels, number flags, red neon halos, gable pump headers; no ad boards or forecourt light poles');

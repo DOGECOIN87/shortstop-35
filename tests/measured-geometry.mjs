@@ -26,7 +26,7 @@ assert.ok(box.max.z - box.min.z > CANOPY.length && box.max.z - box.min.z < CANOP
 const roof = new THREE.Box3().setFromObject(canopy.getObjectByName('Roof-surface'));
 near(roof.max.y, CANOPY.roofTop, 1e-6, 'canopy roof line follows lidar (~5.4 m), not the old 6.87 m');
 const badges = canopy.children.filter(c => c.name === 'Canopy-star-roundel');
-assert.equal(badges.length, 2);
+assert.equal(badges.length, 4, 'corner roundel on each long side at both TEXACO ends (owner photos)');
 for (const b of badges) { const bb = new THREE.Box3().setFromObject(b); assert.ok(bb.max.y > CANOPY.roofTop + 0.5 && bb.max.y < 6.5, `roundel top ${bb.max.y} stands proud of the roof within lidar edge returns (<=6.5 m)`); }
 assert.equal(canopy.children.filter(c => c.name === 'Soffit-Techron-graphic').length, 2, 'with TECHRON soffit graphics on both sides');
 const soffit = canopy.getObjectByName('White-soffit');
