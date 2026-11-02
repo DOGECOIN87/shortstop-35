@@ -58,10 +58,11 @@ Build an interactive Three.js 3D scene of a **FoodMart convenience store** with 
 
 The scene is already implemented. Key sections to understand:
 
-### Time-of-Day System (lines ~1195-1240)
-- Presets: `day`, `golden`, `night`
-- Controls sky color, fog, sun position/intensity, sign emissive, interior lighting, lamp brightness
-- Buttons in toolbar switch time; `?time=day|golden|night` URL param
+### Time-of-Day and Live conditions (`renderLighting()` in index.html, `scripts/live-conditions.js`)
+- **Live** (default): blends the `day`/`golden`/`night` presets by the real sun elevation at the store, lights from the real sun position (moonlight from the real moon at night), draws the moon with its real phase, refreshes every minute; clock shown in Central Time
+- Real weather from the National Weather Service (api.weather.gov, free, no key): station KBAZ latest observation every 10 minutes drives cloud cover (greyer sky, dimmer sun, more clouds), rain streaks, fog distance, lightning flashes and flag speed; active alerts for the store's point show as a banner. Fails quietly back to clear weather
+- Presets: `day`, `golden`, `night` (exactly the original looks); `?time=live|day|golden|night`
+- Testing/demo params: `?at=2026-11-02T20:30-06:00` (start the live clock at another time), `?wx=clear|cloudy|overcast|rain|storm|fog` (force weather)
 
 ### Store Building (station.glb, lines ~1460-1510)
 - Loaded from `assets/web-station/station.glb`, reskinned:
@@ -74,6 +75,9 @@ The scene is already implemented. Key sections to understand:
 - "WE APPRECIATE YOUR BUSINESS" band
 - Neon window signs: CBD, E-CIGS, 10 THC, DELTA 8
 - Front double doors, OPEN neon sign
+
+### Canopy and pumps on the live page
+- The Blender export (`shortstop_detailed.glb`) hides the procedural scene, except `replaceModelFuelArea()` (index.html) which shows the procedural fuel group (new canopy + detailed dispensers), fitted onto the model's pump islands (`MODEL_ISLANDS`), hides the model's dispensers/island fittings/canopy parts and cuts its merged canopy/pump triangles
 
 ### Interior Fit-Out (lines ~1580-1695)
 - Tiled floor, back-wall coolers, left/right snack aisles, centre island

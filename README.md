@@ -19,6 +19,19 @@ Official website for Texaco ShortStop, 1185 Interstate 35 N, New Braunfels, TX 7
 - Map data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. Used to cross-check building outlines and road bearings.
 - Raw datasets are not stored in this repository.
 
+## Live time and weather — 2026-11-02
+
+The 3D scene now starts in **Live** mode: lighting follows the real sun (and
+moon, with its real phase) over 1185 I-35 N in Central Time, and the current
+weather comes from the National Weather Service (api.weather.gov — free, public
+domain, no key) for the New Braunfels airport station KBAZ, with any active
+alerts for the store shown as a banner. Cloud cover greys the sky and dims the
+sun, rain and thunderstorms add rain streaks and lightning, fog closes in, and
+the flag's motion follows the wind. Day / Golden hour / Night remain as fixed
+presets. Demo parameters: `?at=2026-11-02T20:30-06:00` and
+`?wx=clear|cloudy|overcast|rain|storm|fog`. Logic and tests:
+`scripts/live-conditions.js`, `scripts/sun-position.js`, `tests/live-conditions.mjs`.
+
 ## Measured geometry (lidar/OSM) — 2026-10-29
 
 `scripts/station-geometry.js` holds the measured numbers that size the 3D model.

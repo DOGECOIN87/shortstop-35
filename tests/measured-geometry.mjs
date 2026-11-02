@@ -51,7 +51,8 @@ near(SITE_HEADING_DEG, -40.81, 1e-9, 'fitted site heading');
 const source = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 assert.ok(source.includes('const SITE_HEADING = SITE_HEADING_DEG * Math.PI / 180;'));
 assert.ok(source.includes('building.scale.y=STORE.parapetTop/sourceTop;'));
-assert.ok(source.includes('sunPresetVector(name, sunDate)'));
+// Presets use the real sun path for the date; Live uses the real sun position now.
+assert.ok(source.includes('sunPresetVector(activeTime, sunDate)') && source.includes('const s = solarPosition(now);'));
 
 // Real sun at the store coordinate.
 const sp = solarPosition(new Date(Date.UTC(2026, 9, 29, 18, 0)));
@@ -75,7 +76,8 @@ console.log('PASS: Aerial plan / Reference framing compensates the heading corre
 // Count grows with the neon, roundels, pump headers and number flags; what matters is
 // that every glow material is off by day and brighter at night than at golden hour.
 assert.ok(Array.isArray(design.canopyGlow) && design.canopyGlow.length >= 3 && design.canopyGlow.every(g => g.material.emissiveIntensity === 0 && g.night > g.golden));
-assert.ok(source.includes("canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = name === 'night' ? g.night : name === 'golden' ? g.golden : 0);"));
+// Glow follows the blended Golden/Night weights (exactly g.golden / g.night at the presets, 0 by day).
+assert.ok(source.includes('canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = g.golden * w.golden + g.night * w.night);'));
 console.log('PASS: canopy band, letters and star badges glow only at golden hour/night');
 
 // Georeference helper, flagpole and pylons.

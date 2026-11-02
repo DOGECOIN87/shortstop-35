@@ -178,6 +178,15 @@
   .tbtn{font-size:11px;padding:8px 7px}
   .infocard{bottom:100px;max-height:30%;overflow:auto}
 }
+  /* Live time / weather chip and NWS alert banner */
+  .livechip{top:22px;right:22px;display:flex;align-items:center;gap:8px;background:rgba(10,37,64,.82);color:#fff;border-radius:999px;padding:8px 15px;font-size:13.5px;font-weight:700;backdrop-filter:blur(8px);box-shadow:var(--shadow);max-width:min(560px,calc(100% - 44px));white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .livechip .dot{width:8px;height:8px;border-radius:50%;background:#ff4757;box-shadow:0 0 0 3px rgba(255,71,87,.3);flex:none}
+  .livechip.preset .dot{background:#9fb3c8;box-shadow:none}
+  .livechip .wx{color:#cfdff2;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+  .wxalert{top:70px;right:22px;max-width:min(520px,calc(100% - 44px));background:#b3261e;color:#fff;border-radius:14px;padding:10px 38px 10px 14px;font-size:13.5px;font-weight:700;box-shadow:var(--shadow);pointer-events:auto}
+  .wxalert .x{position:absolute;top:6px;right:10px;border:none;background:none;color:#fff;font-size:18px;cursor:pointer;line-height:1}
+  .wxalert[hidden]{display:none}
+  @media(max-width:900px){.livechip{top:auto;bottom:118px;right:12px;font-size:12px;padding:6px 11px}.wxalert{top:auto;bottom:156px;right:12px;left:12px;max-width:none;font-size:12.5px}}
 </style>
 </head>
 <body>
@@ -240,6 +249,9 @@
 
     <div class="hint">🖱️ Drag to orbit · Scroll to zoom · Tap a ★ marker</div>
 
+    <div class="stage-ui livechip" id="livechip" aria-live="polite"><span class="dot"></span><span id="livetime">New Braunfels</span><span class="wx" id="liveweather"></span></div>
+    <div class="stage-ui wxalert" id="wxalert" role="alert" hidden><button class="x" id="wxalertclose" aria-label="Dismiss alert">×</button><span id="wxalerttext"></span></div>
+
     <div class="infocard" id="infocard" role="dialog" aria-live="polite">
       <button class="x" id="infoclose" aria-label="Close">×</button>
       <h3 id="infotitle"></h3>
@@ -257,7 +269,8 @@
         <button class="tbtn" data-view="reference">Reference</button>
       </div>
       <div class="toolgroup" role="group" aria-label="Time of day">
-        <button class="tbtn on" data-time="day">Day</button>
+        <button class="tbtn on" data-time="live" title="Real time and weather at the store">● Live</button>
+        <button class="tbtn" data-time="day">Day</button>
         <button class="tbtn" data-time="golden">Golden hour</button>
         <button class="tbtn" data-time="night">Night</button>
       </div>
@@ -451,7 +464,8 @@ import { TRAFFIC_LANES, TRAFFIC_SIGNALS } from './scripts/traffic-lanes.js';
 import { createSimulation, signalState } from './scripts/traffic-engine.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
-import { sunPresetVector } from './scripts/sun-position.js';
+import { sunPresetVector, solarPosition, skyVector, moonPosition, moonIllumination } from './scripts/sun-position.js';
+import { lightingWeights, blendPresets, lerpHex, weatherAdjust, weatherOverride, fetchWeather, storeTime, weatherSummary } from './scripts/live-conditions.js';
 
 /* =====================================================================
    Texaco ShortStop — realistic 3D model of the real station
@@ -1207,23 +1221,87 @@ const TIMES = {
 let pumpPanelMaterial;
 let canopyUndersideMaterial;
 // canopyGlowMaterials declared above (line ~798); reused here
-let activeTime = 'day';
+// 'live' follows the real clock and weather at the store (default); day,
+// golden and night are the fixed presets.
+let activeTime = 'live';
+let lightingPhase = 'day'; // dominant preset right now; night-only behaviour keys off this
 const sunDate = (() => { const q = new URLSearchParams(location.search).get('date'); const d = q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? new Date(q + 'T12:00:00Z') : new Date(); return isNaN(d) ? new Date() : d; })();
+// ?at=<ISO time with offset> starts the live clock at another moment, e.g. 2026-11-02T20:30-06:00.
+const liveClock = (() => { const q = new URLSearchParams(location.search).get('at'), t = q ? Date.parse(q) : NaN, t0 = performance.now(); return Number.isFinite(t) ? () => new Date(t + performance.now() - t0) : () => new Date(); })();
+const PRESET_WEIGHTS = { day:{ day:1, golden:0, night:0 }, golden:{ day:0, golden:1, night:0 }, night:{ day:0, golden:0, night:1 } };
+let liveWeather = null, liveAlerts = [], baseHemi = 0.55, envKey = '';
+
+// Moon: a phased disc at its real position (Live mode).
+const moonCanvas = document.createElement('canvas'); moonCanvas.width = moonCanvas.height = 128;
+const moonTex = new THREE.CanvasTexture(moonCanvas); moonTex.colorSpace = THREE.SRGBColorSpace;
+const moonSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map:moonTex, transparent:true, depthWrite:false, fog:false, toneMapped:false }));
+moonSprite.name = 'Moon'; moonSprite.scale.setScalar(13); moonSprite.visible = false; scene.add(moonSprite);
+let moonPhaseDrawn = -1;
+function drawMoon(phase) {
+  if (Math.abs(phase - moonPhaseDrawn) < 0.004) return; moonPhaseDrawn = phase;
+  const c = moonCanvas.getContext('2d'), r = 60, cx = 64, cy = 64;
+  c.clearRect(0, 0, 128, 128);
+  c.fillStyle = 'rgba(70,78,96,0.45)'; c.beginPath(); c.arc(cx, cy, r, 0, Math.PI * 2); c.fill(); // earthshine
+  const side = phase < 0.5 ? 1 : -1, k = Math.cos(2 * Math.PI * phase); // waxing: right limb lit
+  const half = y => Math.sqrt(Math.max(0, r * r - (y - cy) ** 2));
+  c.fillStyle = '#f3f0e2'; c.beginPath();
+  for (let i = 0; i <= 48; i++) { const y = cy - r + 2 * r * i / 48; i ? c.lineTo(cx + side * half(y), y) : c.moveTo(cx + side * half(y), y); }
+  for (let i = 48; i >= 0; i--) { const y = cy - r + 2 * r * i / 48; c.lineTo(cx + side * k * half(y), y); }
+  c.closePath(); c.fill(); moonTex.needsUpdate = true;
+}
+
 function applyTime(name) {
-  const T = TIMES[name]; if (!T) return;
+  if (name !== 'live' && !TIMES[name]) return;
   activeTime = name;
-  if (pumpPanelMaterial) pumpPanelMaterial.emissiveIntensity = name === 'night' ? 2 : name === 'golden' ? 0.8 : 0.2;
-  canopySpots.forEach(light => light.intensity = name === 'night' ? 75 : name === 'golden' ? 18 : 0);
-  if (canopyUndersideMaterial) canopyUndersideMaterial.emissiveIntensity = name === 'night' ? 0.45 : 0.2;
-  canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = name === 'night' ? g.night : name === 'golden' ? g.golden : 0);
+  document.querySelectorAll('[data-time]').forEach(b => b.classList.toggle('on', b.dataset.time === name));
+  renderLighting();
+}
+// Live: blend the presets by the real sun elevation at the store, light from
+// the real sun (moon at night), then apply the current weather. The presets
+// reproduce the original fixed looks exactly.
+function renderLighting() {
+  const live = activeTime === 'live', now = liveClock();
+  let w, sunVec;
+  if (live) {
+    const s = solarPosition(now);
+    w = lightingWeights(s.elevation);
+    sunVec = skyVector(Math.max(s.elevation, 3), s.azimuth);
+  } else {
+    w = PRESET_WEIGHTS[activeTime];
+    sunVec = sunPresetVector(activeTime, sunDate) || TIMES[activeTime].sunPos;
+  }
+  const wx = live && liveWeather && !liveWeather.stale ? liveWeather : null;
+  const T = weatherAdjust(blendPresets(TIMES, w), wx, w);
+  let sunIntensity = T.sun;
+  moonSprite.visible = false;
+  if (live) {
+    const m = moonPosition(now), ill = moonIllumination(now);
+    if (m.altitude > -1) {
+      drawMoon(ill.phase);
+      moonSprite.position.set(...skyVector(m.altitude, m.azimuth, 360));
+      moonSprite.material.opacity = (0.35 + 0.65 * Math.max(w.night, w.golden * 0.6)) * (1 - 0.85 * (wx ? Math.max(wx.cloud, wx.fog) : 0));
+      moonSprite.visible = moonSprite.material.opacity > 0.05;
+    }
+    if (w.night > 0) { // moonlight when the moon is up, otherwise the preset's sky light
+      const moonUp = m.altitude > 8, night = moonUp ? skyVector(m.altitude, m.azimuth) : TIMES.night.sunPos;
+      if (moonUp) sunIntensity = T.sun * (1 - w.night * (0.55 - 0.55 * ill.fraction));
+      sunVec = sunVec.map((v, i) => v * (1 - w.night) + night[i] * w.night);
+    }
+  }
+  if (pumpPanelMaterial) pumpPanelMaterial.emissiveIntensity = 0.2 * w.day + 0.8 * w.golden + 2 * w.night;
+  canopySpots.forEach(light => light.intensity = 18 * w.golden + 75 * w.night);
+  if (canopyUndersideMaterial) canopyUndersideMaterial.emissiveIntensity = 0.2 * (w.day + w.golden) + 0.45 * w.night;
+  canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = g.golden * w.golden + g.night * w.night);
   skyMat.uniforms.top.value.setHex(T.sky[0]);
   skyMat.uniforms.mid.value.setHex(T.sky[1]);
   skyMat.uniforms.bot.value.setHex(T.sky[2]);
   scene.background.setHex(T.bg); scene.fog.color.setHex(T.fog);
-  updateEnvironment();
-  // Day/Golden use the real sun path over the store for today (or ?date=YYYY-MM-DD).
-  sun.intensity = T.sun; sun.position.set(...(sunPresetVector(name, sunDate) || T.sunPos)); sun.color.setHex(T.sunCol);
-  hemi.intensity = T.hemi;
+  scene.fog.near = T.fogNear; scene.fog.far = T.fogFar;
+  const key = T.sky.join(',');
+  if (key !== envKey) { envKey = key; updateEnvironment(); }
+  // Day/Golden presets use the real sun path over the store for today (or ?date=YYYY-MM-DD).
+  sun.intensity = sunIntensity; sun.position.set(...sunVec); sun.color.setHex(T.sunCol);
+  hemi.intensity = baseHemi = T.hemi;
   renderer.toneMappingExposure = T.exp;
   canopyLightMat.emissiveIntensity = T.panel;
   lampGlowMat.emissiveIntensity = T.lamp;
@@ -1233,9 +1311,81 @@ function applyTime(name) {
   carTailMats.forEach(m => m.emissiveIntensity = 0.3 + T.head * 0.8);
   starMat.opacity = T.stars;
   signGlowMats.forEach(m => m.emissiveIntensity = T.sign);
-  document.querySelectorAll('[data-time]').forEach(b =>
-    b.classList.toggle('on', b.dataset.time === name));
-  document.querySelectorAll('.stage').forEach(s => s.dataset.time = name);
+  // Clouds: fewer on clear days, greyer under overcast and rain.
+  const cloudMat = clouds[0]?.children[0]?.material;
+  if (cloudMat) cloudMat.color.setHex(wx ? lerpHex(0xffffff, 0x8f969e, Math.max(wx.rain, wx.cloud * 0.6)) : 0xffffff);
+  cloudCount = wx ? Math.round(clouds.length * Math.max(0.15, wx.cloud)) : clouds.length;
+  lightingPhase = w.night > 0.5 ? 'night' : w.golden > 0.5 ? 'golden' : 'day';
+  document.querySelectorAll('.stage').forEach(s => s.dataset.time = lightingPhase);
+  updateLiveChip(now);
+}
+
+// ---- Live weather from the National Weather Service (free, no key) ----
+// ?wx=clear|cloudy|overcast|rain|storm|fog forces a condition for demos.
+let cloudCount = clouds.length, flash = 0, nextFlash = 0;
+const wxParam = new URLSearchParams(location.search).get('wx');
+function updateLiveChip(now = liveClock()) {
+  const chip = document.getElementById('livechip'); if (!chip) return;
+  const live = activeTime === 'live';
+  chip.classList.toggle('preset', !live);
+  document.getElementById('livetime').textContent = live ? `New Braunfels · ${storeTime(now)}` : `${{ day:'Day', golden:'Golden hour', night:'Night' }[activeTime]} preset`;
+  const summary = live ? weatherSummary(liveWeather) : 'tap ● Live for real time';
+  document.getElementById('liveweather').textContent = summary ? `· ${summary}` : '';
+}
+function showAlert() {
+  const box = document.getElementById('wxalert'), a = liveAlerts[0];
+  if (!box) return;
+  if (!a || box.dataset.dismissed === a.headline) { box.hidden = true; return; }
+  document.getElementById('wxalerttext').textContent = `⚠ ${a.headline}`;
+  box.hidden = false;
+}
+document.getElementById('wxalertclose')?.addEventListener('click', () => {
+  const box = document.getElementById('wxalert'); box.dataset.dismissed = liveAlerts[0]?.headline || ''; box.hidden = true;
+});
+async function refreshWeather() {
+  if (wxParam) { liveWeather = weatherOverride(wxParam); liveAlerts = []; }
+  else {
+    try {
+      const { observation, alerts } = await fetchWeather();
+      if (observation) liveWeather = observation;
+      if (alerts) liveAlerts = alerts;
+    } catch (err) { console.warn('Live weather unavailable; keeping the last conditions', err); }
+  }
+  showAlert();
+  if (activeTime === 'live') renderLighting(); else updateLiveChip();
+}
+// Rain streaks around the view target, slanted by the wind.
+const RAIN_N = 1600, rainSeed = new Float32Array(RAIN_N * 3), rainPos = new Float32Array(RAIN_N * 6);
+for (let i = 0; i < RAIN_N; i++) { rainSeed[i * 3] = Math.random() * 80 - 40; rainSeed[i * 3 + 1] = Math.random() * 40; rainSeed[i * 3 + 2] = Math.random() * 80 - 40; }
+const rainGeo = new THREE.BufferGeometry(); rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+const rainMat = new THREE.LineBasicMaterial({ color:0xb8c6d6, transparent:true, opacity:0.4, depthWrite:false });
+const rainLines = new THREE.LineSegments(rainGeo, rainMat); rainLines.name = 'Rain'; rainLines.frustumCulled = false; rainLines.visible = false; scene.add(rainLines);
+function updateWeatherEffects(dt) {
+  const wx = activeTime === 'live' && liveWeather && !liveWeather.stale ? liveWeather : null;
+  const r = wx ? wx.rain : 0;
+  rainLines.visible = r > 0.05;
+  if (rainLines.visible) {
+    rainMat.opacity = 0.18 + 0.35 * r;
+    const fall = (11 + 6 * r) * dt, c = controls.target, drift = (wx.windMph || 0) * 0.012, wd = (wx.windDir ?? 180) * Math.PI / 180;
+    const dx = -Math.sin(wd) * drift, dz = Math.cos(wd) * drift; // wind blows from windDir
+    for (let i = 0; i < RAIN_N; i++) {
+      let y = rainSeed[i * 3 + 1] - fall; if (y < 0) y += 40; rainSeed[i * 3 + 1] = y;
+      const x = c.x + rainSeed[i * 3], z = c.z + rainSeed[i * 3 + 2], o = i * 6;
+      rainPos[o] = x; rainPos[o + 1] = y; rainPos[o + 2] = z; rainPos[o + 3] = x + dx; rainPos[o + 4] = y - 0.7; rainPos[o + 5] = z + dz;
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+  }
+  // Lightning: brief sky-light flashes during thunderstorms.
+  if (wx?.thunder) {
+    nextFlash -= dt;
+    if (nextFlash <= 0) { flash = 1; nextFlash = 6 + Math.random() * 14; }
+  }
+  if (flash > 0) { flash = Math.max(0, flash - dt * 4); hemi.intensity = baseHemi + flash * 2.5; }
+}
+// Flag speed follows the real wind (1 = the original animation speed).
+function windFactor() {
+  const wx = activeTime === 'live' && liveWeather && !liveWeather.stale ? liveWeather : null;
+  return wx && Number.isFinite(wx.windMph) ? Math.max(0.3, Math.min(2.4, 0.35 + wx.windMph / 14)) : 1;
 }
 
 /* ================= CAMERA VIEWS ================= */
@@ -1369,9 +1519,10 @@ const reduceFlagMotion=window.matchMedia('(prefers-reduced-motion: reduce)').mat
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
-  if(!reduceFlagMotion) windTime+=dt;
+  if(!reduceFlagMotion) windTime+=dt*windFactor();
   if (window.__waveFlag) window.__waveFlag(windTime);
-  sideLandscape.update(windTime,activeTime==='night');
+  sideLandscape.update(windTime,lightingPhase==='night');
+  updateWeatherEffects(dt);
   if (fly) {
     fly.t += dt / fly.dur;
     const k = fly.t >= 1 ? 1 : 1 - Math.pow(1 - fly.t, 3);
@@ -1383,7 +1534,7 @@ function tick() {
   updateTraffic(dt);
   updateTour(dt);
   clouds.forEach((c, i) => {
-    c.visible=camera.position.y<35; // Keep aerial views unobstructed.
+    c.visible=camera.position.y<35&&i<cloudCount; // Keep aerial views unobstructed; cover follows the weather.
     c.position.x += dt * (0.5 + i * 0.07);
     if (c.position.x > 200) c.position.x = -200;
   });
@@ -1412,7 +1563,10 @@ window.addEventListener('resize', resize);
 resize();
 
 const params = new URLSearchParams(location.search);
-applyTime(TIMES[params.get('time')] ? params.get('time') : 'day');
+applyTime(TIMES[params.get('time')] ? params.get('time') : 'live');
+// Live lighting follows the clock; weather refreshes every 10 minutes.
+refreshWeather(); setInterval(refreshWeather, 10 * 60 * 1000);
+setInterval(() => { if (activeTime === 'live') renderLighting(); else updateLiveChip(); }, 60 * 1000);
 const requestedView=params.get('view')==='flag'?'grounds':params.get('view');
 const startView = VIEWS[requestedView] ? requestedView : 'overview';
 activeView=startView;
@@ -1751,6 +1905,78 @@ stationLayout.rotation.y = BUILDING_ANGLE;
 stationLayout.position.copy(STATION_OFFSET);
 world.rotation.y = SITE_HEADING;
 world.updateMatrixWorld(true);
+/* ===== New canopy and pumps over the Blender model =====
+   The procedural fuel area (scripts/reference-design.js: Texaco canopy and
+   detailed dispensers) replaces the Blender model's canopy and pumps. It is
+   fitted onto the model's pump islands, measured in the fuel group's frame,
+   so the model's parked cars still line up: ~1.1 m along the canopy, 2.1°. */
+const MODEL_ISLANDS = [[0.27, -15.13], [-0.05, -6.14], [-0.39, 2.85], [-0.72, 11.85]];
+const MODEL_FORECOURT_Y = 0.05; // the model's forecourt surface under the canopy
+function alignFuelGroupToModel() {
+  const P = islandZ.map(z => [0, z]), Q = MODEL_ISLANDS, n = P.length;
+  const pc = [0, 1].map(k => P.reduce((s, p) => s + p[k], 0) / n), qc = [0, 1].map(k => Q.reduce((s, q) => s + q[k], 0) / n);
+  let cosSum = 0, sinSum = 0; // rotation about +Y: (x, z) -> (x cos + z sin, -x sin + z cos)
+  for (let i = 0; i < n; i++) {
+    const px = P[i][0] - pc[0], pz = P[i][1] - pc[1], qx = Q[i][0] - qc[0], qz = Q[i][1] - qc[1];
+    cosSum += qx * px + qz * pz; sinSum += qx * pz - qz * px;
+  }
+  const th = Math.atan2(sinSum, cosSum), c = Math.cos(th), s = Math.sin(th);
+  fuelGroup.rotation.y = th;
+  fuelGroup.position.set(qc[0] - (pc[0] * c + pc[1] * s), MODEL_FORECOURT_Y, qc[1] - (-pc[0] * s + pc[1] * c));
+}
+// Drop triangles whose three corners all lie inside one of the boxes
+// ([x0, y0, z0, x1, y1, z1] in the frame given by `frame`).
+function cutTriangles(mesh, frame, boxes) {
+  const g = mesh.geometry, pos = g?.attributes?.position;
+  if (!pos) return 0;
+  const m = new THREE.Matrix4().multiplyMatrices(frame, mesh.matrixWorld);
+  if (!g.boundingBox) g.computeBoundingBox();
+  const bb = g.boundingBox.clone().applyMatrix4(m);
+  if (!boxes.some(b => bb.max.x >= b[0] && bb.min.x <= b[3] && bb.max.y >= b[1] && bb.min.y <= b[4] && bb.max.z >= b[2] && bb.min.z <= b[5])) return 0;
+  const inside = new Uint8Array(pos.count), v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).applyMatrix4(m);
+    for (let k = 0; k < boxes.length; k++) {
+      const b = boxes[k];
+      if (v.x >= b[0] && v.x <= b[3] && v.y >= b[1] && v.y <= b[4] && v.z >= b[2] && v.z <= b[5]) { inside[i] = k + 1; break; }
+    }
+  }
+  const index = g.index ? g.index.array : null, tris = (index ? index.length : pos.count) / 3, kept = [];
+  let removed = 0;
+  for (let t = 0; t < tris; t++) {
+    const a = index ? index[t * 3] : t * 3, b = index ? index[t * 3 + 1] : t * 3 + 1, cc = index ? index[t * 3 + 2] : t * 3 + 2;
+    if (inside[a] && inside[a] === inside[b] && inside[a] === inside[cc]) removed++;
+    else kept.push(a, b, cc);
+  }
+  if (!removed) return 0;
+  const cut = new THREE.BufferGeometry(); // shares the model's vertex data, new index only
+  for (const [name, attr] of Object.entries(g.attributes)) cut.setAttribute(name, attr);
+  cut.setIndex(kept); cut.boundingBox = g.boundingBox; cut.boundingSphere = g.boundingSphere;
+  mesh.geometry = cut;
+  return removed;
+}
+function replaceModelFuelArea(root) {
+  stationLayout.visible = true;
+  stationLayout.children.forEach(c => { c.visible = c === fuelGroup; });
+  alignFuelGroupToModel();
+  world.updateMatrixWorld(true); root.updateMatrixWorld(true);
+  // Ground-level procedural details (apron joints, fill lids) would float over the model's forecourt.
+  const bb = new THREE.Box3();
+  fuelGroup.traverse(o => { if (o.isMesh && o.parent?.name === 'Forecourt-fine-details' && bb.setFromObject(o).max.y < 0.12 + MODEL_FORECOURT_Y) o.visible = false; });
+  // Cut boxes in the fuel group's original frame (stationLayout's local frame):
+  // the model's canopy above 3.4 m, and its pump islands above the forecourt.
+  const frame = stationLayout.matrixWorld.clone().invert();
+  const boxes = [[-7.5, 3.4, -18.6, 7.2, 6.6, 15.2], ...MODEL_ISLANDS.map(([x, z]) => [x - 6.2, 0.12, z - 1.25, x + 6.2, 3.4, z + 1.25])];
+  let hidden = 0, removed = 0;
+  root.traverse(o => {
+    if (!o.isMesh) return;
+    if (/^(Dispenser_|Island_\d|Pump_island_|Canopy_)/.test(o.name)) { o.visible = false; hidden++; return; }
+    if (o.isInstancedMesh || /car/i.test(o.name)) return; // keep the model's parked cars
+    removed += cutTriangles(o, frame, boxes);
+  });
+  console.info(`New canopy and pumps shown; hid ${hidden} model parts and cut ${removed} canopy/pump triangles.`);
+}
+
 /* ===== Detailed station model built in Blender (blender/shortstop_station.blend) =====
    Exported to assets/web-station/shortstop_detailed.glb in the same true-north local frame as
    trueToSite(): glTF +X = east, -Z = north, so it sits at the site origin offset. It replaces the
@@ -1777,6 +2003,8 @@ try {
   scene.add(root);
   const keepMoving = new Set(traffic.map(v => v.g));
   world.children.forEach(c => { if (!keepMoving.has(c)) c.visible = false; });
+  try { replaceModelFuelArea(root); }
+  catch (err) { console.warn('Could not swap in the new canopy and pumps; showing the model\'s', err); stationLayout.visible = false; }
   if (detailedFlag) {
     // Wave the flag on the page (the Blender wave is a geometry-nodes effect that glTF cannot carry).
     // The optimised GLB stores the flag as quantised int16 under a scaled node; bake it to float metres in root space.
