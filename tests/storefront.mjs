@@ -31,6 +31,17 @@ for (const art of ['reddy-ice', 'geek-bar', 'candy', 'vape-art']) assert.equal(n
 assert.equal(named('Open-neon').length, 1);
 assert.equal(named('FoodMart-lettering').length, 1);
 assert.equal(named('Entry-door').length, 1);
+// Straight-on photo: a pair of doors with pulls, LED letter signs over the four
+// bays south of the door, and an LED screen on the south block wall.
+assert.equal(named('Door-leaf').length, 2, 'double doors');
+assert.equal(named('Door-pull').length, 2);
+assert.ok(S.doorZ[1] - S.doorZ[0] > 1.6, 'door pair is wide enough for two leaves');
+const ledBays = S.bays.filter(b => b.led);
+assert.deepEqual(ledBays.map(b => b.led), ['DELTA 8', '10THC', 'E-CIGS', 'CBD']);
+for (const b of ledBays) assert.ok(b.z[0] >= S.doorZ[1], `${b.led} sign is south of the door`);
+for (const n of ['CBD', 'E-CIGS', '10THC', 'DELTA 8']) assert.equal(named(`LED-sign-${n}`).length, 1, n);
+const screen = local(named('LED-screen-housing')[0]);
+assert.ok(screen.min.z >= S.glazingZ[1] && screen.max.z <= S.storeZ[1] && screen.min.y > 1.5 && screen.max.y < S.fasciaY[0], 'LED screen on the south block wall');
 
 // Pier fixtures sit on the pier, between the glazing and the locker (z -7.4).
 for (const name of ['Emergency-shutoff-sign', 'Extinguisher-cabinet', 'Vape-poster', 'Trash-receptacle', 'Switch-box']) {
@@ -47,6 +58,12 @@ assert.ok(fascia.max.x > 10.2 && fascia.min.y <= 3.9 && fascia.max.y >= 4.9 && f
 const led = local(named('LED-light-strip')[0]);
 assert.ok(led.max.y <= fascia.min.y + 1e-6 && led.min.z <= -9.9 && led.max.z >= 10.1);
 
+// The band around the store is grey now; red only on the sign over the doors.
+assert.equal(named('Fascia')[0].material.color.getHexString(), '9fa3a6');
+for (const n of ['Band-sleeve-north', 'Band-sleeve-south', 'Band-sleeve-back']) assert.equal(named(n).length, 1, n);
+const signPanel = local(named('Sign-panel-red')[0]);
+assert.ok(signPanel.min.z <= S.doorZ[0] && signPanel.max.z >= S.doorZ[1] && signPanel.max.z - signPanel.min.z < 7, 'red only over the door area');
+
 // One delineator per removed bollard, standing on the bollard's foot.
 const delineators = named('Delineator-post');
 assert.equal(delineators.length, posts.length);
@@ -54,7 +71,7 @@ delineators.forEach((p, i) => assert.deepEqual(p.position.toArray(), posts[i]));
 
 // Everything stays in the storefront zone and is finite.
 const zone = local(group);
-assert.ok(zone.min.x > 9.5 && zone.max.x < 12.2 && zone.min.y >= 0.3 && zone.max.y < 5.1 && zone.min.z > -10.2 && zone.max.z < 10.4,
+assert.ok(zone.min.x > S.band.backX - 0.1 && zone.max.x < 12.2 && zone.min.y >= 0.3 && zone.max.y < 5.1 && zone.min.z > -10.2 && zone.max.z < 10.4,
   `storefront zone ${zone.min.toArray()} .. ${zone.max.toArray()}`);
 for (const o of all) if (o.isMesh) {
   const p = o.geometry.attributes.position.array;

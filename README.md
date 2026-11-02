@@ -41,6 +41,14 @@ black mullions, door and glass, the red-lid bins, the wall packs and the
 - orange flexible delineators with white bands where the model had yellow bollards,
   and an A-frame sign by the door.
 
+Follow-up from the owner's straight-on night photo: the entry is a pair of
+glass doors (about 1.8 m) with centre pulls under the "1185" transom; LED letter
+signs (CBD, E-CIGS, 10THC, DELTA 8) hang across the top of the four bays south of
+the door, OPEN moved to the bay north of the door, and an LED screen ("Fifty Bar
+vapes $19.99") is on the south block wall. The band around the store is now
+solid grey on all four sides (the model's red band is sleeved over), with red
+kept only on the FOODMART sign panel and Texaco roundel above the doors.
+
 The decal and poster artwork is redrawn, not the original print files; the
 A-frame sign's wording, the pier width (~1.95 m) and bay widths are estimates
 from the photos. Test: `node --experimental-default-type=module tests/storefront.mjs`.

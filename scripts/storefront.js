@@ -21,21 +21,26 @@ export const STOREFRONT = Object.freeze({
   storeZ: [-10.0, 10.2], // north and south corners of the front wall
   pierZ: [-7.4, -5.45],  // block pier between the glazing and the Amazon locker
   glazingZ: [-5.45, 7.42],
-  doorZ: [0.95, 2.05],
+  doorZ: [0.95, 2.75],  // pair of glass doors (straight-on photo)
   railY: 1.45,           // kick-panel rail (decal panels below, clear glass above)
   headY: 3.5,
   fasciaY: [3.56, 4.98],
+  signZ: [-0.95, 4.7],   // red FOODMART sign panel over the doors (straight-on photo)
+  // The model's red band on the other three walls (y 4.18-4.98): back wall
+  // x -6.39, north wall z -9.90, south wall z 10.14. Sleeved in grey.
+  band: Object.freeze({ y: [4.16, 5.0], backX: -6.39, northZ: -9.9, southZ: 10.145 }),
   fasciaDepth: 0.24,
   // Bays from the pier southward. `art` names the kick-panel decal in the photos.
   bays: Object.freeze([
     { z: [-5.45, -3.35], art: 'reddy-ice' },
     { z: [-3.35, -1.7], art: 'geek-bar' },
     { z: [-1.7, -0.15], art: 'candy' },
-    { z: [-0.15, 0.95], art: 'vape-art' },
-    { z: [2.05, 3.45], art: 'tint', neon: true },
-    { z: [3.45, 4.75], art: 'tint' },
-    { z: [4.75, 6.05], art: 'tint' },
-    { z: [6.05, 7.42], art: 'tint' }
+    { z: [-0.15, 0.95], art: 'vape-art', neon: true },
+    // South of the door: LED letter signs across the top of the glass.
+    { z: [2.75, 3.92], art: 'tint', led: 'DELTA 8' },
+    { z: [3.92, 5.09], art: 'tint', led: '10THC' },
+    { z: [5.09, 6.25], art: 'tint', led: 'E-CIGS' },
+    { z: [6.25, 7.42], art: 'tint', led: 'CBD' }
   ]),
   // Model parts replaced here: [x0, y0, z0, x1, y1, z1] in this frame.
   cutBoxes: Object.freeze([
@@ -119,10 +124,10 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   const glass = new THREE.MeshPhysicalMaterial({
     color: 0xc9ddd6, roughness: 0.06, metalness: 0.1, transparent: true, opacity: 0.24, depthWrite: false
   });
-  // Maroon fascia; it glows faintly after dark, as under the canopy lights in photo 1.
+  // The band around the store is now solid grey (owner, Nov 2026); red remains
+  // only on the FOODMART sign panel over the doors.
   const solid = col => ctex(4, 4, (c, w, h) => { c.fillStyle = col; c.fillRect(0, 0, w, h); });
-  const fasciaMat = glowMat(solid('#7e1a22'));
-  fasciaMat.emissiveMap = solid('#55121a'); fasciaMat.metalness = 0.1;
+  const fasciaMat = std(0x9fa3a6, 0.7, 0.1);
 
   // ---------- block wall: pier by the locker and the south end ----------
   const wallTop = S.fasciaY[0];
@@ -169,24 +174,83 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
     c.fillStyle = '#ff3340'; c.font = 'bold 62px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText('OPEN', w / 2, h / 2 + 3);
   });
-  face('Open-neon', 0.72, 0.32, glowMat(openTex), S.glassX - 0.04, S.headY - 0.42, neonBay.z[0] + 0.5);
+  face('Open-neon', 0.72, 0.32, glowMat(openTex), S.glassX - 0.04, S.headY - 0.42, (neonBay.z[0] + neonBay.z[1]) / 2);
 
-  // ---------- entry door ----------
+  // LED letter signs hung behind the upper glass (CBD, E-CIGS, 10THC, DELTA 8).
+  // Only round LED dots of the drawn lettering are kept.
+  const ledSign = draw => ctex(512, 128, (c, w, h) => {
+    c.clearRect(0, 0, w, h); draw(c, w, h);
+    c.globalCompositeOperation = 'destination-in'; c.beginPath();
+    for (let y = 3; y < h; y += 6) for (let x = 3; x < w; x += 6) { c.moveTo(x + 2.5, y); c.arc(x, y, 2.5, 0, Math.PI * 2); }
+    c.fill(); c.globalCompositeOperation = 'source-over';
+  });
+  const ledText = (c, text, x, y, col, size = 92) => {
+    c.fillStyle = col; c.font = `bold ${size}px Arial`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(text, x, y);
+  };
+  const ledArt = {
+    'CBD': (c, w, h) => {
+      ledText(c, 'CBD', w * 0.4, h / 2 + 4, '#ffffff', 100);
+      c.fillStyle = '#35e05a'; // leaf beside the letters
+      for (let k = -3; k <= 3; k++) { c.save(); c.translate(w * 0.8, h * 0.62); c.rotate(k * 0.42); c.beginPath(); c.ellipse(0, -30, 9, 32 - Math.abs(k) * 5, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
+    },
+    'E-CIGS': (c, w, h) => ledText(c, 'E-CIGS', w / 2, h / 2 + 4, '#ffffff', 96),
+    '10THC': (c, w, h) => {
+      c.strokeStyle = '#35e05a'; c.lineWidth = 9; c.beginPath(); c.moveTo(50, 98); c.lineTo(86, 30); c.lineTo(122, 98); c.closePath(); c.stroke();
+      ledText(c, '10THC', w * 0.6, h / 2 + 4, '#35e05a', 96);
+    },
+    'DELTA 8': (c, w, h) => ledText(c, 'DELTA 8', w / 2, h / 2 + 4, '#e8f6ff', 84)
+  };
+  for (const bay of S.bays.filter(b => b.led)) {
+    const m = glowMat(ledSign(ledArt[bay.led])); m.transparent = true; m.alphaTest = 0.2; m.depthWrite = false;
+    face(`LED-sign-${bay.led}`, bay.z[1] - bay.z[0] - 0.14, 0.3, m, S.glassX - 0.05, S.headY - 0.45, (bay.z[0] + bay.z[1]) / 2);
+  }
+
+  // LED video screen on the south block wall ("Fifty Bar vapes $19.99").
+  const screenTex = ctex(384, 256, (c, w, h) => {
+    for (let i = 0; i < 13; i++) { c.fillStyle = i % 2 ? '#f2f2f2' : '#c8202c'; c.fillRect(0, i * h / 13, w, h / 13 + 1); }
+    c.fillStyle = '#1f3a8a'; c.fillRect(0, 0, w * 0.42, h * 7 / 13);
+    c.fillStyle = '#ffffff'; for (let i = 0; i < 20; i++) c.fillRect(10 + (i % 5) * 30, 10 + Math.floor(i / 5) * 30, 5, 5);
+    c.fillStyle = 'rgba(0,0,0,0.35)'; c.fillRect(0, 0, w, h);
+    c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 6; c.strokeStyle = '#101010';
+    for (const [t, y, size, col] of [['FIFTY BAR VAPES', 64, 40, '#ffffff'], ['$19.99', 132, 62, '#ffd21f'], ['NOW AVAILABLE', 200, 40, '#ffffff']]) {
+      c.font = `bold ${size}px Arial`; c.strokeText(t, w / 2, y); c.fillStyle = col; c.fillText(t, w / 2, y);
+    }
+  });
+  const screenZ = 9.25, [sy0, sy1] = [1.98, 2.86];
+  box('LED-screen-housing', [S.wallX, sy0, screenZ - 0.66, S.wallX + 0.09, sy1, screenZ + 0.66], std(0x0c0c0e, 0.5, 0.3));
+  // Screens are lit day and night, independent of the sign-lighting presets.
+  face('LED-screen', 1.2, sy1 - sy0 - 0.1, std(0xffffff, 0.4, 0, { map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 0.85 }),
+    S.wallX + 0.092, (sy0 + sy1) / 2, screenZ);
+
+  // ---------- entry: pair of glass doors ----------
+  // Two aluminium-framed leaves meeting at the centre, each with a vertical
+  // pull handle by the meeting stiles, under a transom with the street number.
   const door = new THREE.Group(); door.name = 'Entry-door'; group.add(door);
-  const [dz0, dz1] = S.doorZ, doorTop = S.floorY + 2.14, dw = dz1 - dz0;
-  box('Door-stile', [S.glassX - 0.02, S.floorY, dz0 + 0.03, S.glassX + 0.06, doorTop, dz0 + 0.13], aluminium, door);
-  box('Door-stile', [S.glassX - 0.02, S.floorY, dz1 - 0.13, S.glassX + 0.06, doorTop, dz1 - 0.03], aluminium, door);
-  box('Door-bottom-rail', [S.glassX - 0.02, S.floorY, dz0 + 0.03, S.glassX + 0.06, S.floorY + 0.25, dz1 - 0.03], aluminium, door);
-  box('Door-top-rail', [S.glassX - 0.02, doorTop - 0.1, dz0 + 0.03, S.glassX + 0.06, doorTop + 0.05, dz1 - 0.03], aluminium, door);
-  face('Door-glass', dw - 0.26, doorTop - 0.1 - S.floorY - 0.25, glass, S.glassX + 0.02, (doorTop - 0.1 + S.floorY + 0.25) / 2, (dz0 + dz1) / 2, door);
-  box('Door-push-bar', [S.glassX + 0.06, S.floorY + 0.98, dz0 + 0.18, S.glassX + 0.1, S.floorY + 1.03, dz1 - 0.18], aluminium, door);
+  const [dz0, dz1] = S.doorZ, doorTop = S.floorY + 2.14, dw = dz1 - dz0, dzc = (dz0 + dz1) / 2;
+  const leafW = (dw - 0.06 - 0.01) / 2, dx0 = S.glassX - 0.02, dx1 = S.glassX + 0.05;
+  const handleMat = std(0xd9dddf, 0.25, 0.8);
+  [[dz0 + 0.03, dz0 + 0.03 + leafW], [dz1 - 0.03 - leafW, dz1 - 0.03]].forEach(([a, b], i) => {
+    const leaf = new THREE.Group(); leaf.name = 'Door-leaf'; door.add(leaf);
+    box('Door-stile', [dx0, S.floorY, a, dx1, doorTop, a + 0.1], aluminium, leaf);
+    box('Door-stile', [dx0, S.floorY, b - 0.1, dx1, doorTop, b], aluminium, leaf);
+    box('Door-bottom-rail', [dx0, S.floorY, a, dx1, S.floorY + 0.22, b], aluminium, leaf);
+    box('Door-top-rail', [dx0, doorTop - 0.1, a, dx1, doorTop, b], aluminium, leaf);
+    face('Door-glass', b - a - 0.2, doorTop - 0.1 - S.floorY - 0.22, glass, S.glassX + 0.015, (doorTop - 0.1 + S.floorY + 0.22) / 2, (a + b) / 2, leaf);
+    // Offset vertical pull on the outside, next to the meeting stile.
+    const hz = i === 0 ? b - 0.17 : a + 0.17, hx = dx1 + 0.06;
+    box('Door-pull', [hx - 0.013, S.floorY + 0.8, hz - 0.013, hx + 0.013, S.floorY + 1.55, hz + 0.013], handleMat, leaf);
+    for (const y of [S.floorY + 0.86, S.floorY + 1.49]) box('Door-pull-standoff', [dx1, y - 0.012, hz - 0.01, hx, y + 0.012, hz + 0.01], handleMat, leaf);
+    // Lock cylinder on the meeting stile.
+    cyl('Door-lock', 0.017, 0.017, 0.02, std(0x8f9396, 0.3, 0.8), dx1 + 0.01, S.floorY + 1.05, i === 0 ? b - 0.05 : a + 0.05, leaf, 10).rotation.z = Math.PI / 2;
+  });
+  box('Door-astragal', [dx1, S.floorY + 0.02, dzc - 0.02, dx1 + 0.015, doorTop, dzc + 0.02], aluminium, door);
   const redBull = ctex(64, 320, (c, w, h) => {
     c.fillStyle = '#f4f4f2'; c.fillRect(0, 0, w, h);
     c.save(); c.translate(w / 2, h / 2); c.rotate(Math.PI / 2);
     c.fillStyle = '#d0202f'; c.font = 'bold 40px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.fillText('Red Bull', 0, 2); c.restore();
   });
-  face('Door-decal', 0.13, 0.66, std(0xffffff, 0.5, 0, { map: redBull }), S.glassX + 0.03, S.floorY + 1.55, dz1 - 0.23, door);
+  face('Door-decal', 0.13, 0.66, std(0xffffff, 0.5, 0, { map: redBull }), S.glassX + 0.03, S.floorY + 1.55, dz0 + 0.24, door);
   // Transom with the street number above the door (photo 1).
   box('Door-head', [fx0, doorTop + 0.05, dz0, fx1, doorTop + 0.11, dz1], aluminium, frame);
   face('Transom-glass', dw - 0.06, S.headY - 0.09 - doorTop - 0.11, glass, S.glassX + 0.01, (doorTop + 0.11 + S.headY - 0.09) / 2, (dz0 + dz1) / 2);
@@ -194,7 +258,7 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
     c.clearRect(0, 0, w, h); c.fillStyle = '#ffffff'; c.font = 'bold 70px Arial';
     c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('1185', w / 2, h / 2 + 4);
   });
-  face('Street-number', 0.36, 0.13, std(0xffffff, 0.5, 0, { map: numTex, transparent: true, alphaTest: 0.3 }),
+  face('Street-number', 0.5, 0.18, std(0xffffff, 0.5, 0, { map: numTex, transparent: true, alphaTest: 0.3 }),
     S.glassX + 0.025, doorTop + 0.32, (dz0 + dz1) / 2);
   const mat = box('Entry-mat', [S.wallX + 0.05, S.walkY, dz0 + 0.05, S.wallX + 0.85, S.walkY + 0.015, dz1 - 0.05], std(0x1b1d1f, 0.95));
   mat.castShadow = false;
@@ -206,13 +270,34 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   const led = glowMat(solid('#ffffff')); led.color.set(0xeef2f4);
   box('LED-light-strip', [S.wallX - 0.03, fy0 - 0.06, S.storeZ[0], fxOut - 0.02, fy0, S.storeZ[1]], led);
   box('Head-flashing', [S.glassX - 0.05, S.headY, gz0, S.wallX, fy0 - 0.06, gz1], aluminium);
-  const nameTex = ctex(1024, 192, (c, w, h) => {
-    c.clearRect(0, 0, w, h); c.fillStyle = '#fff4f2';
-    c.font = 'bold 150px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('FoodMart', w / 2, h / 2 + 8);
+  // Grey sleeves over the model's red band on the north, south and back walls.
+  const B = S.band, sleeve = 0.03;
+  box('Band-sleeve-north', [B.backX - sleeve, B.y[0], B.northZ - sleeve - 0.005, S.wallX, B.y[1], B.northZ - 0.005], fasciaMat);
+  box('Band-sleeve-south', [B.backX - sleeve, B.y[0], B.southZ + 0.005, S.wallX, B.y[1], B.southZ + sleeve + 0.005], fasciaMat);
+  box('Band-sleeve-back', [B.backX - sleeve - 0.005, B.y[0], B.northZ - sleeve - 0.005, B.backX - 0.005, B.y[1], B.southZ + sleeve + 0.005], fasciaMat);
+  // Red sign panel: silver italic FOODMART with the big "M", and the Texaco roundel.
+  const [sz0, sz1] = S.signZ, sw = sz1 - sz0, py0s = fy0 + 0.08, py1s = fy1 - 0.12;
+  box('Sign-panel-red', [fxOut, py0s, sz0, fxOut + 0.05, py1s, sz1], std(0xc41c2a, 0.5, 0.1));
+  const signTex = ctex(1536, 256, (c, w, h) => {
+    c.fillStyle = '#c41c2a'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#9e1420'; c.fillRect(14, 14, w * 0.8, h - 28);            // darker inset behind the name
+    const silver = c.createLinearGradient(0, 40, 0, 220);
+    silver.addColorStop(0, '#ffffff'); silver.addColorStop(0.5, '#c9cdd1'); silver.addColorStop(1, '#f4f5f6');
+    c.save(); c.transform(1, 0, -0.28, 1, 40, 0);                           // italic slant
+    c.textBaseline = 'alphabetic'; c.lineJoin = 'round'; c.strokeStyle = '#4a0a10'; c.lineWidth = 8;
+    const word = (t, x, y, size) => { c.font = `900 ${size}px Arial`; c.strokeText(t, x, y); c.fillStyle = silver; c.fillText(t, x, y); return c.measureText(t).width; };
+    let x = 120; x += word('FOOD', x, 150, 120) - 6;
+    x += word('M', x, 212, 205) - 4; word('ART', x, 212, 120);
+    c.restore();
+    const cx = w * 0.9, cy = h / 2;                                         // Texaco roundel
+    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(cx, cy, 104, 0, Math.PI * 2); c.fill();
+    c.strokeStyle = '#c41c2a'; c.lineWidth = 10; c.beginPath(); c.arc(cx, cy, 92, 0, Math.PI * 2); c.stroke();
+    c.fillStyle = '#c41c2a'; c.beginPath();
+    for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 30 : 76; c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
+    c.fill();
+    c.fillStyle = '#ffffff'; c.font = '900 70px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('T', cx, cy + 6);
   });
-  const nameMat = glowMat(nameTex); nameMat.transparent = true; nameMat.alphaTest = 0.25;
-  face('FoodMart-lettering', 3.6, 0.68, nameMat, fxOut + 0.006, (fy0 + fy1) / 2, (dz0 + dz1) / 2);
+  face('FoodMart-lettering', sw - 0.04, py1s - py0s - 0.04, glowMat(signTex), fxOut + 0.052, (py0s + py1s) / 2, (sz0 + sz1) / 2);
 
   // ---------- pier: shut-off, switch, extinguisher, poster, trash can ----------
   const pier = new THREE.Group(); pier.name = 'Storefront-pier'; group.add(pier);
