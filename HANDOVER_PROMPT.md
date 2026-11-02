@@ -49,9 +49,9 @@ Build an interactive Three.js 3D scene of a **FoodMart convenience store** with 
 - **Tiled sales floor**: Gray/white tile
 
 ### Pumps & Canopy (Texaco reference)
-- **Pump headers**: White field, red diagonal band, star/T badge, "with TECHRON", pump number
-- **Canopy**: Red/white Texaco canopy, star roundels on ends, TEXACO raised letters
-- **Night lighting**: TEXACO letters and star roundels glow, perimeter LED edge lighting, pump island base lights
+- **Pump headers**: ends flare outward toward the top; face split on a diagonal into a white wedge (red star roundel) and red ("with TECHRON" + pump number)
+- **Canopy**: one TEXACO brand end (+Z, toward the road) as a tall red blade; each long side's top edge slants up to it, with a long white wedge over red split on the diagonal; red roundel (white star, red T) on each long side at the brand corner; plain red far end
+- **Night lighting**: red neon along each long-side diagonal, up both brand corners and across the top of the TEXACO blade (no neon on the far end or along the bottom edges); TEXACO letters, roundels and pump headers glow; pump island base lights
 
 ## Current State of `index.html` (What's Been Built)
 
@@ -81,8 +81,8 @@ The scene is already implemented. Key sections to understand:
 - ATM + Bitcoin ATM
 
 ### Pumps & Canopy (`scripts/reference-design.js`)
-- Texaco "with TECHRON" pump headers with star badge
-- Canopy with red/white branding, TEXACO letters, star roundels, perimeter LED edge lighting
+- `pump()`: slanted header (inverted-trapezoid extrusion) with the diagonal white/red face graphic drawn on canvas
+- `canopy()`: slanted long-side plates (`Canopy-white-slant`, `Long-red-ribbon`), TEXACO brand blade, red neon + additive halo glow (`GlowMaterial`, hidden by day), corner roundels, columns with number flags
 
 ### Sidewalks (lines ~820-845)
 - Front walk along store facade, canopy apron walks, connector walks, side property walk, driveway aprons

@@ -17,7 +17,7 @@ assert.ok(CANOPY.edgeTop < CANOPY.roofTop, 'membrane caps the black edge so the 
 near(CANOPY.clearance, 4.195, 0.005, 'derived clearance (~13 ft 9 in, to confirm)');
 const material = new THREE.MeshStandardMaterial(), M = new Proxy({}, { get: () => material });
 const font = new FontLoader().parse(JSON.parse(fs.readFileSync(new URL('../assets/fonts/helvetiker_bold.typeface.json', import.meta.url), 'utf8')));
-const design = createReferenceDesign({ M, font, ctex: () => new THREE.Texture(), glowMat: () => material, makeHeaderMaterial: () => material });
+const design = createReferenceDesign({ M, font, ctex: () => new THREE.Texture() });
 const islandZ = [-14, -5, 4, 13];
 const canopy = design.canopy(islandZ); canopy.updateMatrixWorld(true);
 const box = new THREE.Box3().setFromObject(canopy);
@@ -26,7 +26,7 @@ assert.ok(box.max.z - box.min.z > CANOPY.length && box.max.z - box.min.z < CANOP
 const roof = new THREE.Box3().setFromObject(canopy.getObjectByName('Roof-surface'));
 near(roof.max.y, CANOPY.roofTop, 1e-6, 'canopy roof line follows lidar (~5.4 m), not the old 6.87 m');
 const badges = canopy.children.filter(c => c.name === 'Canopy-star-roundel');
-assert.equal(badges.length, 4, 'corner roundel on each long side at both TEXACO ends (owner photos)');
+assert.equal(badges.length, 2, 'one roundel per long side at the TEXACO brand corner (owner photos)');
 for (const b of badges) { const bb = new THREE.Box3().setFromObject(b); assert.ok(bb.max.y > CANOPY.roofTop + 0.5 && bb.max.y < 6.5, `roundel top ${bb.max.y} stands proud of the roof within lidar edge returns (<=6.5 m)`); }
 assert.equal(canopy.children.filter(c => c.name === 'Soffit-Techron-graphic').length, 2, 'with TECHRON soffit graphics on both sides');
 const soffit = canopy.getObjectByName('White-soffit');
@@ -72,7 +72,9 @@ near(INN.ridge, 9.2, 1e-9, 'inn ridge'); assert.ok(source.includes('pitchedRoof(
 console.log('PASS: car wash size/height and inn ridge from lidar');
 assert.ok(source.includes("const bearing=((name==='reference'?4.1:49)+(SITE_HEADING_DEG+35))*Math.PI/180;"),'plan cameras keep the owner-chosen framing after the heading fit');
 console.log('PASS: Aerial plan / Reference framing compensates the heading correction');
-assert.ok(Array.isArray(design.canopyGlow) && design.canopyGlow.length === 3 && design.canopyGlow.every(g => g.material.emissiveIntensity === 0 && g.night > g.golden));
+// Count grows with the neon, roundels, pump headers and number flags; what matters is
+// that every glow material is off by day and brighter at night than at golden hour.
+assert.ok(Array.isArray(design.canopyGlow) && design.canopyGlow.length >= 3 && design.canopyGlow.every(g => g.material.emissiveIntensity === 0 && g.night > g.golden));
 assert.ok(source.includes("canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = name === 'night' ? g.night : name === 'golden' ? g.golden : 0);"));
 console.log('PASS: canopy band, letters and star badges glow only at golden hour/night');
 

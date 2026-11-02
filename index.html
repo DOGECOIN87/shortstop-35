@@ -1441,25 +1441,10 @@ const stationWallMap = ctex(512,256,(c,w,h)=>{
 },4,2);
 const storefrontFrameMat=new THREE.MeshStandardMaterial({color:0xb8bfbe,roughness:0.48,metalness:0.18});
 
-function makeHeaderMaterial(number) {
-  // Red band of the Texaco pump header (owner pump photo): small "with" over
-  // "TECHRON" and the large pump number, white on red. The star roundel lives
-  // on the white gable above (scripts/reference-design.js).
-  const headerTexture = ctex(512,96,(x,w,h)=>{
-    x.fillStyle='#c8102e';x.fillRect(0,0,w,h);
-    x.fillStyle='#fff';x.textBaseline='alphabetic';x.textAlign='left';
-    x.font='bold 18px Arial';x.fillText('with',150,40);
-    x.font='bold 40px Arial';x.fillText('TECHRON',150,76);
-    x.font='bold 64px Arial';x.textAlign='center';x.fillText(String(number),w-90,74);
-    x.fillStyle='rgba(0,0,0,.18)';x.fillRect(0,h-6,w,6);
-  });
-  const material = new THREE.MeshStandardMaterial({map:headerTexture,emissive:0xffffff,emissiveMap:headerTexture,emissiveIntensity:0.2});
-  signGlowMats.push(material);return material;
-}
 let referenceFont=null;
 try { referenceFont=await new FontLoader().loadAsync('./assets/fonts/helvetiker_bold.typeface.json'); }
 catch(e){ console.warn('Font load failed; canopy lettering will use fallback:', e); }
-const referenceDesign=createReferenceDesign({M,ctex,glowMat,makeHeaderMaterial,font:referenceFont});
+const referenceDesign=createReferenceDesign({M,ctex,font:referenceFont});
 pumpPanelMaterial=referenceDesign.panelMaterial;
 canopyUndersideMaterial=referenceDesign.underside;
 canopyGlowMaterials.push(...referenceDesign.canopyGlow);
