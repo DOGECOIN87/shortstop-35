@@ -104,6 +104,8 @@ The scene is already implemented. Key sections to understand:
 
 ## Common Pitfalls to Avoid
 
+0. **Restamp modules after editing any `scripts/*.js`** — run `node tools/version-modules.mjs`. index.html loads local modules through content-versioned URLs (import map) so a new deploy never runs against modules cached from the previous one; without it, returning visitors see "couldn't start 3D" for up to 10 minutes. `tests/module-version.mjs` fails if you forget.
+
 1. **Duplicate `let` declarations** — `canopyGlowMaterials` was declared twice; caused a SyntaxError that prevented the entire module from running
 2. **Variable ordering** — `canopyGlowMaterials` must be declared before the pump-island code pushes to it
 3. **Top-level await** — FontLoader must complete before `createReferenceDesign()` is called
