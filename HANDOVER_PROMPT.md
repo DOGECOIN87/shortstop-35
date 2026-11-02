@@ -50,8 +50,9 @@ Build an interactive Three.js 3D scene of a **FoodMart convenience store** with 
 
 ### Pumps & Canopy (Texaco reference)
 - **Pump headers**: ends flare outward toward the top; face split on a diagonal into a white wedge (red star roundel) and red ("with TECHRON" + pump number)
-- **Canopy**: one TEXACO brand end (+Z, toward the road) as a tall red blade; each long side's top edge slants up to it, with a long white wedge over red split on the diagonal; red roundel (white star, red T) on each long side at the brand corner; plain red far end
-- **Night lighting**: red neon along each long-side diagonal, up both brand corners and across the top of the TEXACO blade (no neon on the far end or along the bottom edges); TEXACO letters, roundels and pump headers glow; pump island base lights
+- **Dispensers**: arched electronics head with red TEXACO badge, sale display + speaker grilles, blue payment screen with soft keys, PIN pad, red card reader, contactless reader, receipt printer, 4 grade buttons (88/87/89/93), instruction tiles, dark media panel; nozzles in boots with chrome swivels; hoses from top outlets with breakaway couplings, looping near the island; red lower door with white roundel (flared-foot T)
+- **Canopy** (measured from the photos in perspective): level roof line, deep fascia (~1.45 m) rising above the lidar roof deck as a parapet; each long side red below / white above, split on a diagonal lowest at its TEXACO corner, white covering the half nearest that corner, far half all red; white panel's corner end cut on a diagonal with black trim (red triangle at the corner); thick black coping on the TEXACO faces, overhanging the corners with diagonal ends; TEXACO letters ~60% of the red face height, offset toward the roundel corner; roundel (red disc, white star, red T) at each long side's TEXACO corner, ~45% above the roof line. Facing a TEXACO corner from outside, the long side is on the left (both photos), so the corners are rotationally placed: +x side at -Z, -x side at +Z (road end)
+- **Night lighting**: red neon along the bottom of each white panel, up its corner diagonal and across the top of the TEXACO face, with a short return down the opposite corner; TEXACO letters, roundels, pump headers and screens glow; pump island base lights
 
 ## Current State of `index.html` (What's Been Built)
 
@@ -81,8 +82,8 @@ The scene is already implemented. Key sections to understand:
 - ATM + Bitcoin ATM
 
 ### Pumps & Canopy (`scripts/reference-design.js`)
-- `pump()`: slanted header (inverted-trapezoid extrusion) with the diagonal white/red face graphic drawn on canvas
-- `canopy()`: slanted long-side plates (`Canopy-white-slant`, `Long-red-ribbon`), TEXACO brand blade, red neon + additive halo glow (`GlowMaterial`, hidden by day), corner roundels, columns with number flags
+- `pump()`: slanted header, detailed electronics face (canvas) plus raised PIN pad, card/tap readers, grade buttons, nozzles, hoses and breakaways
+- `canopy()`: level parapet fascia; per long side a full-length red plate (`Long-red-ribbon`) under a white diagonal panel (`Canopy-white-slant`), corner diagonal trim, neon + additive halo glow (`GlowMaterial`, hidden by day), roundels; TEXACO faces with coping and offset lettering; soffit TECHRON graphics; columns with number flags
 
 ### Sidewalks (lines ~820-845)
 - Front walk along store facade, canopy apron walks, connector walks, side property walk, driveway aprons
