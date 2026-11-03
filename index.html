@@ -897,12 +897,20 @@ box(6,0.025,5,apronMat,25,0.035,18,frontWalk);               // other side apron
 {
   const wash = new THREE.Group();wash.name='Aerial-aligned-car-wash'; wash.position.set(PLAN.wash.x,0,PLAN.wash.z);wash.rotation.y=PLAN.wash.heading;
   wash.scale.set(WASH.width/11,WASH.roofTop/4.31,WASH.length/8);stationLayout.add(wash);
+  const washWallTexture = new THREE.TextureLoader().load('./assets/store-wall-texture.jpg');
+  washWallTexture.colorSpace = THREE.SRGBColorSpace;
+  washWallTexture.wrapS = THREE.RepeatWrapping;
+  washWallTexture.wrapT = THREE.RepeatWrapping;
+  washWallTexture.repeat.set(4.5, -2.6);
+  washWallTexture.offset.y = 1;
+  washWallTexture.anisotropy = 8;
+  const washWallMat = new THREE.MeshStandardMaterial({ map:washWallTexture, roughness:0.94, metalness:0 });
   // Model the bay as walls around an opening, rather than painting a door on a solid box.
-  box(0.35,3.8,8,M.wallWhite,-5.3,1.9,0,wash);
-  box(0.35,3.8,8,M.wallWhite,5.3,1.9,0,wash);
-  box(10.6,3.8,0.3,M.wallWhite,0,1.9,-3.9,wash);
-  box(3.2,3.1,0.3,M.wallWhite,-3.8,1.55,3.9,wash);
-  box(3.2,3.1,0.3,M.wallWhite,3.8,1.55,3.9,wash);
+  box(0.35,3.8,8,washWallMat,-5.3,1.9,0,wash);
+  box(0.35,3.8,8,washWallMat,5.3,1.9,0,wash);
+  box(10.6,3.8,0.3,washWallMat,0,1.9,-3.9,wash);
+  box(3.2,3.1,0.3,washWallMat,-3.8,1.55,3.9,wash);
+  box(3.2,3.1,0.3,washWallMat,3.8,1.55,3.9,wash);
   box(10.9,0.8,8.3,M.red,0,3.75,0,wash);
   box(11.1,0.12,8.5,M.white,0,4.21,0,wash);
   for(let z=-3.9;z<4.2;z+=0.28) box(10.8,0.035,0.035,M.steel,0,4.29,z,wash,false);
