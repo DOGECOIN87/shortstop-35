@@ -87,7 +87,7 @@ export function settleOnWalk(group, heightAt) {
   });
 }
 
-export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
+export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wallTexture = null }) {
   const group = new THREE.Group();
   group.name = 'FoodMart-storefront';
   group.rotation.y = S.heading;
@@ -153,6 +153,9 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   // only on the FOODMART sign panel over the doors.
   const solid = col => ctex(4, 4, (c, w, h) => { c.fillStyle = col; c.fillRect(0, 0, w, h); });
   const fasciaMat = std(0x9fa3a6, 0.7, 0.1);
+  const perimeterWallMat = wallTexture
+    ? std(0xffffff, 0.94, 0, { map: wallTexture, bumpMap: wallTexture, bumpScale: 0.18 })
+    : blockMat;
 
   // ---------- block wall: pier by the locker and the south end ----------
   const wallTop = S.fasciaY[0];
@@ -327,6 +330,24 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   box('Band-sleeve-north', [B.backX - sleeve, B.y[0], B.northZ - sleeve - 0.005, S.wallX, B.y[1], B.northZ - 0.005], fasciaMat);
   box('Band-sleeve-south', [B.backX - sleeve, B.y[0], B.southZ + 0.005, S.wallX, B.y[1], B.southZ + sleeve + 0.005], fasciaMat);
   box('Band-sleeve-back', [B.backX - sleeve - 0.005, B.y[0], B.northZ - sleeve - 0.005, B.backX - 0.005, B.y[1], B.southZ + sleeve + 0.005], fasciaMat);
+  // Continue the photographed split-face wall finish around the three opaque
+  // sides of the building; the front remains the detailed storefront.
+  box('Perimeter-wall-back', [B.backX - 0.07, S.walkY, B.northZ, B.backX - 0.01, B.y[0], B.southZ], perimeterWallMat);
+  box('Perimeter-wall-north', [B.backX, S.walkY, B.northZ - 0.07, S.wallX, B.y[0], B.northZ - 0.01], perimeterWallMat);
+  box('Perimeter-wall-south', [B.backX, S.walkY, B.southZ + 0.01, S.wallX, B.y[0], B.southZ + 0.07], perimeterWallMat);
+  // The gray projecting border is continuous around the roofline, with a
+  // recessed cool-white LED edge on every side instead of only at the front.
+  const borderY = B.y[1] + 0.008, borderH = 0.055, borderDepth = 0.16;
+  const borderMat = std(0x777c80, 0.5, 0.35);
+  const borderGlow = glowMat(solid('#eef4f7'));
+  box('Roofline-border-front', [S.wallX - borderDepth, borderY, S.storeZ[0] - 0.08, S.wallX + 0.03, borderY + borderH, S.storeZ[1] + 0.08], borderMat);
+  box('Roofline-border-back', [B.backX - 0.03, borderY, B.northZ - 0.08, B.backX + borderDepth, borderY + borderH, B.southZ + 0.08], borderMat);
+  box('Roofline-border-north', [B.backX - 0.03, borderY, B.northZ - borderDepth, S.wallX + 0.03, borderY + borderH, B.northZ + 0.03], borderMat);
+  box('Roofline-border-south', [B.backX - 0.03, borderY, B.southZ - 0.03, S.wallX + 0.03, borderY + borderH, B.southZ + borderDepth], borderMat);
+  box('Roofline-light-front', [S.wallX - borderDepth - 0.01, borderY - 0.035, S.storeZ[0], S.wallX - borderDepth + 0.02, borderY, S.storeZ[1]], borderGlow);
+  box('Roofline-light-back', [B.backX + borderDepth - 0.02, borderY - 0.035, B.northZ, B.backX + borderDepth + 0.01, borderY, B.southZ], borderGlow);
+  box('Roofline-light-north', [B.backX, borderY - 0.035, B.northZ - borderDepth - 0.01, S.wallX, borderY, B.northZ - borderDepth + 0.02], borderGlow);
+  box('Roofline-light-south', [B.backX, borderY - 0.035, B.southZ + borderDepth - 0.02, S.wallX, borderY, B.southZ + borderDepth + 0.01], borderGlow);
   // Red sign panel: silver italic FOODMART with the big "M", and the Texaco roundel.
   const [sz0, sz1] = S.signZ, sw = sz1 - sz0, py0s = fy0 + 0.08, py1s = fy1 - 0.12;
   box('Sign-panel-red', [fxOut, py0s, sz0, fxOut + 0.05, py1s, sz1], std(0xc41c2a, 0.5, 0.1));
@@ -370,6 +391,10 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   cord.castShadow = false;
   // Open-front white cabinet with the extinguisher (photo 2).
   const cab = new THREE.Group(); cab.name = 'Extinguisher-cabinet'; cab.userData.onWalk = true; pier.add(cab);
+  // The two freestanding sidewalk blocks marked in the owner's latest model
+  // screenshot are not part of the desired site plan; keep the wall detail
+  // code below intact but remove this cabinet from the finished scene.
+  cab.visible = false;
   const white = std(0xeeeeeb, 0.5, 0.1), [cz0, cz1] = [d(0.65), d(0.28)], cy0 = S.walkY + 0.02, cy1 = S.walkY + 0.86, cx1 = S.wallX + 0.19;
   box('Cabinet-back', [S.wallX, cy0, cz0, S.wallX + 0.01, cy1, cz1], white, cab);
   box('Cabinet-side', [S.wallX, cy0, cz0, cx1, cy1, cz0 + 0.03], white, cab);
@@ -408,7 +433,8 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
     return can;
   };
   receptacle(S.wallX + 0.4, d(1.32), pier);
-  receptacle(S.wallX + 0.4, S.glazingZ[1] + 0.55, group); // south end, by the block wall (photo 6)
+  const southSidewalkBlock = receptacle(S.wallX + 0.4, S.glazingZ[1] + 0.55, group); // south end, by the block wall (photo 6)
+  southSidewalkBlock.visible = false;
 
   // Two security cameras on the top course of the pier with a cable between (photo 4).
   const camMat = std(0xe8e9e8, 0.5, 0.1);

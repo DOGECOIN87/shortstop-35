@@ -2066,7 +2066,7 @@ function replaceModelStorefront(root) {
   });
   const logoMap = new THREE.TextureLoader().load('./assets/logo.jpg');
   logoMap.colorSpace = THREE.SRGBColorSpace;
-  const front = buildStorefront({ ctex, glowMat, logoMap, posts });
+  const front = buildStorefront({ ctex, glowMat, logoMap, posts, wallTexture: stationWallTexture });
   // Stand the props on the model's walk, which is not level along the front.
   const ground = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name)) ground.push(o); });
   root.add(front); root.updateMatrixWorld(true);
