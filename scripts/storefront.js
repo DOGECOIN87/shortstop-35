@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
+import { BLOCK_TILE, blockWall } from './block-wall.js';
 
 // FoodMart storefront rebuilt from the owner's two night photos (Nov 2026):
 // split-face grey block pier with the emergency pump shut-off, vape poster,
@@ -87,7 +88,7 @@ export function settleOnWalk(group, heightAt) {
   });
 }
 
-export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wallTexture = null }) {
+export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wallTexture = null, blockMats = null }) {
   const group = new THREE.Group();
   group.name = 'FoodMart-storefront';
   group.rotation.y = S.heading;
@@ -129,29 +130,22 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
       }
     }
   });
-  const frontWallTexture = wallTexture ? wallTexture.clone() : blockTex;
-  if (wallTexture) {
-    frontWallTexture.wrapS = THREE.RepeatWrapping;
-    frontWallTexture.wrapT = THREE.RepeatWrapping;
-    // blockPart scales UVs in 1.6 m x 0.8 m wall chunks; this yields the same
-    // ~0.4 m x 0.2 m block size as the perimeter boxes.
-    frontWallTexture.repeat.set(0.8, -4);
-    frontWallTexture.offset.y = 1;
-    frontWallTexture.needsUpdate = true;
-  }
-  const blockMat = std(0xffffff, 0.95, 0, { map: frontWallTexture, bumpMap: frontWallTexture, bumpScale: 0.18 });
-  // The lower courses read darker grey than the upper split-face (photo 5).
-  const blockLow = std(0xffffff, 0.95, 0, { map: frontWallTexture, bumpMap: frontWallTexture, bumpScale: 0.18 });
-  const BAND_Y = 1.6;
+  // Photo block tiles (scripts/block-wall.js) when the page supplies them;
+  // the drawn texture otherwise (tests, no network).
+  const tile = blockMats ? BLOCK_TILE : { w: BLOCK_W, h: BLOCK_H };
+  const blockMat = blockMats ? blockMats.upper : std(0xffffff, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  // The lower courses are painted darker than the upper split-face (photos).
+  const blockLow = blockMats ? blockMats.lower : std(0xa9adb0, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  const BAND_Y = S.walkY + 1.1;
   const blockFace = (name, [z0, z1], [y0, y1], x = S.wallX) => {
     blockPart(name + '-lower', [z0, z1], [y0, BAND_Y], x, blockLow);
     return blockPart(name, [z0, z1], [BAND_Y, y1], x, blockMat);
   };
   const blockPart = (name, [z0, z1], [y0, y1], x, mat) => {
     const w = z1 - z0, h = y1 - y0;
-    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(w, h), w / BLOCK_W, h / BLOCK_H), mat);
+    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(w, h), w / tile.w, h / tile.h), mat);
     // keep the courses continuous across the colour change
-    const uv = m.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) + (y0 - S.walkY) / BLOCK_H);
+    const uv = m.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) + (y0 - S.walkY) / tile.h);
     m.rotation.y = Math.PI / 2; m.position.set(x, (y0 + y1) / 2, (z0 + z1) / 2);
     return add(m, name);
   };
@@ -163,9 +157,6 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   // only on the FOODMART sign panel over the doors.
   const solid = col => ctex(4, 4, (c, w, h) => { c.fillStyle = col; c.fillRect(0, 0, w, h); });
   const fasciaMat = std(0x9fa3a6, 0.7, 0.1);
-  const perimeterWallMat = wallTexture
-    ? std(0xffffff, 0.94, 0, { map: wallTexture, bumpMap: wallTexture, bumpScale: 0.18 })
-    : blockMat;
 
   // ---------- block wall: pier by the locker and the south end ----------
   const wallTop = S.fasciaY[0];
@@ -343,9 +334,17 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   box('Band-sleeve-back', [B.backX - sleeve - 0.005, B.y[0], B.northZ - sleeve - 0.005, B.backX - 0.005, B.y[1], B.southZ + sleeve + 0.005], fasciaMat);
   // Continue the photographed split-face wall finish around the three opaque
   // sides of the building; the front remains the detailed storefront.
-  box('Perimeter-wall-back', [B.backX - 0.07, S.walkY, B.northZ, B.backX - 0.01, B.y[0], B.southZ], perimeterWallMat);
-  box('Perimeter-wall-north', [B.backX, S.walkY, B.northZ - 0.07, S.wallX, B.y[0], B.northZ - 0.01], perimeterWallMat);
-  box('Perimeter-wall-south', [B.backX, S.walkY, B.southZ + 0.01, S.wallX, B.y[0], B.southZ + 0.07], perimeterWallMat);
+  // Same split-face block on the back and both ends, light above a darker
+  // lower band (photos of the north wall and the car wash).
+  const walls = { upper: blockMat, lower: blockLow }, wy0 = S.walkY - 0.6;
+  const blockSide = (name, a, b, normal) => {
+    const parts = blockWall(group, { a, b, y0: wy0, y1: B.y[0], band: BAND_Y, normal, mats: walls, name, offset: 0.02 });
+    // Tests run with the drawn texture: scale its UVs to the same block size.
+    if (!blockMats) for (const m of parts) { const uv = m.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * BLOCK_TILE.w / tile.w, uv.getY(i) * BLOCK_TILE.h / tile.h); }
+  };
+  blockSide('Perimeter-wall-back', [B.backX, B.southZ], [B.backX, B.northZ], [-1, 0]);
+  blockSide('Perimeter-wall-north', [B.backX, B.northZ], [S.wallX, B.northZ], [0, -1]);
+  blockSide('Perimeter-wall-south', [S.wallX, B.southZ], [B.backX, B.southZ], [0, 1]);
   // The gray projecting border is continuous around the roofline, with a
   // recessed cool-white LED edge on every side instead of only at the front.
   const borderY = B.y[1] + 0.008, borderH = 0.055, borderDepth = 0.16;

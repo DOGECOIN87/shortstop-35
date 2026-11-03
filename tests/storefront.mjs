@@ -80,7 +80,7 @@ delineators.forEach((p, i) => assert.deepEqual(p.position.toArray(), posts[i]));
 
 // Everything stays in the storefront zone and is finite.
 const zone = local(group);
-assert.ok(zone.min.x > S.band.backX - 0.1 && zone.max.x < 12.2 && zone.min.y >= 0.3 && zone.max.y < 5.1 && zone.min.z > -10.2 && zone.max.z < 10.4,
+assert.ok(zone.min.x > S.band.backX - 0.1 && zone.max.x < 12.2 && zone.min.y >= S.walkY - 0.65 && zone.max.y < 5.1 && zone.min.z > -10.2 && zone.max.z < 10.4,
   `storefront zone ${zone.min.toArray()} .. ${zone.max.toArray()}`);
 for (const o of all) if (o.isMesh) {
   const p = o.geometry.attributes.position.array;

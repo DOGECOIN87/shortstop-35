@@ -445,23 +445,25 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=d927d12556",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=d927d12556",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=d927d12556",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=d927d12556",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=d927d12556",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=d927d12556",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=d927d12556",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=d927d12556",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=d927d12556",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=d927d12556",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=d927d12556",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=d927d12556",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=d927d12556",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=d927d12556",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=d927d12556",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=d927d12556",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=d927d12556"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=bd27f1616e",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=bd27f1616e",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=bd27f1616e",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=bd27f1616e",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=bd27f1616e",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=bd27f1616e",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=bd27f1616e",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=bd27f1616e",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=bd27f1616e",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=bd27f1616e",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=bd27f1616e",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=bd27f1616e",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=bd27f1616e",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=bd27f1616e",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=bd27f1616e",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=bd27f1616e",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=bd27f1616e",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=bd27f1616e",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=bd27f1616e"
 } }
 </script>
 
@@ -482,6 +484,8 @@ import { createSimulation, signalState } from './scripts/traffic-engine.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
 import { STOREFRONT, buildStorefront, storefrontFrame, settleOnWalk } from './scripts/storefront.js';
 import { applySiteFixes } from './scripts/site-fixes.js';
+import { blockMaterials } from './scripts/block-wall.js';
+import { buildCarWash, WASH as WASH_DRESSING } from './scripts/car-wash.js';
 import { levelModelSidewalks } from './scripts/sidewalk-levels.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector, solarPosition, skyVector, moonPosition, moonIllumination } from './scripts/sun-position.js';
@@ -2080,7 +2084,8 @@ function replaceModelStorefront(root) {
   });
   const logoMap = new THREE.TextureLoader().load('./assets/logo.jpg');
   logoMap.colorSpace = THREE.SRGBColorSpace;
-  const front = buildStorefront({ ctex, glowMat, logoMap, posts, wallTexture: stationWallTexture });
+  const blockMats = blockMaterials();
+  const front = buildStorefront({ ctex, glowMat, logoMap, posts, blockMats });
   // Stand the props on the model's walk, which is not level along the front.
   const ground = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name)) ground.push(o); });
   root.add(front); root.updateMatrixWorld(true);
@@ -2144,6 +2149,23 @@ try {
     const fx = applySiteFixes(root);
     console.info(`Site fixes: cut ${fx.cut} model triangles, replaced ${fx.hidden} parts, added ${fx.props} props.`);
   } catch (err) { console.warn('Could not apply the site fixes', err); }
+  // Car wash walls, fascia and signs from the owner's photos (scripts/car-wash.js).
+  try {
+    const ground = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name)) ground.push(o); });
+    const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0);
+    const wash = buildCarWash({ ctex, glowMat, mats: blockMaterials(), groundAt: (lx, lz) => {
+      const c = Math.cos(-0.677), s = Math.sin(-0.677), p = new THREE.Vector3(lx * c + lz * s, 3, -lx * s + lz * c);
+      ray.set(root.localToWorld(p), down); ray.far = 5;
+      const hit = ray.intersectObjects(ground, false)[0];
+      return hit ? root.worldToLocal(hit.point.clone()).y : NaN;
+    } });
+    root.add(wash);
+    root.updateMatrixWorld(true);
+    const washFrame = wash.matrixWorld.clone().invert();
+    let washCut = 0;
+    root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name) && !o.parent?.name?.startsWith('Car-wash')) washCut += cutTriangles(o, washFrame, WASH_DRESSING.cutBoxes); });
+    console.info(`Car wash dressed; cut ${washCut} model triangles.`);
+  } catch (err) { console.warn('Could not dress the car wash', err); }
   // ?debug: aim the camera at a point given in the glTF root's frame (for
   // photo-matching screenshots); the tour stays off.
   if (new URLSearchParams(location.search).has('debug')) {
