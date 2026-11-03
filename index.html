@@ -1238,6 +1238,7 @@ const TIMES = {
 };
 let pumpPanelMaterial;
 let canopyUndersideMaterial;
+const storefrontLights = [];
 // canopyGlowMaterials declared above (line ~798); reused here
 // 'live' follows the real clock and weather at the store (default); day,
 // golden and night are the fixed presets.
@@ -1308,6 +1309,10 @@ function renderLighting() {
   }
   if (pumpPanelMaterial) pumpPanelMaterial.emissiveIntensity = 0.2 * w.day + 0.8 * w.golden + 2 * w.night;
   canopySpots.forEach(light => light.intensity = 18 * w.golden + 75 * w.night);
+  storefrontLights.forEach(({ light, glow }) => {
+    light.intensity = 0.08 * w.day + 0.72 * w.golden + 2.6 * w.night;
+    glow.emissiveIntensity = 0.12 + 0.55 * w.golden + 2.1 * w.night;
+  });
   if (canopyUndersideMaterial) canopyUndersideMaterial.emissiveIntensity = 0.2 * (w.day + w.golden) + 0.45 * w.night;
   canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = g.golden * w.golden + g.night * w.night);
   skyMat.uniforms.top.value.setHex(T.sky[0]);
@@ -1603,7 +1608,7 @@ const stationWallTexture = new THREE.TextureLoader().load('./assets/store-wall-t
 stationWallTexture.colorSpace = THREE.SRGBColorSpace;
 stationWallTexture.wrapS = THREE.RepeatWrapping;
 stationWallTexture.wrapT = THREE.RepeatWrapping;
-stationWallTexture.repeat.set(2.6, 1.35);
+stationWallTexture.repeat.set(1.15, 0.9);
 stationWallTexture.anisotropy = 8;
 // The procedural fallback remains available if the reference asset cannot load.
 const stationWallMap = ctex(512,256,(c,w,h)=>{
@@ -1673,6 +1678,30 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
     fan.rotation.x=-Math.PI/2;fan.position.set(-31,roofY+0.775,z);storeGroup.add(fan);
     for(let j=0;j<5;j++)box(0.025,0.035,0.72,M.steel,-31-0.28+j*0.14,roofY+0.8,z,storeGroup);
   }
+  // Three exterior wall-pack fixtures matching the owner's night photograph:
+  // evenly spaced above the fascia, aimed down and out across the storefront.
+  const fixtureBodyMat = new THREE.MeshStandardMaterial({ color:0x35383d, roughness:0.48, metalness:0.55 });
+  const fixtureGlowMat = new THREE.MeshStandardMaterial({ color:0xfff7df, emissive:0xffe4a8, emissiveIntensity:1.5, roughness:0.24 });
+  for (const z of [-7, 0, 6]) {
+    const x = -22.48;
+    box(0.42, 0.18, 0.34, fixtureBodyMat, x, roofY + 0.16, z, storeGroup);
+    box(0.28, 0.035, 0.22, fixtureGlowMat, x - 0.225, roofY + 0.06, z, storeGroup);
+    const target = new THREE.Object3D();
+    target.position.set(x - 3.8, roofY - 2.8, z);
+    storeGroup.add(target);
+    const light = new THREE.SpotLight(0xffedc5, 1.8, 24, Math.PI / 3.2, 0.72, 1.7);
+    light.position.set(x - 0.28, roofY + 0.08, z);
+    light.target = target;
+    light.castShadow = true;
+    light.shadow.mapSize.set(mobileRendering ? 512 : 768, mobileRendering ? 512 : 768);
+    light.shadow.camera.near = 0.15;
+    light.shadow.camera.far = 26;
+    light.shadow.bias = -0.00035;
+    light.shadow.normalBias = 0.025;
+    storeGroup.add(light);
+    storefrontLights.push({ light, glow: fixtureGlowMat });
+  }
+  renderLighting();
   // ===== FOODMART storefront (redesigned to match owner's FoodMart references) =====
   // Wrapped in try/catch so a storefront-detail error never prevents the
   // rest of the 3D scene from rendering.
