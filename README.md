@@ -78,6 +78,30 @@ The decal and poster artwork is redrawn, not the original print files; the
 A-frame sign's wording, the pier width (~1.95 m) and bay widths are estimates
 from the photos. Test: `node --experimental-default-type=module tests/storefront.mjs`.
 
+The LED screen is centred on the south block wall between the glazing and the
+south corner (z 8.81), as the owner marked.
+
+## Sidewalk props, propane exchange and palm — 2026-11-02
+
+`scripts/site-fixes.js` clears the two sidewalk objects the owner circled on the
+live page and dresses the yard the same way the model will be seen:
+
+- the red air/water cabinet that runs along the south walk and the plain grey box
+  by the south corner are cut out of the model by dropping the triangles inside
+  two boxes in the store frame (the boxes only remove geometry that is wholly
+  inside them, so the walk they stand on keeps its surface);
+- the model's six loose propane bottles, which stood where the grey box was,
+  are hidden (the instanced `Propane_tank` mesh) and a white steel mesh exchange
+  cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
+  inside) stands on the grass island nearer the store, as marked by the owner;
+- a 7 m palm stands on the farther grass island by the car wash.
+
+Both props are raycast onto the model's actual surface when they are placed, so
+they sit on the slope rather than at a nominal height. Test:
+`node --experimental-default-type=module tests/site-fixes.mjs`. On the real GLB
+the fix cuts 247 model triangles, hides the bottle instances and adds the two
+props.
+
 ## Live time and weather — 2026-11-02
 
 The 3D scene now starts in **Live** mode: lighting follows the real sun (and

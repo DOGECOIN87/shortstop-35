@@ -49,6 +49,8 @@ for (const b of ledBays) assert.ok(b.z[0] >= S.doorZ[1], `${b.led} sign is south
 for (const n of ['CBD', 'E-CIGS', '10THC', 'DELTA 8']) assert.equal(named(`LED-sign-${n}`).length, 1, n);
 const screen = local(named('LED-screen-housing')[0]);
 assert.ok(screen.min.z >= S.glazingZ[1] && screen.max.z <= S.storeZ[1] && screen.min.y > 1.5 && screen.max.y < S.fasciaY[0], 'LED screen on the south block wall');
+// Centred on that wall, as the owner asked.
+assert.ok(Math.abs((screen.min.z + screen.max.z) / 2 - (S.glazingZ[1] + S.storeZ[1]) / 2) < 0.02, 'LED screen centred on the south block wall');
 
 // Pier fixtures sit on the pier, between the glazing and the locker (z -7.4).
 for (const name of ['Emergency-shutoff-sign', 'Extinguisher-cabinet', 'Vape-poster', 'Trash-receptacle', 'Switch-box']) {

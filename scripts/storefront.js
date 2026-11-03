@@ -267,7 +267,8 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
       c.font = `bold ${size}px Arial`; c.strokeText(t, w / 2, y); c.fillStyle = col; c.fillText(t, w / 2, y);
     }
   });
-  const screenZ = 9.4, [sy0, sy1] = [1.98, 2.86]; // ~2 m from the glazing (straight-on photo)
+  // Centred on the block wall between the glazing and the south corner.
+  const screenZ = (S.glazingZ[1] + S.storeZ[1]) / 2, [sy0, sy1] = [1.98, 2.86];
   box('LED-screen-housing', [S.wallX, sy0, screenZ - 0.66, S.wallX + 0.09, sy1, screenZ + 0.66], std(0x0c0c0e, 0.5, 0.3));
   // Screens are lit day and night, independent of the sign-lighting presets.
   face('LED-screen', 1.2, sy1 - sy0 - 0.1, std(0xffffff, 0.4, 0, { map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 0.85 }),

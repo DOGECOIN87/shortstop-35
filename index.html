@@ -445,22 +445,23 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=d82ce2c8c1",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=d82ce2c8c1",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=d82ce2c8c1",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=d82ce2c8c1",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=d82ce2c8c1",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=d82ce2c8c1",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=d82ce2c8c1",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=d82ce2c8c1",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=d82ce2c8c1",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=d82ce2c8c1",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=d82ce2c8c1",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=d82ce2c8c1",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=d82ce2c8c1",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=d82ce2c8c1",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=d82ce2c8c1",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=d82ce2c8c1"
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=2cc480e466",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=2cc480e466",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=2cc480e466",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=2cc480e466",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=2cc480e466",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=2cc480e466",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=2cc480e466",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=2cc480e466",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=2cc480e466",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=2cc480e466",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=2cc480e466",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=2cc480e466",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=2cc480e466",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=2cc480e466",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=2cc480e466",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=2cc480e466",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=2cc480e466"
 } }
 </script>
 
@@ -480,6 +481,7 @@ import { TRAFFIC_LANES, TRAFFIC_SIGNALS } from './scripts/traffic-lanes.js';
 import { createSimulation, signalState } from './scripts/traffic-engine.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
 import { STOREFRONT, buildStorefront, storefrontFrame, settleOnWalk } from './scripts/storefront.js';
+import { applySiteFixes } from './scripts/site-fixes.js';
 import { levelModelSidewalks } from './scripts/sidewalk-levels.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector, solarPosition, skyVector, moonPosition, moonIllumination } from './scripts/sun-position.js';
@@ -2082,6 +2084,12 @@ try {
   } catch (err) { console.warn('Could not level the sidewalks; showing the model\'s', err); }
   try { replaceModelStorefront(root); }
   catch (err) { console.warn('Could not rebuild the storefront; showing the model\'s', err); }
+  // Sidewalk props the owner marked for removal, the propane exchange cage and
+  // the palm by the car wash (scripts/site-fixes.js).
+  try {
+    const fx = applySiteFixes(root);
+    console.info(`Site fixes: cut ${fx.cut} model triangles, replaced ${fx.hidden} parts, added ${fx.props} props.`);
+  } catch (err) { console.warn('Could not apply the site fixes', err); }
   if (detailedFlag) {
     // Wave the flag on the page (the Blender wave is a geometry-nodes effect that glTF cannot carry).
     // The optimised GLB stores the flag as quantised int16 under a scaled node; bake it to float metres in root space.
