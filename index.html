@@ -445,25 +445,25 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/block-wall.js": "./scripts/block-wall.js?v=382d6cfa24",
-  "./scripts/car-wash.js": "./scripts/car-wash.js?v=382d6cfa24",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=382d6cfa24",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=382d6cfa24",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=382d6cfa24",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=382d6cfa24",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=382d6cfa24",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=382d6cfa24",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=382d6cfa24",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=382d6cfa24",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=382d6cfa24",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=382d6cfa24",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=382d6cfa24",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=382d6cfa24",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=382d6cfa24",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=382d6cfa24",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=382d6cfa24",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=382d6cfa24",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=382d6cfa24"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=f704086ee9",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=f704086ee9",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=f704086ee9",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=f704086ee9",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=f704086ee9",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=f704086ee9",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=f704086ee9",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=f704086ee9",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=f704086ee9",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=f704086ee9",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=f704086ee9",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=f704086ee9",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=f704086ee9",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=f704086ee9",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=f704086ee9",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=f704086ee9",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=f704086ee9",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=f704086ee9",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=f704086ee9"
 } }
 </script>
 
@@ -875,6 +875,11 @@ atm.position.set(-23.0,2.9,-7); atm.rotation.y=Math.PI/2; storeGroup.add(atm);
 // Photo-led fine detail pass; no extra network assets or light/shadow sources.
 addStationDetails({fuelGroup,storeGroup,islandZ,M,ctex,glowMat});
 const sideLandscape=addStoreSideLandscape({stationLayout,M,ctex});
+function enableOwnerSideSurfaces(){
+  const visible=new Set(['Store-wall-sidewalks','Traced-store-front-walk','Car-wash-to-store-walk','Store-side-connector-walk','Marked-car-wash-side-grass','Marked-rear-store-grass','Raised-grass-island','Rear-grass-border','Grass-behind-dumpster']);
+  sideLandscape.group.visible=true;
+  for(const child of sideLandscape.group.children) child.visible=visible.has(child.name)||child.name==='Planted-island-curb';
+}
 
 // ===== Station-property sidewalks (concrete, local station frame) =====
 // Front sidewalk along the store facade — customer walkway from canopy to store.
@@ -2149,6 +2154,8 @@ try {
     const fx = applySiteFixes(root);
     console.info(`Site fixes: cut ${fx.cut} model triangles, replaced ${fx.hidden} parts, added ${fx.props} props.`);
   } catch (err) { console.warn('Could not apply the site fixes', err); }
+  try { enableOwnerSideSurfaces(); console.info('Owner-marked side grass, curbs and sidewalks enabled on the detailed model.'); }
+  catch (err) { console.warn('Could not enable the owner-marked side surfaces', err); }
   // Car wash walls, fascia and signs from the owner's photos (scripts/car-wash.js).
   try {
     const ground = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name)) ground.push(o); });

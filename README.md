@@ -81,10 +81,12 @@ from the photos. Test: `node --experimental-default-type=module tests/storefront
 The LED screen is centred on the south block wall between the glazing and the
 south corner (z 8.81), as the owner marked.
 
-## Sidewalk props, propane exchange and palm — 2026-11-02
+## Sidewalk props, propane exchange and island landscaping — 2026-11-03
 
 `scripts/site-fixes.js` clears the two sidewalk objects the owner circled on the
-live page and dresses the yard the same way the model will be seen:
+live page. The owner-marked grass, curb and sidewalk surfaces from
+`scripts/store-side-landscape.js` are also enabled over the detailed model so
+the live scene follows the photo-traced geometry:
 
 - the red air/water cabinet that runs along the south walk and the plain grey box
   by the south corner are cut out of the model by dropping the triangles inside
@@ -93,8 +95,9 @@ live page and dresses the yard the same way the model will be seen:
 - the model's six loose propane bottles, which stood where the grey box was,
   are hidden (the instanced `Propane_tank` mesh) and a white steel mesh exchange
   cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
-  inside) stands on the grass island nearer the store, with its doors facing I-35;
-- a 7 m palm stands on the farther grass island by the car wash.
+  inside) stands on the paved edge beside the landscaped tree island, with its
+  doors facing I-35;
+- a 7 m palm remains in the island by the car wash, behind the exchange cabinet.
 
 Both props are raycast onto the model's actual surface when they are placed, so
 they sit on the slope rather than at a nominal height. Test:

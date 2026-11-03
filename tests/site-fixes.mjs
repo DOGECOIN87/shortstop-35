@@ -52,8 +52,9 @@ cage.rotation.y = F.propane.rotation;
 cage.position.fromArray([F.propane.at[0], 0, F.propane.at[1]]);
 cage.updateMatrixWorld(true);
 const pb = new THREE.Box3().setFromObject(cage);
-assert.ok(pb.min.x > 13 && pb.max.x < 16, 'cage sits on the nearer marked island');
-assert.ok(pb.min.z > -20.5 && pb.max.z < -17.5, 'cage is near the store-side island');
+assert.ok(pb.min.x > 15 && pb.max.x < 18, 'cage sits on the paved edge beside the island');
+assert.ok(pb.min.z > -33 && pb.max.z < -30, 'cage is beside the car-wash-side tree island');
+assert.ok(close(Math.hypot(F.propane.at[0] - F.palm.at[0], F.propane.at[1] - F.palm.at[1]), 2.0, 0.02), 'cage is beside, not on, the landscaped island');
 const front = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), F.propane.rotation);
 const towardHighway = new THREE.Vector3(71.56 - F.propane.at[0], 0, 55.25 - F.propane.at[1]).normalize();
 assert.ok(front.dot(towardHighway) > 0.999, 'cage door faces the nearest I-35 pavement');
@@ -69,8 +70,7 @@ palm.updateMatrixWorld(true);
 const palmBox = new THREE.Box3().setFromObject(palm);
 assert.ok(palmBox.max.y > 6.6 && palmBox.max.y < 7.6, 'palm is storey-and-a-half tall');
 assert.ok(palmBox.min.y > -0.2 && palmBox.min.y < 0.2, 'palm base at its origin');
-assert.deepEqual(F.palm.at, [14.5, -31.5], 'palm on the farther marked island by the car wash');
-assert.ok(F.palm.at[1] < F.propane.at[1] - 10, 'palm is farther from the store than the cage');
+assert.deepEqual(F.palm.at, [14.5, -31.5], 'palm remains on the tree island by the car wash');
 
 // --- applySiteFixes on a stand-in root --------------------------------------
 const root = new THREE.Group();

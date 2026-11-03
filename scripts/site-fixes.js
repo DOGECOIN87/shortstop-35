@@ -15,6 +15,7 @@ import { STOREFRONT } from './storefront.js';
 // Everything here is in the storefront frame used by scripts/storefront.js:
 // +X out of the storefront toward the pumps, +Z south along the front wall,
 // Y up. Boxes are [x0, y0, z0, x1, y1, z1] in that frame.
+const PROPANE_AT = Object.freeze([16.5, -31.5]);
 export const SITE_FIXES = Object.freeze({
   cutBoxes: Object.freeze([
     [10.30, -0.45, 13.10, 11.80, 1.75, 18.90], // red air & water cabinet, south walk
@@ -23,12 +24,12 @@ export const SITE_FIXES = Object.freeze({
   // Model parts that are replaced rather than cut (instanced: the loose
   // propane bottles stacked against the south wall).
   hideMeshes: Object.freeze([/^Propane_tank/]),
-  palm: Object.freeze({ at: [14.5, -31.5], height: 7.2 }), // farther island, by the car wash
+  palm: Object.freeze({ at: [14.5, -31.5], height: 7.2 }), // tree island, by the car wash
   propane: Object.freeze({
-    at: [14.5, -19.0],   // nearer island, as marked by the owner
+    at: PROPANE_AT,       // paved edge beside the tree island, as shown in the photos
     // Aim the front toward the nearest I-35 pavement in the model, not just
     // perpendicular to the store facade (highway nearest point ≈ [71.56, 55.25]).
-    rotation: Math.atan2(-(71.56 - 14.5), -(55.25 - (-19.0))),
+    rotation: Math.atan2(-(71.56 - PROPANE_AT[0]), -(55.25 - PROPANE_AT[1])),
     width: 1.72, depth: 0.98, height: 2.02
   })
 });
