@@ -26,7 +26,9 @@ export const SITE_FIXES = Object.freeze({
   palm: Object.freeze({ at: [14.5, -31.5], height: 7.2 }), // farther island, by the car wash
   propane: Object.freeze({
     at: [14.5, -19.0],   // nearer island, as marked by the owner
-    rotation: -Math.PI / 2, // built facing -Z, turned to face out of the store
+    // Aim the front toward the nearest I-35 pavement in the model, not just
+    // perpendicular to the store facade (highway nearest point ≈ [71.56, 55.25]).
+    rotation: Math.atan2(-(71.56 - 14.5), -(55.25 - (-19.0))),
     width: 1.72, depth: 0.98, height: 2.02
   })
 });

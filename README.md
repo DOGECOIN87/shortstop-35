@@ -93,7 +93,7 @@ live page and dresses the yard the same way the model will be seen:
 - the model's six loose propane bottles, which stood where the grey box was,
   are hidden (the instanced `Propane_tank` mesh) and a white steel mesh exchange
   cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
-  inside) stands on the grass island nearer the store, as marked by the owner;
+  inside) stands on the grass island nearer the store, with its doors facing I-35;
 - a 7 m palm stands on the farther grass island by the car wash.
 
 Both props are raycast onto the model's actual surface when they are placed, so
