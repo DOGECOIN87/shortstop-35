@@ -21,12 +21,15 @@ export const WASH = Object.freeze({
   cutBoxes: Object.freeze([
     [-9.93, 0.4, -29.1, -9.5, 3.95, -15.1],   // east wall door, red stripes
     [-9.93, 1.2, -29.1, -9.0, 3.3, -15.1],    // east wall window
+    [-18.3, 0.4, -29.1, -17.78, 3.95, -15.1], // west wall fittings, under the new face
     [-9.95, 3.3, -30.0, -8.6, 4.95, -14.2],   // red fascia, east
     [-19.2, 3.3, -30.0, -17.75, 4.95, -14.2], // red fascia, west
     [-19.2, 3.3, -30.2, -8.6, 4.95, -28.9],   // red fascia, far end
     [-19.2, 3.3, -15.3, -8.6, 4.95, -14.0]    // red fascia, ENTER end
   ]),
-  door: -16.9,            // door centre along z
+  // Doors are on the west side, one by the entrance and one by the exit
+  // (owner); the banner side has none.
+  doors: [-16.6, -27.6],
   banner: { z: -21.6, y: 2.55, w: 4.7, h: 0.44 },
   posters: [-25.4, -26.7],
   pads: [[-19.7, -16.5], [-25.6, -22.4]], // red stamped pads along the east wall
@@ -85,11 +88,13 @@ export function buildCarWash({ ctex, glowMat, mats, groundAt = () => 0.7 }) {
   });
   east('CarWash-sign', 2.0, 0.72, glowMat(signTex), xe + out + 0.01, (fy0 + fy1) / 2 - 0.02, zn - 2.1);
 
-  // Steel service door.
-  const doorBase = ground(xe + 0.5, W.door);
-  box('Wash-door-frame', [xe + 0.04, doorBase, W.door - 0.52, xe + 0.09, doorBase + 2.2, W.door + 0.52], std(0x8e9396, 0.5, 0.4));
-  box('Wash-door', [xe + 0.05, doorBase, W.door - 0.46, xe + 0.1, doorBase + 2.14, W.door + 0.46], std(0xa7acae, 0.45, 0.35));
-  box('Wash-door-handle', [xe + 0.1, doorBase + 0.98, W.door - 0.38, xe + 0.15, doorBase + 1.02, W.door - 0.26], std(0x5d6063, 0.3, 0.8));
+  // Steel service doors on the west wall (facing -X), by the entrance and the exit.
+  for (const dz of W.doors) {
+    const base = ground(xw - 0.5, dz);
+    box('Wash-door-frame', [xw - 0.09, base, dz - 0.52, xw - 0.04, base + 2.2, dz + 0.52], std(0x8e9396, 0.5, 0.4));
+    box('Wash-door', [xw - 0.1, base, dz - 0.46, xw - 0.05, base + 2.14, dz + 0.46], std(0xa7acae, 0.45, 0.35));
+    box('Wash-door-handle', [xw - 0.15, base + 0.98, dz + 0.26, xw - 0.1, base + 1.02, dz + 0.38], std(0x5d6063, 0.3, 0.8));
+  }
 
   // Banner in a thin aluminium frame.
   const B = W.banner;
