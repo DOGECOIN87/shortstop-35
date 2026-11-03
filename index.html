@@ -1596,8 +1596,16 @@ document.querySelectorAll('[data-view]').forEach(b =>
 // Source textures are applied explicitly because the FBX used vendor-specific
 // materials the FBX-to-glTF converter could not automatically translate.
 const stationLoader = new GLTFLoader();
-// The source atlas depicts generic white siding, not the stone visible in
-// the owner's street reference. Use a restrained limestone course material.
+// Exact wall finish from the owner's supplied concrete-block reference photo.
+// The source asset is a wall-only crop so the sign and frame do not repeat onto
+// the store sides. Repeat is kept modest so the block scale reads naturally.
+const stationWallTexture = new THREE.TextureLoader().load('./assets/store-wall-texture.jpg');
+stationWallTexture.colorSpace = THREE.SRGBColorSpace;
+stationWallTexture.wrapS = THREE.RepeatWrapping;
+stationWallTexture.wrapT = THREE.RepeatWrapping;
+stationWallTexture.repeat.set(2.6, 1.35);
+stationWallTexture.anisotropy = 8;
+// The procedural fallback remains available if the reference asset cannot load.
 const stationWallMap = ctex(512,256,(c,w,h)=>{
   // Gray concrete block / CMU wall like the owner's FoodMart facade.
   c.fillStyle='#a8a69c';c.fillRect(0,0,w,h);
@@ -1648,7 +1656,12 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
       m.material = new THREE.MeshPhysicalMaterial({ color:0x2c4256, roughness:0.04, metalness:0.08, transparent:true, opacity:0.35, clearcoat:0.5 });
     }
     else if([50,51,52,53,54,55,56,57,58].includes(id)) m.material=storefrontFrameMat;
-    else m.material=new THREE.MeshStandardMaterial({color:0xdcd9d2,roughness:0.85,transparent:true,opacity:0.5});
+    else m.material=new THREE.MeshStandardMaterial({
+      map:stationWallTexture,
+      color:0xffffff,
+      roughness:0.9,
+      metalness:0.0
+    });
   });
   // Equipment is seated on the fitted source roof, not floating at a guessed Y.
   const roofY=storeBounds.max.y;
