@@ -2144,6 +2144,17 @@ try {
     const fx = applySiteFixes(root);
     console.info(`Site fixes: cut ${fx.cut} model triangles, replaced ${fx.hidden} parts, added ${fx.props} props.`);
   } catch (err) { console.warn('Could not apply the site fixes', err); }
+  // ?debug: aim the camera at a point given in the glTF root's frame (for
+  // photo-matching screenshots); the tour stays off.
+  if (new URLSearchParams(location.search).has('debug')) {
+    tourEnabled = false;
+    window.__debugView = (pos, tgt, fov = 60) => {
+      root.updateMatrixWorld(true);
+      camera.position.copy(root.localToWorld(new THREE.Vector3(...pos)));
+      controls.target.copy(root.localToWorld(new THREE.Vector3(...tgt)));
+      camera.fov = fov; camera.updateProjectionMatrix(); controls.update();
+    };
+  }
   if (detailedFlag) {
     // Wave the flag on the page (the Blender wave is a geometry-nodes effect that glTF cannot carry).
     // The optimised GLB stores the flag as quantised int16 under a scaled node; bake it to float metres in root space.
