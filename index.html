@@ -1608,7 +1608,11 @@ const stationWallTexture = new THREE.TextureLoader().load('./assets/store-wall-t
 stationWallTexture.colorSpace = THREE.SRGBColorSpace;
 stationWallTexture.wrapS = THREE.RepeatWrapping;
 stationWallTexture.wrapT = THREE.RepeatWrapping;
-stationWallTexture.repeat.set(1.15, 0.9);
+// The reference photo is authored top-to-bottom; invert V for Three.js UVs.
+// The crop contains roughly five blocks by four courses, so this repeat count
+// keeps each block close to the photographed ~0.4 m x 0.2 m CMU scale.
+stationWallTexture.repeat.set(8, -5);
+stationWallTexture.offset.y = 1;
 stationWallTexture.anisotropy = 8;
 // The procedural fallback remains available if the reference asset cannot load.
 const stationWallMap = ctex(512,256,(c,w,h)=>{

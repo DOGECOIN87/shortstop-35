@@ -129,9 +129,19 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
       }
     }
   });
-  const blockMat = std(0xffffff, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  const frontWallTexture = wallTexture ? wallTexture.clone() : blockTex;
+  if (wallTexture) {
+    frontWallTexture.wrapS = THREE.RepeatWrapping;
+    frontWallTexture.wrapT = THREE.RepeatWrapping;
+    // blockPart scales UVs in 1.6 m x 0.8 m wall chunks; this yields the same
+    // ~0.4 m x 0.2 m block size as the perimeter boxes.
+    frontWallTexture.repeat.set(0.8, -4);
+    frontWallTexture.offset.y = 1;
+    frontWallTexture.needsUpdate = true;
+  }
+  const blockMat = std(0xffffff, 0.95, 0, { map: frontWallTexture, bumpMap: frontWallTexture, bumpScale: 0.18 });
   // The lower courses read darker grey than the upper split-face (photo 5).
-  const blockLow = std(0xa9adb0, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  const blockLow = std(0xffffff, 0.95, 0, { map: frontWallTexture, bumpMap: frontWallTexture, bumpScale: 0.18 });
   const BAND_Y = 1.6;
   const blockFace = (name, [z0, z1], [y0, y1], x = S.wallX) => {
     blockPart(name + '-lower', [z0, z1], [y0, BAND_Y], x, blockLow);
