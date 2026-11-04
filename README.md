@@ -19,6 +19,105 @@ Official website for Texaco ShortStop, 1185 Interstate 35 N, New Braunfels, TX 7
 - Map data © OpenStreetMap contributors, available under the Open Database License (ODbL): https://www.openstreetmap.org/copyright. Used to cross-check building outlines and road bearings.
 - Raw datasets are not stored in this repository.
 
+## Sidewalk and curb levels across the map — 2026-11-02
+
+`scripts/sidewalk-levels.js` corrects the detailed model's walks and raised
+curb borders when the page loads (Blender is not available to fix the source
+file). Measured in the model, the curb borders stood ~0.5-0.75 m above the
+ground (lawns sit at grade, ~0.5 m below the curb tops) and walks were anywhere
+from level with the ground to ~0.4 m above it. Now:
+
+- every part of a walk stands 6 in (0.152 m) above the ground at its nearest
+  edge, so each edge drops about 6 in; on a cross-slope the walk tilts with the
+  ground (median edge drop afterwards 0.148 m);
+- curb borders along a walk are flush with it;
+- every other raised border (lawn beds, islands) comes down to 6 in above the
+  lower ground beside it, or flush with the higher side where the ground steps
+  across it, so it never drops below ground it holds back (median border height
+  above the lower ground 0.20 m, was 0.57 m);
+- walks against the store are held at the door thresholds (no change within
+  0.5 m of the walls, full change from 3.5 m).
+
+Where the model's ground falls steeply across a walk (parts of the frontage
+walk drop ~0.5 m over 3 m), one edge still drops more than 6 in. Roads, lawns,
+buildings and other model parts are not moved. The procedural fallback scene
+(shown only if the model fails to load) is unchanged.
+Test: `node --experimental-default-type=module tests/sidewalk-levels.mjs`.
+
+## Storefront from the owner's photos — 2026-11-02
+
+`scripts/storefront.js` rebuilds the store front on top of the detailed Blender
+model to match the owner's two night photos of the storefront. It works in the
+model's store frame (the store is turned 2.25° in the glTF), removes the model's
+black mullions, door and glass, the red-lid bins, the wall packs and the
+"SHORT STOP" fascia letters, and adds:
+
+- split-face grey block on the pier by the Amazon Hub locker and on the south end;
+- on the pier: the copper "Emergency Pump Shut-Off / All Pumps" plate and key
+  switch, a beige switch box, an outlet with its cord, the open white
+  fire-extinguisher cabinet, the framed "Special Vape 50K, starting $9.99+"
+  poster with the Short Stop roundel, and the square grey trash receptacle;
+- a clear-anodised storefront with decal kick panels drawn after the photos
+  (Reddy Ice, Geek Bar, candy, vape art; the bays past the door are tinted
+  because their decals are not visible), the alarm sticker, an OPEN neon, a
+  single glass door with push bar, Red Bull decal, "1185" on the transom and a mat;
+- a maroon fascia with a white LED strip along its underside and "FoodMart"
+  lettering (both glow at night);
+- orange flexible delineators with white bands where the model had yellow bollards,
+  and an A-frame sign by the door.
+
+Follow-up from the owner's straight-on night photo: the entry is a pair of
+glass doors (about 1.8 m) with centre pulls under the "1185" transom; LED letter
+signs (CBD, E-CIGS, 10THC, DELTA 8) hang in the upper glass of the four bays south
+of the door (0.55 m tall, centred 2.85 m up, lit day and night), OPEN moved to the bay north of the door, and an LED screen ("Fifty Bar
+vapes $19.99") is on the south block wall. The band around the store is now
+solid grey on all four sides (the model's red band is sleeved over), with red
+kept only on the FOODMART sign panel and Texaco roundel above the doors.
+
+The decal and poster artwork is redrawn, not the original print files; the
+A-frame sign's wording, the pier width (~1.95 m) and bay widths are estimates
+from the photos. Test: `node --experimental-default-type=module tests/storefront.mjs`.
+
+The LED screen is centred on the south block wall between the glazing and the
+south corner (z 8.81), as the owner marked.
+
+## Sidewalk props, propane exchange and island landscaping — 2026-11-03
+
+`scripts/site-fixes.js` clears the two sidewalk objects the owner circled on the
+live page. The owner-marked grass, curb and sidewalk surfaces from
+`scripts/store-side-landscape.js` are also enabled over the detailed model so
+the live scene follows the photo-traced geometry:
+
+- the red air/water cabinet that runs along the south walk and the plain grey box
+  by the south corner are cut out of the model by dropping the triangles inside
+  two boxes in the store frame (the boxes only remove geometry that is wholly
+  inside them, so the walk they stand on keeps its surface);
+- the model's six loose propane bottles, which stood where the grey box was,
+  are hidden (the instanced `Propane_tank` mesh) and a white steel mesh exchange
+  cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
+  inside) stands on the paved edge beside the landscaped tree island, with its
+  doors facing I-35;
+- a 7 m palm remains in the island by the car wash, behind the exchange cabinet.
+
+Both props are raycast onto the model's actual surface when they are placed, so
+they sit on the slope rather than at a nominal height. Test:
+`node --experimental-default-type=module tests/site-fixes.mjs`. On the real GLB
+the fix cuts 247 model triangles, hides the bottle instances and adds the two
+props.
+
+## Live time and weather — 2026-11-02
+
+The 3D scene now starts in **Live** mode: lighting follows the real sun (and
+moon, with its real phase) over 1185 I-35 N in Central Time, and the current
+weather comes from the National Weather Service (api.weather.gov — free, public
+domain, no key) for the New Braunfels airport station KBAZ, with any active
+alerts for the store shown as a banner. Cloud cover greys the sky and dims the
+sun, rain and thunderstorms add rain streaks and lightning, fog closes in, and
+the flag's motion follows the wind. Day / Golden hour / Night remain as fixed
+presets. Demo parameters: `?at=2026-11-02T20:30-06:00` and
+`?wx=clear|cloudy|overcast|rain|storm|fog`. Logic and tests:
+`scripts/live-conditions.js`, `scripts/sun-position.js`, `tests/live-conditions.mjs`.
+
 ## Measured geometry (lidar/OSM) — 2026-10-29
 
 `scripts/station-geometry.js` holds the measured numbers that size the 3D model.

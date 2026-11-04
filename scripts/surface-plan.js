@@ -52,7 +52,7 @@ export function getSurfacePlan(){
  ];
  const grass=grassSpec.map(([name,p])=>{
   if(name==='Marked-car-wash-side-grass')p=clip.intersection(p,rect(-100,-100,100,north-w));
-  if(name==='Marked-rear-store-grass')p=clip.intersection(p,rect(-100,north,west-w,south));
+  if(name==='Marked-rear-store-grass')p=clip.intersection(p,rect(-100,north,west-w-0.1,south));
   return {name,polygons:subtract(p,[walks,store,dumpster])};
  });
  const roadMasks=[ribbonPolygon(wide(PLAN.frontage),12.2),ribbonPolygon(wide(PLAN.crossStreet),21)];
