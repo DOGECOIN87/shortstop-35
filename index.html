@@ -876,13 +876,9 @@ atm.position.set(-23.0,2.9,-7); atm.rotation.y=Math.PI/2; storeGroup.add(atm);
 addStationDetails({fuelGroup,storeGroup,islandZ,M,ctex,glowMat});
 const sideLandscape=addStoreSideLandscape({stationLayout,M,ctex});
 function enableOwnerSideSurfaces(){
-  // The detailed GLB already contains the store-side paving, grass and curb
-  // surfaces. The traced overlay was calibrated in a different local frame
-  // and produces the extra floating/overlapping areas visible in the overview
-  // (especially beside the carwash and at the rear store corner). Keep the
-  // procedural landscape available for fallback scenes, but do not overlay it
-  // on the detailed model.
-  sideLandscape.group.visible=false;
+  const visible=new Set(['Store-wall-sidewalks','Traced-store-front-walk','Car-wash-to-store-walk','Store-side-connector-walk','Marked-car-wash-side-grass','Marked-rear-store-grass','Raised-grass-island','Rear-grass-border','Grass-behind-dumpster']);
+  sideLandscape.group.visible=true;
+  for(const child of sideLandscape.group.children) child.visible=visible.has(child.name)||child.name==='Planted-island-curb';
 }
 
 // ===== Station-property sidewalks (concrete, local station frame) =====
