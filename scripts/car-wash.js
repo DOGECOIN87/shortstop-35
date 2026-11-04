@@ -64,11 +64,6 @@ export function buildCarWash({ ctex, glowMat, mats, groundAt = () => 0.7 }) {
   const band = eastBase + 1.1;
   blockWall(g, { a: [xe, zn + 0.05], b: [xe, zf - 0.05], y0: eastBase - 0.8, y1: W.wallTop, band, normal: [1, 0], mats, name: 'Wash-wall-east', offset: 0.05 });
   blockWall(g, { a: [xw, zf - 0.05], b: [xw, zn + 0.05], y0: eastBase - 0.8, y1: W.wallTop, band, normal: [-1, 0], mats, name: 'Wash-wall-west', offset: 0.05 });
-  // The reference views show masonry continuing around both short ends. The
-  // old dressing stopped at the long-wall faces, leaving dark gaps at the
-  // entrance/far-end returns when viewed from the store-side walk.
-  blockWall(g, { a: [xw + 0.05, zf], b: [xe - 0.05, zf], y0: eastBase - 0.8, y1: W.wallTop, band, normal: [0, -1], mats, name: 'Wash-wall-far', offset: 0.05 });
-  blockWall(g, { a: [xe - 0.05, zn], b: [xw + 0.05, zn], y0: eastBase - 0.8, y1: W.wallTop, band, normal: [0, 1], mats, name: 'Wash-wall-enter', offset: 0.05 });
 
   // Light grey fascia all round, a white LED strip under its front edge.
   const [fy0, fy1] = W.fascia, out = 0.42, t = 0.06;
@@ -83,11 +78,6 @@ export function buildCarWash({ ctex, glowMat, mats, groundAt = () => 0.7 }) {
   led.color.set(0xeef3f5);
   box('Wash-LED-east', [xe + out - 0.12, fy0 - 0.05, zf - out, xe + out - t, fy0 - 0.02, zn + out], led);
   box('Wash-LED-enter', [xw - out, fy0 - 0.05, zn + out - 0.12, xe + out, fy0 - 0.02, zn + out - t], led);
-  // Vertical corner strips are visible on the short returns in the night
-  // photos; keep them narrow so they read as fixtures rather than glowing
-  // wall planes.
-  box('Wash-LED-far-return', [xw - out, fy0 - 0.02, zf - out - 0.05, xw - out + 0.06, fy1 + 0.02, zf - out + 0.01], led);
-  box('Wash-LED-enter-return', [xe + out - 0.01, fy0 - 0.02, zn + out - 0.01, xe + out + 0.05, fy1 + 0.02, zn + out - 0.05], led);
 
   // Red "CarWash" panel with the white diagonal cut, on the fascia by the ENTER end.
   const signTex = ctex(512, 192, (c, w, h) => {

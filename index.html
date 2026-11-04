@@ -445,25 +445,25 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/block-wall.js": "./scripts/block-wall.js?v=6f3a034664",
-  "./scripts/car-wash.js": "./scripts/car-wash.js?v=6f3a034664",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=6f3a034664",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=6f3a034664",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=6f3a034664",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=6f3a034664",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=6f3a034664",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=6f3a034664",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=6f3a034664",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=6f3a034664",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=6f3a034664",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=6f3a034664",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=6f3a034664",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=6f3a034664",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=6f3a034664",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=6f3a034664",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=6f3a034664",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=6f3a034664",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=6f3a034664"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=f704086ee9",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=f704086ee9",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=f704086ee9",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=f704086ee9",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=f704086ee9",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=f704086ee9",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=f704086ee9",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=f704086ee9",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=f704086ee9",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=f704086ee9",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=f704086ee9",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=f704086ee9",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=f704086ee9",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=f704086ee9",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=f704086ee9",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=f704086ee9",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=f704086ee9",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=f704086ee9",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=f704086ee9"
 } }
 </script>
 
@@ -678,35 +678,24 @@ function starPath(x, cx, cy, r) {
   }
   x.closePath();
 }
-function texacoTPath(x, cx, cy, r) {
-  x.beginPath();
-  x.moveTo(cx - 0.30 * r, cy - 0.21 * r); x.lineTo(cx + 0.30 * r, cy - 0.21 * r);
-  x.lineTo(cx + 0.30 * r, cy - 0.07 * r); x.lineTo(cx + 0.08 * r, cy - 0.07 * r);
-  x.lineTo(cx + 0.08 * r, cy + 0.30 * r); x.lineTo(cx + 0.16 * r, cy + 0.46 * r);
-  x.lineTo(cx - 0.16 * r, cy + 0.46 * r); x.lineTo(cx - 0.08 * r, cy + 0.30 * r);
-  x.lineTo(cx - 0.08 * r, cy - 0.07 * r); x.lineTo(cx - 0.30 * r, cy - 0.07 * r);
-  x.closePath();
-}
 const starTex = ctex(256, 256, (x, w, h) => {
-  // The tall signs use the illuminated Texaco roundel: gray sign plate,
-  // filled red disc, white five-point star, and the red flared-foot T.
-  x.fillStyle = '#777777'; x.fillRect(0, 0, w, h);
-  x.fillStyle = '#d9232e'; x.beginPath(); x.arc(128, 128, 105, 0, Math.PI * 2); x.fill();
-  x.fillStyle = '#ffffff'; starPath(x, 128, 124, 76); x.fill();
-  x.fillStyle = '#d9232e'; texacoTPath(x, 128, 127, 78); x.fill();
-  x.strokeStyle = '#ffffff'; x.lineWidth = 5; x.beginPath(); x.arc(128, 128, 105, 0, Math.PI * 2); x.stroke();
+  x.fillStyle = '#ffffff'; x.fillRect(0, 0, w, h);
+  x.strokeStyle = '#d9232e'; x.lineWidth = 10;
+  x.beginPath(); x.arc(128, 128, 104, 0, 7); x.stroke();
+  x.fillStyle = '#d9232e'; starPath(x, 128, 128, 74); x.fill();
+  x.fillStyle = '#fff'; x.font = '900 72px Arial'; x.textAlign='center'; x.textBaseline='middle'; x.fillText('T',128,132);
 });
 const priceTex = ctex(512, 320, (x, w, h) => {
   x.fillStyle = '#101216'; x.fillRect(0, 0, w, h);
   x.strokeStyle = '#3a3f46'; x.lineWidth = 6; x.strokeRect(3, 3, w - 6, h - 6);
-  // Values and labels are transcribed from the owner's night sign photos.
-  const rows = [['Gasoline', 'Regular', '3.229', '#f2f2f2'], ['Mid-Grade', 'Plus', '3.428', '#f2f2f2'], ['Diesel', '', '5.639', '#39d353']];
+  // No current price data is available.
+  const rows = [['REGULAR', '—', '#f2f2f2'], ['PLUS', '—', '#f2f2f2'], ['DIESEL', '—', '#39d353']];
   rows.forEach((r, i) => {
-    const y = 24 + i * 98;
-    x.fillStyle = r[3]; x.font = '700 25px Arial'; x.textAlign = 'left'; x.fillText(r[0], 22, y + 26);
-    if (r[1]) { x.font = '700 21px Arial'; x.fillText(r[1], 22, y + 50); }
-    x.fillStyle = r[3]; x.font = '900 70px "Courier New", monospace'; x.textAlign = 'right';
-    x.fillText(r[2], w - 25, y + 57);
+    const y = 34 + i * 98;
+    x.fillStyle = '#9aa3ad'; x.font = '700 30px Arial'; x.textAlign = 'left'; x.fillText(r[0], 26, y + 34);
+    x.fillStyle = r[2]; x.font = '900 74px "Courier New", monospace'; x.textAlign = 'right';
+    x.fillText(r[1], w - 78, y + 56);
+
   });
 });
 const carWashTex = ctex(512, 128, (x, w, h) => {
