@@ -93,8 +93,8 @@ page and dresses the yard the same way the model will be seen:
 - the model's six loose propane bottles, which stood where the grey box was,
   are hidden (the instanced `Propane_tank` mesh) and a white steel mesh exchange
   cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
-  inside) stands on the paved edge beside the car-wash-side tree island, 2 m
-  from the palm, with its doors facing I-35;
+  inside) stands on the concrete pump apron at the car-wash-side tree island's
+  pump-side corner, with its doors facing I-35;
 - an 8.1 m streetlight is restored on that grass island, and its spotlight and
   warm fixture follow the Day / Golden hour / Night lighting presets;
 - a 7.2 m palm stands on the grass island by the car wash.
