@@ -89,6 +89,8 @@ near(n[0] * Math.cos(a) + n[1] * Math.sin(a), 0, 1e-9, 'north stays on the world
 near(FLAGPOLE.top, 20.3, 1e-9, 'flagpole top from lidar');
 assert.ok(PYLONS.south.top > PYLONS.north.top && PYLONS.south.top < 20);
 assert.ok(source.includes('pylon(...trueToSite(PYLONS.south.trueXY), PYLONS.south.top)') && source.includes('pylon(...trueToSite(PYLONS.north.trueXY), PYLONS.north.top)'));
+assert.ok(source.includes('texacoTPath') && source.includes("x.fillStyle = '#d9232e'; x.beginPath(); x.arc(128, 128, 105"), 'pylon emblems use the filled Texaco roundel');
+for (const price of ['3.229', '3.428', '5.639']) assert.ok(source.includes(price), `pylon price row ${price} restored`);
 const landscape = fs.readFileSync(new URL('../scripts/store-side-landscape.js', import.meta.url), 'utf8');
 assert.ok(landscape.includes('const H=FLAGPOLE.top-0.2'));
 console.log('PASS: georeference helper, 20 m flagpole, measured pylon heights/position');

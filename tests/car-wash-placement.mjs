@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import { PLAN,aerialToBuilding } from '../scripts/reference-plan.js';
+import { buildCarWash } from '../scripts/car-wash.js';
 const w=PLAN.wash;
 const corners=w.corners.map(aerialToBuilding);
 const center=corners.reduce((sum,p)=>[sum[0]+p[0]/4,sum[1]+p[1]/4],[0,0]);
@@ -14,4 +15,12 @@ for(const p of corners){
 const b=new THREE.Box3().setFromObject(roof);
 assert.ok(b.max.z<PLAN.canopy.centerZ-PLAN.canopy.length/2,'wash stays beyond canopy end');
 assert.ok(w.depth>w.width,'same-image roof has a longer bay direction, not the previous short square');
+const wash=buildCarWash({
+ ctex:()=>new THREE.Texture(),
+ glowMat:tex=>new THREE.MeshStandardMaterial({map:tex}),
+ mats:{upper:new THREE.MeshStandardMaterial(),lower:new THREE.MeshStandardMaterial()},
+ groundAt:()=>0.7
+});
+const names=[];wash.traverse(o=>names.push(o.name));
+for(const n of ['Wash-wall-far-lower','Wash-wall-enter-lower','Wash-LED-far-return','Wash-LED-enter-return']) assert.ok(names.includes(n),`${n} is present`);
 console.log('PASS: wash fits all four same-image aerial corners within 0.65 m, with canopy clearance');
