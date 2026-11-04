@@ -15,9 +15,9 @@ import { STOREFRONT } from './storefront.js';
 // Everything here is in the storefront frame used by scripts/storefront.js:
 // +X out of the storefront toward the pumps, +Z south along the front wall,
 // Y up. Boxes are [x0, y0, z0, x1, y1, z1] in that frame.
-// The cabinet footprint is on the concrete pump apron at the island's
-// pump-side corner, just beyond the curb (not on the grass bed).
-const PROPANE_AT = Object.freeze([17.5, -31.5]);
+// The cabinet footprint is on the nearer concrete apron beside accessible
+// parking, at the user-marked yellow-arrow endpoint (not on the grass bed).
+const PROPANE_AT = Object.freeze([14.5, -19.0]);
 export const SITE_FIXES = Object.freeze({
   cutBoxes: Object.freeze([
     [9.50, 0.15, 10.80, 12.60, 2.20, 13.90]    // grey placeholder box, south corner
@@ -29,7 +29,7 @@ export const SITE_FIXES = Object.freeze({
   palm: Object.freeze({ at: [14.5, -31.5], height: 7.2 }), // farther island, by the car wash
   light: Object.freeze({ at: [11.5, -31.5], height: 8.1 }), // grass island beside the palm
   propane: Object.freeze({
-    at: PROPANE_AT,       // concrete pump apron at the island's pump-side corner
+    at: PROPANE_AT,       // nearer concrete apron beside accessible parking
     // Aim the front toward the nearest I-35 pavement in the model, not just
     // perpendicular to the store facade (highway nearest point ≈ [71.56, 55.25]).
     rotation: Math.atan2(-(71.56 - PROPANE_AT[0]), -(55.25 - PROPANE_AT[1])),

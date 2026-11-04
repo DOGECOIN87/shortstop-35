@@ -1,7 +1,7 @@
 // node --experimental-default-type=module tests/site-fixes.mjs
 // The sidewalk props the owner circled are gone, the grass-island light and
-// palm are restored, and the propane cage stands on the concrete pump apron at
-// the island's pump-side corner.
+// palm are restored, and the propane cage stands on the nearer concrete apron
+// beside accessible parking at the user-marked location.
 // Geometry is checked in the storefront frame (store -> root local).
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
@@ -54,10 +54,9 @@ cage.rotation.y = F.propane.rotation;
 cage.position.fromArray([F.propane.at[0], 0, F.propane.at[1]]);
 cage.updateMatrixWorld(true);
 const pb = new THREE.Box3().setFromObject(cage);
-assert.ok(pb.min.x > 16 && pb.max.x < 19, 'cage sits on the concrete pump apron at the island\'s pump-side corner');
-assert.ok(pb.min.z > -33 && pb.max.z < -30, 'cage is beside the car-wash-side tree island');
-assert.deepEqual(F.propane.at, [17.5, -31.5], 'cage is at the pump-side corner of the landscaped island');
-assert.ok(F.propane.at[0] > F.palm.at[0] + 2, 'cage is beyond the island curb on the pump side');
+assert.ok(pb.min.x > 13 && pb.max.x < 16, 'cage sits on the nearer concrete apron');
+assert.ok(pb.min.z > -21 && pb.max.z < -17, 'cage is beside the accessible-parking area');
+assert.deepEqual(F.propane.at, [14.5, -19.0], 'cage is at the user-marked nearer apron location');
 const front = new THREE.Vector3(0, 0, -1).applyAxisAngle(new THREE.Vector3(0, 1, 0), F.propane.rotation);
 const towardHighway = new THREE.Vector3(71.56 - F.propane.at[0], 0, 55.25 - F.propane.at[1]).normalize();
 assert.ok(front.dot(towardHighway) > 0.999, 'cage door faces the nearest I-35 pavement');
