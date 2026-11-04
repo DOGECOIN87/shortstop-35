@@ -1,5 +1,4 @@
 import * as THREE from '../vendor/three.module.js';
-import { BLOCK_TILE, blockWall } from './block-wall.js';
 
 // FoodMart storefront rebuilt from the owner's two night photos (Nov 2026):
 // split-face grey block pier with the emergency pump shut-off, vape poster,
@@ -88,7 +87,7 @@ export function settleOnWalk(group, heightAt) {
   });
 }
 
-export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wallTexture = null, blockMats = null }) {
+export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [] }) {
   const group = new THREE.Group();
   group.name = 'FoodMart-storefront';
   group.rotation.y = S.heading;
@@ -130,22 +129,19 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
       }
     }
   });
-  // Photo block tiles (scripts/block-wall.js) when the page supplies them;
-  // the drawn texture otherwise (tests, no network).
-  const tile = blockMats ? BLOCK_TILE : { w: BLOCK_W, h: BLOCK_H };
-  const blockMat = blockMats ? blockMats.upper : std(0xffffff, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
-  // The lower courses are painted darker than the upper split-face (photos).
-  const blockLow = blockMats ? blockMats.lower : std(0xa9adb0, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
-  const BAND_Y = S.walkY + 1.1;
+  const blockMat = std(0xffffff, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  // The lower courses read darker grey than the upper split-face (photo 5).
+  const blockLow = std(0xa9adb0, 0.95, 0, { map: blockTex, bumpMap: blockTex, bumpScale: 0.6 });
+  const BAND_Y = 1.6;
   const blockFace = (name, [z0, z1], [y0, y1], x = S.wallX) => {
     blockPart(name + '-lower', [z0, z1], [y0, BAND_Y], x, blockLow);
     return blockPart(name, [z0, z1], [BAND_Y, y1], x, blockMat);
   };
   const blockPart = (name, [z0, z1], [y0, y1], x, mat) => {
     const w = z1 - z0, h = y1 - y0;
-    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(w, h), w / tile.w, h / tile.h), mat);
+    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(w, h), w / BLOCK_W, h / BLOCK_H), mat);
     // keep the courses continuous across the colour change
-    const uv = m.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) + (y0 - S.walkY) / tile.h);
+    const uv = m.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setY(i, uv.getY(i) + (y0 - S.walkY) / BLOCK_H);
     m.rotation.y = Math.PI / 2; m.position.set(x, (y0 + y1) / 2, (z0 + z1) / 2);
     return add(m, name);
   };
@@ -271,8 +267,7 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
       c.font = `bold ${size}px Arial`; c.strokeText(t, w / 2, y); c.fillStyle = col; c.fillText(t, w / 2, y);
     }
   });
-  // Centred on the block wall between the glazing and the south corner.
-  const screenZ = (S.glazingZ[1] + S.storeZ[1]) / 2, [sy0, sy1] = [1.98, 2.86];
+  const screenZ = 9.4, [sy0, sy1] = [1.98, 2.86]; // ~2 m from the glazing (straight-on photo)
   box('LED-screen-housing', [S.wallX, sy0, screenZ - 0.66, S.wallX + 0.09, sy1, screenZ + 0.66], std(0x0c0c0e, 0.5, 0.3));
   // Screens are lit day and night, independent of the sign-lighting presets.
   face('LED-screen', 1.2, sy1 - sy0 - 0.1, std(0xffffff, 0.4, 0, { map: screenTex, emissive: 0xffffff, emissiveMap: screenTex, emissiveIntensity: 0.85 }),
@@ -332,32 +327,6 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   box('Band-sleeve-north', [B.backX - sleeve, B.y[0], B.northZ - sleeve - 0.005, S.wallX, B.y[1], B.northZ - 0.005], fasciaMat);
   box('Band-sleeve-south', [B.backX - sleeve, B.y[0], B.southZ + 0.005, S.wallX, B.y[1], B.southZ + sleeve + 0.005], fasciaMat);
   box('Band-sleeve-back', [B.backX - sleeve - 0.005, B.y[0], B.northZ - sleeve - 0.005, B.backX - 0.005, B.y[1], B.southZ + sleeve + 0.005], fasciaMat);
-  // Continue the photographed split-face wall finish around the three opaque
-  // sides of the building; the front remains the detailed storefront.
-  // Same split-face block on the back and both ends, light above a darker
-  // lower band (photos of the north wall and the car wash).
-  const walls = { upper: blockMat, lower: blockLow }, wy0 = S.walkY - 0.6;
-  const blockSide = (name, a, b, normal) => {
-    const parts = blockWall(group, { a, b, y0: wy0, y1: B.y[0], band: BAND_Y, normal, mats: walls, name, offset: 0.02 });
-    // Tests run with the drawn texture: scale its UVs to the same block size.
-    if (!blockMats) for (const m of parts) { const uv = m.geometry.attributes.uv; for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * BLOCK_TILE.w / tile.w, uv.getY(i) * BLOCK_TILE.h / tile.h); }
-  };
-  blockSide('Perimeter-wall-back', [B.backX, B.southZ], [B.backX, B.northZ], [-1, 0]);
-  blockSide('Perimeter-wall-north', [B.backX, B.northZ], [S.wallX, B.northZ], [0, -1]);
-  blockSide('Perimeter-wall-south', [S.wallX, B.southZ], [B.backX, B.southZ], [0, 1]);
-  // The gray projecting border is continuous around the roofline, with a
-  // recessed cool-white LED edge on every side instead of only at the front.
-  const borderY = B.y[1] + 0.008, borderH = 0.055, borderDepth = 0.16;
-  const borderMat = std(0x777c80, 0.5, 0.35);
-  const borderGlow = glowMat(solid('#eef4f7'));
-  box('Roofline-border-front', [S.wallX - borderDepth, borderY, S.storeZ[0] - 0.08, S.wallX + 0.03, borderY + borderH, S.storeZ[1] + 0.08], borderMat);
-  box('Roofline-border-back', [B.backX - 0.03, borderY, B.northZ - 0.08, B.backX + borderDepth, borderY + borderH, B.southZ + 0.08], borderMat);
-  box('Roofline-border-north', [B.backX - 0.03, borderY, B.northZ - borderDepth, S.wallX + 0.03, borderY + borderH, B.northZ + 0.03], borderMat);
-  box('Roofline-border-south', [B.backX - 0.03, borderY, B.southZ - 0.03, S.wallX + 0.03, borderY + borderH, B.southZ + borderDepth], borderMat);
-  box('Roofline-light-front', [S.wallX - borderDepth - 0.01, borderY - 0.035, S.storeZ[0], S.wallX - borderDepth + 0.02, borderY, S.storeZ[1]], borderGlow);
-  box('Roofline-light-back', [B.backX + borderDepth - 0.02, borderY - 0.035, B.northZ, B.backX + borderDepth + 0.01, borderY, B.southZ], borderGlow);
-  box('Roofline-light-north', [B.backX, borderY - 0.035, B.northZ - borderDepth - 0.01, S.wallX, borderY, B.northZ - borderDepth + 0.02], borderGlow);
-  box('Roofline-light-south', [B.backX, borderY - 0.035, B.southZ + borderDepth - 0.02, S.wallX, borderY, B.southZ + borderDepth + 0.01], borderGlow);
   // Red sign panel: silver italic FOODMART with the big "M", and the Texaco roundel.
   const [sz0, sz1] = S.signZ, sw = sz1 - sz0, py0s = fy0 + 0.08, py1s = fy1 - 0.12;
   box('Sign-panel-red', [fxOut, py0s, sz0, fxOut + 0.05, py1s, sz1], std(0xc41c2a, 0.5, 0.1));
@@ -401,10 +370,6 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   cord.castShadow = false;
   // Open-front white cabinet with the extinguisher (photo 2).
   const cab = new THREE.Group(); cab.name = 'Extinguisher-cabinet'; cab.userData.onWalk = true; pier.add(cab);
-  // The two freestanding sidewalk blocks marked in the owner's latest model
-  // screenshot are not part of the desired site plan; keep the wall detail
-  // code below intact but remove this cabinet from the finished scene.
-  cab.visible = false;
   const white = std(0xeeeeeb, 0.5, 0.1), [cz0, cz1] = [d(0.65), d(0.28)], cy0 = S.walkY + 0.02, cy1 = S.walkY + 0.86, cx1 = S.wallX + 0.19;
   box('Cabinet-back', [S.wallX, cy0, cz0, S.wallX + 0.01, cy1, cz1], white, cab);
   box('Cabinet-side', [S.wallX, cy0, cz0, cx1, cy1, cz0 + 0.03], white, cab);
@@ -443,8 +408,7 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
     return can;
   };
   receptacle(S.wallX + 0.4, d(1.32), pier);
-  const southSidewalkBlock = receptacle(S.wallX + 0.4, S.glazingZ[1] + 0.55, group); // south end, by the block wall (photo 6)
-  southSidewalkBlock.visible = false;
+  receptacle(S.wallX + 0.4, S.glazingZ[1] + 0.55, group); // south end, by the block wall (photo 6)
 
   // Two security cameras on the top course of the pier with a cable between (photo 4).
   const camMat = std(0xe8e9e8, 0.5, 0.1);
