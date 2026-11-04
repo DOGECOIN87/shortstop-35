@@ -17,7 +17,10 @@ import { STOREFRONT } from './storefront.js';
 // Y up. Boxes are [x0, y0, z0, x1, y1, z1] in that frame.
 // The entire cabinet footprint is inside the user-outlined concrete rectangle
 // lower-right of the nearer island, beside accessible parking (clear of grass).
-const PROPANE_AT = Object.freeze([20.0, -19.0]);
+// Owner’s clarified preview: use the strip immediately beside the island,
+// not the open forecourt farther out toward the pumps.
+// Slide back 0.75 m toward the grass curb without changing the door direction.
+const PROPANE_AT = Object.freeze([14.0, -17.25]);
 export const SITE_FIXES = Object.freeze({
   cutBoxes: Object.freeze([
     [9.50, 0.15, 10.80, 12.60, 2.20, 13.90]    // grey placeholder box, south corner
@@ -30,9 +33,9 @@ export const SITE_FIXES = Object.freeze({
   light: Object.freeze({ at: [11.5, -31.5], height: 8.1 }), // grass island beside the palm
   propane: Object.freeze({
     at: PROPANE_AT,       // striped concrete rectangle beside accessible parking
-    // Aim the front toward the nearest I-35 pavement in the model, not just
-    // perpendicular to the store facade (highway nearest point ≈ [71.56, 55.25]).
-    rotation: Math.atan2(-(71.56 - PROPANE_AT[0]), -(55.25 - PROPANE_AT[1])),
+    // Local -Z is the door side. Turn it toward +Z (the parked vehicles),
+    // leaving the back along -Z against the nearer grass-island edge.
+    rotation: Math.PI,
     width: 1.72, depth: 0.98, height: 2.02
   })
 });

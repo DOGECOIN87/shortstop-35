@@ -445,25 +445,25 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/block-wall.js": "./scripts/block-wall.js?v=848a007f5f",
-  "./scripts/car-wash.js": "./scripts/car-wash.js?v=848a007f5f",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=848a007f5f",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=848a007f5f",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=848a007f5f",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=848a007f5f",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=848a007f5f",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=848a007f5f",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=848a007f5f",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=848a007f5f",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=848a007f5f",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=848a007f5f",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=848a007f5f",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=848a007f5f",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=848a007f5f",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=848a007f5f",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=848a007f5f",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=848a007f5f",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=848a007f5f"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=65034d240a",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=65034d240a",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=65034d240a",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=65034d240a",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=65034d240a",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=65034d240a",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=65034d240a",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=65034d240a",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=65034d240a",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=65034d240a",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=65034d240a",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=65034d240a",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=65034d240a",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=65034d240a",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=65034d240a",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=65034d240a",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=65034d240a",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=65034d240a",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=65034d240a"
 } }
 </script>
 
@@ -2157,7 +2157,7 @@ try {
   try {
     const ground = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name)) ground.push(o); });
     const ray = new THREE.Raycaster(), down = new THREE.Vector3(0, -1, 0);
-    const wash = buildCarWash({ ctex, glowMat, mats: blockMaterials(), groundAt: (lx, lz) => {
+    const wash = buildCarWash({ ctex, glowMat, mats: blockMaterials(), pavementMaterial: M.concrete, groundAt: (lx, lz) => {
       const c = Math.cos(-0.677), s = Math.sin(-0.677), p = new THREE.Vector3(lx * c + lz * s, 3, -lx * s + lz * c);
       ray.set(root.localToWorld(p), down); ray.far = 5;
       const hit = ray.intersectObjects(ground, false)[0];

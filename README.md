@@ -95,7 +95,9 @@ page and dresses the yard the same way the model will be seen:
   cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
   inside) stands fully inside the user-outlined concrete rectangle lower-right
   of the nearer island beside accessible parking, clear of the grass, with its
-  doors facing I-35;
+  doors facing the parked vehicles and its back toward the grass edge. On 2026-11-04 the owner clarified the location in the
+  preview: the cabinet belongs immediately alongside the island, not out in the
+  open forecourt (storefront-frame center `[14, -17.25]`, slid back 0.75 m toward the grass curb);
 - an 8.1 m streetlight is restored on that grass island, and its spotlight and
   warm fixture follow the Day / Golden hour / Night lighting presets;
 - a 7.2 m palm stands on the grass island by the car wash.
@@ -107,6 +109,17 @@ the former red-cabinet region cut 12 sidewalk triangles and 8 curb triangles.
 The cabinet is now hidden by mesh name, while regression tests verify that walk
 and curb materials survive the remaining grey-box cleanup; the propane bottles
 are hidden, the cage is kept off the grass, and the light, palm and cage are added.
+
+## Car-wash end-wall correction — 2026-11-04
+
+The service door in `scripts/car-wash.js` is now on the ENTER end beside the
+marked grass corner, rather than on the long banner-side wall. A 2.2 m partial
+wall surrounds the door while leaving the main wash bay open. Both long walls
+and the partial wall use solid masonry geometry with matching upper/lower block
+textures on the outside, bay-facing sides, and exposed top/end faces. The west
+finish extends past the original wall face, and the marked narrow grass strip
+along the approach is covered by a grade-following concrete surface.
+Regression test: `node --experimental-default-type=module tests/car-wash-dressing.mjs`.
 
 ## Live time and weather — 2026-11-02
 
