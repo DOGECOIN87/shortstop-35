@@ -83,24 +83,29 @@ south corner (z 8.81), as the owner marked.
 
 ## Sidewalk props, propane exchange and palm — 2026-11-02
 
-`scripts/site-fixes.js` clears the two sidewalk objects the owner circled on the
-live page and dresses the yard the same way the model will be seen:
+`scripts/site-fixes.js` clears the sidewalk props the owner marked on the live
+page and dresses the yard the same way the model will be seen:
 
-- the red air/water cabinet that runs along the south walk and the plain grey box
-  by the south corner are cut out of the model by dropping the triangles inside
-  two boxes in the store frame (the boxes only remove geometry that is wholly
-  inside them, so the walk they stand on keeps its surface);
+- the red air/water cabinet that runs along the south walk is hidden by its named
+  model mesh, while the plain grey box by the south corner is removed from the
+  merged model geometry; cuts explicitly protect the merged sidewalk and curb
+  materials, so neither walking surface is left with a hole;
 - the model's six loose propane bottles, which stood where the grey box was,
   are hidden (the instanced `Propane_tank` mesh) and a white steel mesh exchange
   cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
-  inside) stands on the grass island nearer the store, with its doors facing I-35;
-- a 7 m palm stands on the farther grass island by the car wash.
+  inside) stands on the paved edge beside the car-wash-side tree island, 2 m
+  from the palm, with its doors facing I-35;
+- an 8.1 m streetlight is restored on that grass island, and its spotlight and
+  warm fixture follow the Day / Golden hour / Night lighting presets;
+- a 7.2 m palm stands on the grass island by the car wash.
 
-Both props are raycast onto the model's actual surface when they are placed, so
-they sit on the slope rather than at a nominal height. Test:
+All replacement yard props are raycast onto the model's surface when they are
+placed, so they sit on the slope rather than at a nominal height. Test:
 `node --experimental-default-type=module tests/site-fixes.mjs`. On the real GLB
-the fix cuts 247 model triangles, hides the bottle instances and adds the two
-props.
+the former red-cabinet region cut 12 sidewalk triangles and 8 curb triangles.
+The cabinet is now hidden by mesh name, while regression tests verify that walk
+and curb materials survive the remaining grey-box cleanup; the propane bottles
+are hidden, the cage is kept off the grass, and the light, palm and cage are added.
 
 ## Live time and weather — 2026-11-02
 

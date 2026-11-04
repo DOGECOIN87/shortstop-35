@@ -4,31 +4,33 @@ import { STOREFRONT } from './storefront.js';
 // Sidewalk and yard corrections the owner marked on screenshots of the live
 // page, applied to the detailed Blender model after it loads:
 //
-//   * the red air/water cabinet that runs along the south walk and the plain
-//     grey box beside the south corner are cut out of the model (they are not
-//     in the current site photos);
-//   * the model's loose propane bottles, which stood where the grey box was,
-//     are replaced by a white mesh exchange cabinet on the grass island
-//     nearer the store, as marked in the owner’s placement screenshot;
-//   * a palm goes on the farther grass island by the car wash.
+//   * the named red air/water cabinet is hidden directly; the old broad cut
+//     also removed triangles from the merged walk and curb beneath it;
+//   * the plain grey box beside the south corner is cut without cutting the
+//     merged walk or curb surfaces;
+//   * the model's loose propane bottles are replaced by a white mesh exchange
+//     cabinet on the paved edge beside the car-wash-side tree island;
+//   * the palm and restored streetlight stand on the grass island by the car wash.
 //
 // Everything here is in the storefront frame used by scripts/storefront.js:
 // +X out of the storefront toward the pumps, +Z south along the front wall,
 // Y up. Boxes are [x0, y0, z0, x1, y1, z1] in that frame.
+const PROPANE_AT = Object.freeze([16.5, -31.5]);
 export const SITE_FIXES = Object.freeze({
   cutBoxes: Object.freeze([
-    [10.30, -0.45, 13.10, 11.80, 1.75, 18.90], // red air & water cabinet, south walk
     [9.50, 0.15, 10.80, 12.60, 2.20, 13.90]    // grey placeholder box, south corner
   ]),
-  // Model parts that are replaced rather than cut (instanced: the loose
-  // propane bottles stacked against the south wall).
-  hideMeshes: Object.freeze([/^Propane_tank/]),
+  protectedCutMaterials: Object.freeze(['SS Walk concrete', 'SS Curb concrete']),
+  // Model parts hidden because they are removed or replaced, including the
+  // instanced loose propane bottles stacked against the south wall.
+  hideMeshes: Object.freeze([/^Air_&_water_machine$/, /^Propane_tank/]),
   palm: Object.freeze({ at: [14.5, -31.5], height: 7.2 }), // farther island, by the car wash
+  light: Object.freeze({ at: [11.5, -31.5], height: 8.1 }), // grass island beside the palm
   propane: Object.freeze({
-    at: [14.5, -19.0],   // nearer island, as marked by the owner
+    at: PROPANE_AT,       // paved edge beside the tree island, as shown in the photos
     // Aim the front toward the nearest I-35 pavement in the model, not just
     // perpendicular to the store facade (highway nearest point ≈ [71.56, 55.25]).
-    rotation: Math.atan2(-(71.56 - 14.5), -(55.25 - (-19.0))),
+    rotation: Math.atan2(-(71.56 - PROPANE_AT[0]), -(55.25 - PROPANE_AT[1])),
     width: 1.72, depth: 0.98, height: 2.02
   })
 });
@@ -45,7 +47,7 @@ function canvasTexture(size, draw) {
   return t;
 }
 
-function materials() {
+function materials(lampMaterial = null) {
   const mesh = canvasTexture(64, (c, w) => {
     c.clearRect(0, 0, w, w);
     c.strokeStyle = '#e9ecec';
@@ -78,7 +80,11 @@ function materials() {
     cap: new THREE.MeshStandardMaterial({ color: 0x5b5f63, roughness: 0.6, metalness: 0.4 }),
     sign: new THREE.MeshStandardMaterial({ map: sign, color: sign ? 0xffffff : 0xf0f0ec, roughness: 0.6 }),
     trunk: new THREE.MeshStandardMaterial({ color: 0x8a7256, roughness: 0.9 }),
-    frond: new THREE.MeshStandardMaterial({ color: 0x3f7a33, roughness: 0.75, side: THREE.DoubleSide })
+    frond: new THREE.MeshStandardMaterial({ color: 0x3f7a33, roughness: 0.75, side: THREE.DoubleSide }),
+    lightBase: new THREE.MeshStandardMaterial({ color: 0x85837b, roughness: 0.92 }),
+    lamp: lampMaterial || new THREE.MeshStandardMaterial({
+      color: 0xfff2cf, emissive: 0xffdf9e, emissiveIntensity: 0.15, roughness: 0.3
+    })
   };
 }
 
@@ -119,6 +125,32 @@ export function buildPalm({ height = 7, trunkMat, frondMat, seed = 1 }) {
   crown.position.set(topX, topY - 0.1, 0);
   g.add(crown);
   return g;
+}
+
+/* ------------------------------------------------ grass-island streetlight */
+export function buildGrassIslandLight({ height = 8.1, poleMat, baseMat, lensMat }) {
+  const group = new THREE.Group();
+  group.name = 'Car-wash-grass-island-light';
+  const add = (mesh, name) => { mesh.name = name; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); return mesh; };
+  const footing = add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 0.28, 20), baseMat), 'Grass-island-light-concrete-footing');
+  footing.position.y = 0.14;
+  const shaftH = height - 0.28;
+  const shaft = add(new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.105, shaftH, 16), poleMat), 'Grass-island-light-pole');
+  shaft.position.y = 0.28 + shaftH / 2;
+  const arm = add(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1.0, 10), poleMat), 'Grass-island-light-arm');
+  arm.rotation.z = -Math.PI / 2;
+  arm.position.set(0.42, height - 0.12, 0);
+  const head = add(new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.12, 0.28), poleMat), 'Grass-island-light-head');
+  head.position.set(0.88, height - 0.12, 0);
+  const lens = add(new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.025, 0.20), lensMat), 'Grass-island-light-lens');
+  lens.position.set(0.9, height - 0.19, 0);
+  const light = new THREE.SpotLight(0xffe8bb, 0, 22, Math.PI / 4, 0.72, 2);
+  light.name = 'Grass-island-light-source';
+  light.position.set(0.9, height - 0.2, 0);
+  light.target.position.set(1.4, 0.02, 0);
+  light.castShadow = false;
+  group.add(light, light.target);
+  return { group, light };
 }
 
 /* ----------------------------------------------------- propane exchange cage */
@@ -245,20 +277,21 @@ export function groundHeightAt(root, toWorld, x, z, from = 6) {
 
 /* ------------------------------------------------------------------- public */
 // Apply every fix to the loaded glTF root. Returns a summary for the console.
-export function applySiteFixes(root, { frame } = {}) {
+export function applySiteFixes(root, { frame, lampMaterial } = {}) {
   root.updateMatrixWorld(true);
   const storeFrame = frame || new THREE.Matrix4().makeRotationY(-STOREFRONT.heading);
   // store frame -> world, for the ground raycasts; props themselves are built
   // in the store frame and turned by the group's heading below.
   const toWorld = new THREE.Matrix4().multiplyMatrices(root.matrixWorld, new THREE.Matrix4().copy(storeFrame).invert());
   const cutFrame = new THREE.Matrix4().multiplyMatrices(storeFrame, root.matrixWorld.clone().invert());
-  const F = SITE_FIXES, mats = materials();
+  const F = SITE_FIXES, mats = materials(lampMaterial);
   let cut = 0, hidden = 0;
   root.traverse(o => {
     if (!o.isMesh) return;
     if (F.hideMeshes.some(re => re.test(o.name || ''))) { o.visible = false; hidden++; return; }
     if (o.isInstancedMesh || /car/i.test(o.name || '')) return;
     if (under(o, ['FoodMart-storefront'])) return;
+    if (F.protectedCutMaterials.includes(o.material?.name || '')) return;
     cut += cutMesh(o, cutFrame, F.cutBoxes);
   });
 
@@ -277,11 +310,15 @@ export function applySiteFixes(root, { frame } = {}) {
   palm.position.set(F.palm.at[0], groundAt(F.palm.at[0], F.palm.at[1]) - 0.05, F.palm.at[1]);
   added.add(palm);
 
+  const islandLight = buildGrassIslandLight({ height: F.light.height, poleMat: mats.steel, baseMat: mats.lightBase, lensMat: mats.lamp });
+  islandLight.group.position.set(F.light.at[0], groundAt(F.light.at[0], F.light.at[1]) - 0.02, F.light.at[1]);
+  added.add(islandLight.group);
+
   const cage = buildPropaneCabinet(F.propane.width, F.propane.depth, F.propane.height, mats);
   cage.position.set(F.propane.at[0], groundAt(F.propane.at[0], F.propane.at[1]) - 0.02, F.propane.at[1]);
   cage.rotation.y = F.propane.rotation;
   added.add(cage);
 
   root.updateMatrixWorld(true);
-  return { cut, hidden, props: added.children.length };
+  return { cut, hidden, props: added.children.length, lights: [islandLight.light] };
 }
