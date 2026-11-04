@@ -15,9 +15,9 @@ import { STOREFRONT } from './storefront.js';
 // Everything here is in the storefront frame used by scripts/storefront.js:
 // +X out of the storefront toward the pumps, +Z south along the front wall,
 // Y up. Boxes are [x0, y0, z0, x1, y1, z1] in that frame.
-// The entire cabinet footprint is on the striped concrete rectangle immediately
-// outside the nearer island, beside accessible parking (clear of the grass bed).
-const PROPANE_AT = Object.freeze([18.0, -19.0]);
+// The entire cabinet footprint is inside the user-outlined concrete rectangle
+// lower-right of the nearer island, beside accessible parking (clear of grass).
+const PROPANE_AT = Object.freeze([20.0, -19.0]);
 export const SITE_FIXES = Object.freeze({
   cutBoxes: Object.freeze([
     [9.50, 0.15, 10.80, 12.60, 2.20, 13.90]    // grey placeholder box, south corner

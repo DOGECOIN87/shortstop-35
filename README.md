@@ -93,8 +93,8 @@ page and dresses the yard the same way the model will be seen:
 - the model's six loose propane bottles, which stood where the grey box was,
   are hidden (the instanced `Propane_tank` mesh) and a white steel mesh exchange
   cabinet (1.7 x 1.0 x 2.0 m, two door leaves, branded header, six 20 lb bottles
-  inside) stands fully on the striped concrete rectangle immediately outside
-  the nearer island beside accessible parking, clear of the grass, with its
+  inside) stands fully inside the user-outlined concrete rectangle lower-right
+  of the nearer island beside accessible parking, clear of the grass, with its
   doors facing I-35;
 - an 8.1 m streetlight is restored on that grass island, and its spotlight and
   warm fixture follow the Day / Golden hour / Night lighting presets;
