@@ -876,7 +876,10 @@ atm.position.set(-23.0,2.9,-7); atm.rotation.y=Math.PI/2; storeGroup.add(atm);
 addStationDetails({fuelGroup,storeGroup,islandZ,M,ctex,glowMat});
 const sideLandscape=addStoreSideLandscape({stationLayout,M,ctex});
 function enableOwnerSideSurfaces(){
-  const visible=new Set(['Store-wall-sidewalks','Traced-store-front-walk','Car-wash-to-store-walk','Store-side-connector-walk','Marked-car-wash-side-grass','Marked-rear-store-grass','Raised-grass-island','Rear-grass-border','Grass-behind-dumpster']);
+  // Keep the measured sidewalk overlays and broader site surfaces, but omit
+  // the two traced grass patches that create the incorrect extra layer around
+  // the dumpster area in the detailed model.
+  const visible=new Set(['Store-wall-sidewalks','Traced-store-front-walk','Car-wash-to-store-walk','Store-side-connector-walk','Marked-car-wash-side-grass','Marked-rear-store-grass','Raised-grass-island']);
   sideLandscape.group.visible=true;
   for(const child of sideLandscape.group.children) child.visible=visible.has(child.name)||child.name==='Planted-island-curb';
 }
