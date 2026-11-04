@@ -714,12 +714,18 @@ const archesTex = ctex(256, 256, (x, w, h) => {
 });
 
 /* ---------- shared materials ---------- */
+const ownerWallTexture = new THREE.TextureLoader().load('./assets/store-wall-texture.jpg');
+ownerWallTexture.colorSpace = THREE.SRGBColorSpace;
+ownerWallTexture.wrapS = THREE.RepeatWrapping;
+ownerWallTexture.wrapT = THREE.RepeatWrapping;
+ownerWallTexture.repeat.set(2.6, 1.35);
+ownerWallTexture.anisotropy = 8;
 const M = {
   concrete: new THREE.MeshStandardMaterial({ map:concreteTex, roughness:0.94 }),
   asphalt:  new THREE.MeshStandardMaterial({ map:asphaltTex, roughness:0.97 }),
   grass:    new THREE.MeshStandardMaterial({ map:grassTex, color:0xb9c2a4, roughness:1 }),
   white:    new THREE.MeshStandardMaterial({ color:0xe9e7e2, roughness:0.6, metalness:0.08 }),
-  wallWhite:new THREE.MeshStandardMaterial({ color:0xdcd9d2, roughness:0.85 }),
+  wallWhite:new THREE.MeshStandardMaterial({ map:ownerWallTexture, color:0xffffff, roughness:0.9, metalness:0 }),
   roof:     new THREE.MeshStandardMaterial({ map:roofTex, roughness:0.95 }),
   red:      new THREE.MeshStandardMaterial({ color:0xc8102e, roughness:0.42, metalness:0.15 }),
   redDark:  new THREE.MeshStandardMaterial({ color:0x8f0b21, roughness:0.5, metalness:0.1 }),
@@ -1648,7 +1654,7 @@ const stationPromise = new Promise((resolve,reject) => stationLoader.load('./ass
       m.material = new THREE.MeshPhysicalMaterial({ color:0x2c4256, roughness:0.04, metalness:0.08, transparent:true, opacity:0.35, clearcoat:0.5 });
     }
     else if([50,51,52,53,54,55,56,57,58].includes(id)) m.material=storefrontFrameMat;
-    else m.material=new THREE.MeshStandardMaterial({color:0xdcd9d2,roughness:0.85,transparent:true,opacity:0.5});
+    else m.material=new THREE.MeshStandardMaterial({ map:ownerWallTexture, color:0xffffff, roughness:0.9, metalness:0 });
   });
   // Equipment is seated on the fitted source roof, not floating at a guessed Y.
   const roofY=storeBounds.max.y;
