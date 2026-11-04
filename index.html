@@ -2045,6 +2045,57 @@ function replaceModelStorefront(root) {
   console.info(`FoodMart storefront shown; cut ${removed} model triangles, replaced ${hidden} instances (${posts.length} delineators).`);
 }
 
+function applyOwnerWallTextureToDetailedModel(root) {
+  root.updateMatrixWorld(true);
+  const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const toStore = new THREE.Matrix4().makeRotationY(-STOREFRONT.heading);
+  const forbidden = /walk|curb|asphalt|pavement|flag|road|parking|island/i;
+  const corner = new THREE.Vector3();
+  const localBox = new THREE.Box3();
+  const size = new THREE.Vector3();
+  const corners = [];
+  function rootBounds(mesh) {
+    const world = new THREE.Box3().setFromObject(mesh);
+    corners.length = 0;
+    for (const x of [world.min.x, world.max.x]) for (const y of [world.min.y, world.max.y]) for (const z of [world.min.z, world.max.z]) {
+      corners.push(corner.set(x, y, z).applyMatrix4(toRoot).clone());
+    }
+    localBox.makeEmpty(); corners.forEach(p => localBox.expandByPoint(p));
+    return localBox;
+  }
+  function inStoreWall(box) {
+    const storeBox = box.clone();
+    storeBox.min.applyMatrix4(toStore); storeBox.max.applyMatrix4(toStore);
+    const x = storeBox.getCenter(new THREE.Vector3()).x;
+    const z = storeBox.getCenter(new THREE.Vector3()).z;
+    const s = storeBox.getSize(size);
+    if (s.y < 0.65) return false;
+    const front = x > 9.55 && x < 11.9 && z > -10.8 && z < 10.8;
+    const back = x > -7.0 && x < -5.75 && z > -10.8 && z < 10.8;
+    const ends = z > 9.65 && z < 10.8 && x > -7.0 && x < 11.9 || z < -9.55 && z > -10.8 && x > -7.0 && x < 11.9;
+    return front || back || ends;
+  }
+  function inCarWashWall(box) {
+    const c = box.getCenter(new THREE.Vector3()), s = box.getSize(size);
+    return s.y > 0.65 && c.x > -20.0 && c.x < -8.0 && c.z > -31.0 && c.z < -14.0 && c.y < 5.2;
+  }
+  let textured = 0;
+  root.traverse(o => {
+    if (!o.isMesh || !o.material || forbidden.test(o.material.name || '')) return;
+    const b = rootBounds(o);
+    if (!inStoreWall(b) && !inCarWashWall(b)) return;
+    const wasArray = Array.isArray(o.material);
+    const materials = wasArray ? o.material : [o.material];
+    const texturedMaterials = materials.map(material => {
+      const m = material.clone(); m.map = ownerWallTexture; m.color.set(0xffffff);
+      m.roughness = 0.9; m.metalness = 0; m.needsUpdate = true; return m;
+    });
+    o.material = wasArray ? texturedMaterials : texturedMaterials[0];
+    textured++;
+  });
+  console.info(`Applied supplied wall texture to ${textured} detailed store/carwash meshes.`);
+}
+
 /* ===== Detailed station model built in Blender (blender/shortstop_station.blend) =====
    Exported to assets/web-station/shortstop_detailed.glb in the same true-north local frame as
    trueToSite(): glTF +X = east, -Z = north, so it sits at the site origin offset. It replaces the
@@ -2069,6 +2120,7 @@ try {
     if (o.material && o.material.map && /flag/i.test(o.material.name || '')) detailedFlag = o;
   });
   scene.add(root);
+  applyOwnerWallTextureToDetailedModel(root);
   const keepMoving = new Set(traffic.map(v => v.g));
   world.children.forEach(c => { if (!keepMoving.has(c)) c.visible = false; });
   try { replaceModelFuelArea(root); }
