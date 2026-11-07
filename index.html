@@ -445,25 +445,25 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/block-wall.js": "./scripts/block-wall.js?v=fd184fd510",
-  "./scripts/car-wash.js": "./scripts/car-wash.js?v=fd184fd510",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=fd184fd510",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=fd184fd510",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=fd184fd510",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=fd184fd510",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=fd184fd510",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=fd184fd510",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=fd184fd510",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=fd184fd510",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=fd184fd510",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=fd184fd510",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=fd184fd510",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=fd184fd510",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=fd184fd510",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=fd184fd510",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=fd184fd510",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=fd184fd510",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=fd184fd510"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=70ff2da465",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=70ff2da465",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=70ff2da465",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=70ff2da465",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=70ff2da465",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=70ff2da465",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=70ff2da465",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=70ff2da465",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=70ff2da465",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=70ff2da465",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=70ff2da465",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=70ff2da465",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=70ff2da465",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=70ff2da465",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=70ff2da465",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=70ff2da465",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=70ff2da465",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=70ff2da465",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=70ff2da465"
 } }
 </script>
 
@@ -1254,6 +1254,9 @@ const TIMES = {
 let pumpPanelMaterial;
 let canopyUndersideMaterial;
 const storefrontLights = [];
+// Roof floodlights, LED signs and screens of the rebuilt storefront
+// (scripts/storefront.js): { applyLighting(weights), animate(seconds) }.
+let storefrontFX = null;
 // canopyGlowMaterials declared above (line ~798); reused here
 // 'live' follows the real clock and weather at the store (default); day,
 // golden and night are the fixed presets.
@@ -1329,6 +1332,7 @@ function renderLighting() {
     light.intensity = 0.08 * w.day + 0.72 * w.golden + 2.6 * w.night;
     glow.emissiveIntensity = 0.12 + 0.55 * w.golden + 2.1 * w.night;
   });
+  if (storefrontFX) storefrontFX.applyLighting(w);
   if (canopyUndersideMaterial) canopyUndersideMaterial.emissiveIntensity = 0.2 * (w.day + w.golden) + 0.45 * w.night;
   canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = g.golden * w.golden + g.night * w.night);
   skyMat.uniforms.top.value.setHex(T.sky[0]);
@@ -1561,6 +1565,8 @@ function tick() {
   if(!reduceFlagMotion) windTime+=dt*windFactor();
   if (window.__waveFlag) window.__waveFlag(windTime);
   sideLandscape.update(windTime,lightingPhase==='night');
+  // LED signs and screens animate; with reduced motion they hold one frame.
+  if (storefrontFX) storefrontFX.animate(reduceFlagMotion ? 0 : performance.now() / 1000);
   updateWeatherEffects(dt);
   if (fly) {
     fly.t += dt / fly.dur;
@@ -2070,7 +2076,8 @@ function replaceModelStorefront(root) {
   let removed = 0, hidden = 0;
   root.traverse(o => {
     if (!o.isMesh) return;
-    if (!o.isInstancedMesh) { if (!/car/i.test(o.name)) removed += cutTriangles(o, frame, STOREFRONT.cutBoxes); return; }
+    // Parked cars are kept; the merged "Car wash ..." meshes also carry storefront glass.
+    if (!o.isInstancedMesh) { if (!/car/i.test(o.name) || /^car_wash/i.test(o.name)) removed += cutTriangles(o, frame, STOREFRONT.cutBoxes); return; }
     const rule = STOREFRONT.hideInstances.find(r => r.name.test(o.name));
     if (!rule) return;
     o.geometry.computeBoundingBox();
@@ -2088,6 +2095,14 @@ function replaceModelStorefront(root) {
   logoMap.colorSpace = THREE.SRGBColorSpace;
   const blockMats = blockMaterials();
   const front = buildStorefront({ ctex, glowMat, logoMap, posts, blockMats });
+  // Roof floodlights over the lot: shadows on desktop only.
+  for (const light of front.userData.floodLights) {
+    light.castShadow = !mobileRendering;
+    light.shadow.mapSize.set(1024, 1024);
+    light.shadow.camera.near = 0.3; light.shadow.camera.far = 42;
+    light.shadow.bias = -0.0004; light.shadow.normalBias = 0.03;
+  }
+  storefrontFX = front.userData;
   // Stand the props on the model's walk, which is not level along the front.
   const ground = []; root.traverse(o => { if (o.isMesh && !o.isInstancedMesh && !/car/i.test(o.name)) ground.push(o); });
   root.add(front); root.updateMatrixWorld(true);

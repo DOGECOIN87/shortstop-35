@@ -60,18 +60,43 @@ for (const name of ['Emergency-shutoff-sign', 'Extinguisher-cabinet', 'Vape-post
   assert.ok(b.min.x >= S.wallX - 1e-6 && b.max.y < S.fasciaY[0], `${name} in front of the wall, below the fascia`);
 }
 
-// Fascia hides the model's raised letters (x <= 10.16, y 3.9-4.9, |z| < 6.5)
-// and the LED strip runs the full front.
-const fascia = local(named('Fascia')[0]);
-assert.ok(fascia.max.x > 10.2 && fascia.min.y <= 3.9 && fascia.max.y >= 4.9 && fascia.min.z < -9.9 && fascia.max.z > 10.1);
+// Photos: a projecting fascia band (~0.9 m) under a set-back parapet that
+// together cover the model's old fascia (y 3.9-4.9), and the LED strip runs
+// the full front.
+const fascia = local(named('Fascia')[0]), parapet = local(named('Parapet')[0]);
+assert.ok(fascia.max.x > 10.4 && fascia.min.y <= 3.3 && fascia.max.y >= 4.1 && fascia.min.z < -10.3 && fascia.max.z > 10.5, 'fascia band runs past both corners');
+assert.ok(parapet.min.y <= fascia.max.y + 1e-6 && parapet.max.y >= 4.99 && parapet.max.x >= 10.1 && parapet.max.x < fascia.max.x, 'parapet set back above the band');
 const led = local(named('LED-light-strip')[0]);
 assert.ok(led.max.y <= fascia.min.y + 1e-6 && led.min.z <= -9.9 && led.max.z >= 10.1);
 
 // The band around the store is grey now; red only on the sign over the doors.
 assert.equal(named('Fascia')[0].material.color.getHexString(), '9fa3a6');
 for (const n of ['Band-sleeve-north', 'Band-sleeve-south', 'Band-sleeve-back']) assert.equal(named(n).length, 1, n);
-const signPanel = local(named('Sign-panel-red')[0]);
-assert.ok(signPanel.min.z <= S.doorZ[0] && signPanel.max.z >= S.doorZ[1] && signPanel.max.z - signPanel.min.z < 7, 'red only over the door area');
+const signPanel = local(named('Sign-panel')[0]);
+assert.ok(signPanel.min.z <= S.doorZ[0] && signPanel.max.z >= S.doorZ[1] && signPanel.max.z - signPanel.min.z < 3.2, 'sign spans the doors (about 2.9 m)');
+assert.ok(signPanel.min.y >= fascia.min.y && signPanel.max.y <= fascia.max.y, 'sign sits on the fascia band');
+
+// Bays north of the doors are equal (straight-on photo).
+const north = S.bays.filter(b => b.z[1] <= S.doorZ[0]).map(b => b.z[1] - b.z[0]);
+assert.equal(north.length, 4);
+for (const wdt of north) assert.ok(Math.abs(wdt - north[0]) < 1e-9, 'equal bays north of the doors');
+
+// Three roof floodlights on the coping with spotlights aimed at the lot.
+assert.equal(named('Roof-floodlight').length, 3);
+assert.equal(group.userData.floodLights.length, 3);
+for (const l of group.userData.floodLights) { l.updateMatrixWorld(true); l.target.updateMatrixWorld(true); }
+for (const l of group.userData.floodLights) {
+  const p = l.getWorldPosition(new THREE.Vector3()), t = l.target.getWorldPosition(new THREE.Vector3());
+  assert.ok(p.y > 5 && t.y < 1 && t.x - p.x > 8, 'flood above the parapet, aimed down at the lot');
+}
+// Lit and animated displays: LED boards, OPEN sign, wall screen and the locker kiosk.
+for (const n of ['LED-screen', 'Open-sign', 'Amazon-locker-screen', 'LED-sign-CBD']) assert.equal(named(n)[0].material.type, 'MeshBasicMaterial', `${n} is lit`);
+assert.ok(group.userData.liveCanvases >= 7, 'animated canvases');
+group.userData.applyLighting({ day: 0, golden: 0, night: 1 });
+assert.ok(group.userData.floodLights.every(l => l.intensity > 50));
+group.userData.applyLighting({ day: 1, golden: 0, night: 0 });
+assert.ok(group.userData.floodLights.every(l => l.intensity === 0));
+group.userData.animate(3.7); // no canvases in tests: must not throw
 
 // One delineator per removed bollard, standing on the bollard's foot.
 const delineators = named('Delineator-post');
@@ -79,8 +104,9 @@ assert.equal(delineators.length, posts.length);
 delineators.forEach((p, i) => assert.deepEqual(p.position.toArray(), posts[i]));
 
 // Everything stays in the storefront zone and is finite.
-const zone = local(group);
-assert.ok(zone.min.x > S.band.backX - 0.1 && zone.max.x < 12.2 && zone.min.y >= S.walkY - 0.65 && zone.max.y < 5.1 && zone.min.z > -10.2 && zone.max.z < 10.4,
+group.rotation.y = 0; group.updateMatrixWorld(true);
+const zone = new THREE.Box3(); group.traverse(o => { if (o.isMesh) zone.expandByObject(o); }); group.rotation.y = S.heading;
+assert.ok(zone.min.x > S.band.backX - 0.1 && zone.max.x < 12.2 && zone.min.y >= S.walkY - 0.65 && zone.max.y < 5.8 && zone.min.z > -10.5 && zone.max.z < 10.7,
   `storefront zone ${zone.min.toArray()} .. ${zone.max.toArray()}`);
 for (const o of all) if (o.isMesh) {
   const p = o.geometry.attributes.position.array;
@@ -97,8 +123,12 @@ import('../scripts/storefront.js').then(({ settleOnWalk }) => {
   const parent = new THREE.Group(); const g2 = buildStorefront({ ctex: () => new THREE.Texture(), glowMat, posts: [] }); parent.add(g2);
   settleOnWalk(g2, () => S.walkY + 0.08);
   const settled = []; g2.traverse(o => { if (o.userData.onWalk) settled.push(o); });
-  assert.ok(settled.length >= 5, 'mat, two receptacles, cabinet and A-frame settle');
-  for (const o of settled) assert.ok(Math.abs(o.position.y - 0.08 - (o.name === 'Entry-mat' ? S.walkY + 0.0075 : 0)) < 1e-6 || o.name === 'Entry-mat', `${o.name} raised onto the walk`);
+  assert.ok(settled.length >= 4, 'two receptacles, cabinet and A-frame settle');
+  for (const o of settled) assert.ok(Math.abs(o.position.y - 0.08) < 1e-6, `${o.name} raised onto the walk`);
+  // The rubber mat follows the walk vertex by vertex: bevel at the walk, top 12 mm up.
+  const mat = g2.getObjectByName('Entry-mat'), ys = mat.geometry.attributes.position;
+  let lo = Infinity, hi = -Infinity; for (let i = 0; i < ys.count; i++) { lo = Math.min(lo, ys.getY(i)); hi = Math.max(hi, ys.getY(i)); }
+  assert.ok(Math.abs(lo - 0.082) < 1e-4 && Math.abs(hi - 0.094) < 1e-4, `mat follows the walk (${lo}..${hi})`);
 });
 
 // The page applies it to the detailed model.

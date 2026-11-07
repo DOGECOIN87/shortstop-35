@@ -81,6 +81,29 @@ from the photos. Test: `node --experimental-default-type=module tests/storefront
 The LED screen is centred on the south block wall between the glazing and the
 south corner (z 8.81), as the owner marked.
 
+Follow-up from the owner's two night storefront photos (2026-11-07):
+
+- three LED floodlights on the parapet coping (over the LED screen, just north
+  of the doors and at the north corner) light the lot at night, with shadows on
+  desktop and glare when looking into them; the model's single roof spotlight
+  is removed;
+- the front is now a projecting grey fascia band (3.25-4.16 m, running 0.45 m
+  past both corners, LED strip underneath) below a set-back parapet; the
+  storefront head drops to 3.22 m to match the photo's proportions;
+- the Texaco FoodMart sign is 2.88 x 0.79 m (white roundel panel cut on a
+  diagonal against the red "FoodMart" panel), centred over the doors on the band;
+- the four bays north of the doors are equal width (1.33 m); the doors
+  (1.92 m) and the south bays moved to suit, and the blind covers the top third
+  of the candy bay;
+- the LED letter signs, OPEN sign and wall screen are lit, glow, and animate
+  (wipe, blink at 1.25 Hz, shine sweep; OPEN chase border; screen alternates
+  "50K Vape Special only $9.99" and "Fifty Bar vapes $19.99"), holding a single
+  frame for visitors who prefer reduced motion;
+- the Amazon locker's kiosk screen is lit, and the entry mat is a bevelled
+  3 x 5 ft rubber mat that follows the walk's slope;
+- a glass strip across the storefront in the model's merged "Car wash
+  equipment window" mesh is now cut (it darkened the window signs).
+
 ## Sidewalk props, propane exchange and palm — 2026-11-02
 
 `scripts/site-fixes.js` clears the sidewalk props the owner marked on the live
