@@ -36,7 +36,7 @@ export const STOREFRONT = Object.freeze({
   headY: 3.22,           // storefront head, 2.75 m above the walk (photos)
   fasciaY: [3.25, 4.16], // projecting fascia band with the LED strip and the sign
   parapetY: [4.16, 5.0], // set-back upper parapet (the model's band height)
-  fasciaOverhang: 0.45,  // the band runs past both corners of the building
+  fasciaOverhang: 0.45,  // the band's side returns project this far past the front corners
   // Texaco FoodMart sign: white roundel panel / red "FoodMart" panel, 2.88 x
   // 0.79 m, centred just south of the doors' centre on the fascia band.
   signZ: [-0.48, 2.4],
@@ -289,7 +289,6 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   });
   // The band around the store is solid grey (owner, Nov 2026); red remains
   // only on the FoodMart sign over the doors.
-  const solid = col => ctex(4, 4, (c, w, h) => { c.fillStyle = col; c.fillRect(0, 0, w, h); });
   // Grey fascia and parapet; at night the floodlights and canopy wash them a
   // little (photos), approximated by a faint emissive set with the lighting.
   const fasciaMat = std(0x9fa3a6, 0.7, 0.1, { emissive: 0x9fa3a6, emissiveIntensity: 0 });
@@ -576,25 +575,37 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   entryMat.castShadow = false; entryMat.userData.conformToWalk = true; entryMat.userData.profile = profile;
 
   // ---------- fascia band, parapet, LED strip and sign ----------
-  const [fy0, fy1] = S.fasciaY, [py0, py1] = S.parapetY, fxOut = S.wallX - 0.03 + S.fasciaDepth;
-  const [ez0, ez1] = [S.storeZ[0] - S.fasciaOverhang, S.storeZ[1] + S.fasciaOverhang];
-  box('Fascia', [S.wallX - 0.03, fy0, ez0, fxOut, fy1, ez1], fasciaMat);
-  const flashing = std(0x8d9195, 0.45, 0.45);
-  box('Fascia-cap', [S.wallX + 0.09, fy1, ez0 - 0.01, fxOut + 0.02, fy1 + 0.025, ez1 + 0.01], flashing);
-  box('Fascia-soffit', [S.wallX - 0.03, fy0 - 0.02, ez0, fxOut, fy0, ez1], std(0xd8dadb, 0.6, 0.1));
-  // Panel joints on the band either side of the sign (photos).
+  // Photos of the front, the north side and the back corner: the projecting
+  // grey band with the white LED strip under it wraps all four walls (seen
+  // from the front its side returns read as overhangs past the corners); the
+  // set-back parapet rises above it to the metal coping.
+  const [fy0, fy1] = S.fasciaY, [py0, py1] = S.parapetY, D = S.fasciaDepth, fxOut = S.wallX - 0.03 + D;
+  const B = S.band, sleeve = 0.03;
+  const [ez0, ez1] = [B.northZ - D, B.southZ + D], bxOut = B.backX - D, bxIn = B.backX + 0.03, sxIn = S.wallX - 0.03;
+  const flashing = std(0x8d9195, 0.45, 0.45), soffitMat = std(0xd8dadb, 0.6, 0.1);
+  const stripMat = ledMat(null, { color: 0xffffff });
+  // [name, band footprint [x0, z0, x1, z1], LED strip footprint, cap footprint]
+  const bands = [
+    ['Fascia', [S.wallX - 0.03, ez0, fxOut, ez1], [fxOut - 0.1, ez0 + 0.05, fxOut, ez1 - 0.05], [S.wallX + 0.09, ez0 - 0.01, fxOut + 0.02, ez1 + 0.01]],
+    ['Fascia-north', [bxIn, ez0, sxIn, B.northZ + 0.03], [bxIn, ez0, sxIn, ez0 + 0.1], [bxIn, ez0 - 0.01, sxIn, B.northZ - sleeve - 0.005]],
+    ['Fascia-south', [bxIn, B.southZ - 0.03, sxIn, ez1], [bxIn, ez1 - 0.1, sxIn, ez1], [bxIn, B.southZ + sleeve + 0.005, sxIn, ez1 + 0.01]],
+    ['Fascia-back', [bxOut, ez0, bxIn, ez1], [bxOut, ez0 + 0.05, bxOut + 0.1, ez1 - 0.05], [bxOut - 0.02, ez0 - 0.01, B.backX - sleeve - 0.005, ez1 + 0.01]]
+  ];
+  for (const [name, [x0, z0, x1, z1], [lx0, lz0, lx1, lz1], [cx0, cz0, cx1, cz1]] of bands) {
+    box(name, [x0, fy0, z0, x1, fy1, z1], fasciaMat);
+    box(name + '-soffit', [x0, fy0 - 0.02, z0, x1, fy0, z1], soffitMat);
+    box(name === 'Fascia' ? 'LED-light-strip' : name + '-LED-strip', [lx0, fy0 - 0.07, lz0, lx1, fy0 - 0.02, lz1], stripMat).castShadow = false;
+    box(name + '-cap', [cx0, fy1, cz0, cx1, fy1 + 0.025, cz1], flashing);
+  }
+  // Panel joints on the front band either side of the sign (photos).
   const signC = (S.signZ[0] + S.signZ[1]) / 2, jointMat = std(0x6b6f72, 0.6, 0.2);
   for (let k = -3; k <= 3; k++) {
     if (!k) continue;
     const z = signC + Math.sign(k) * (2.2 + (Math.abs(k) - 1) * 4.4);
     if (z > ez0 + 0.3 && z < ez1 - 0.3) box('Fascia-joint', [fxOut, fy0 + 0.02, z - 0.007, fxOut + 0.005, fy1 - 0.02, z + 0.007], jointMat);
   }
-  // White LED strip along the band's bottom front edge.
-  const stripMat = ledMat(null, { color: 0xffffff });
-  box('LED-light-strip', [fxOut - 0.1, fy0 - 0.07, S.storeZ[0], fxOut, fy0 - 0.02, S.storeZ[1]], stripMat).castShadow = false;
   box('Head-flashing', [S.glassX - 0.05, S.headY, gz0, S.wallX, fy0, gz1], aluminium);
   // Upper parapet, set back at the wall face above the band.
-  const B = S.band, sleeve = 0.03;
   box('Parapet', [S.wallX - 0.1, py0, B.northZ - sleeve - 0.005, S.wallX + 0.09, py1 + 0.01, B.southZ + sleeve + 0.005], fasciaMat);
   // Grey sleeves over the model's red band on the north, south and back walls.
   box('Band-sleeve-north', [B.backX - sleeve, B.y[0], B.northZ - sleeve - 0.005, S.wallX, B.y[1], B.northZ - 0.005], fasciaMat);
@@ -611,18 +622,13 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   blockSide('Perimeter-wall-back', [B.backX, B.southZ], [B.backX, B.northZ], [-1, 0]);
   blockSide('Perimeter-wall-north', [B.backX, B.northZ], [S.wallX, B.northZ], [0, -1]);
   blockSide('Perimeter-wall-south', [S.wallX, B.southZ], [B.backX, B.southZ], [0, 1]);
-  // Metal coping around the roofline, with a recessed cool-white LED edge on
-  // the back and ends.
+  // Metal coping around the roofline.
   const borderY = B.y[1] + 0.008, borderH = 0.055, borderDepth = 0.16, copingTop = borderY + borderH;
   const borderMat = std(0x8a8f93, 0.45, 0.4);
-  const borderGlow = glowMat(solid('#eef4f7'));
   box('Roofline-border-front', [S.wallX - borderDepth, borderY, S.storeZ[0] - 0.08, S.wallX + 0.13, copingTop, S.storeZ[1] + 0.08], borderMat);
   box('Roofline-border-back', [B.backX - 0.03, borderY, B.northZ - 0.08, B.backX + borderDepth, copingTop, B.southZ + 0.08], borderMat);
   box('Roofline-border-north', [B.backX - 0.03, borderY, B.northZ - borderDepth, S.wallX + 0.03, copingTop, B.northZ + 0.03], borderMat);
   box('Roofline-border-south', [B.backX - 0.03, borderY, B.southZ - 0.03, S.wallX + 0.03, copingTop, B.southZ + borderDepth], borderMat);
-  box('Roofline-light-back', [B.backX + borderDepth - 0.02, borderY - 0.035, B.northZ, B.backX + borderDepth + 0.01, borderY, B.southZ], borderGlow);
-  box('Roofline-light-north', [B.backX, borderY - 0.035, B.northZ - borderDepth - 0.01, S.wallX, borderY, B.northZ - borderDepth + 0.02], borderGlow);
-  box('Roofline-light-south', [B.backX, borderY - 0.035, B.southZ + borderDepth - 0.02, S.wallX, borderY, B.southZ + borderDepth + 0.01], borderGlow);
 
   // Texaco FoodMart sign (photos): white panel with the roundel, cut on a
   // diagonal against the red panel carrying "FoodMart" in white.
@@ -857,6 +863,9 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   });
   const side = new THREE.Mesh(new THREE.PlaneGeometry(L.x[1] - L.x[0], lh), std(0xffffff, 0.55, 0.15, { map: sideTex }));
   side.position.set((L.x[0] + L.x[1]) / 2, (L.y[0] + L.y[1]) / 2, L.z[1] + 0.012); add(side, 'Amazon-locker-side');
+  // The north end carries the same "amazon hub" panel (photo along the walk).
+  const sideN = new THREE.Mesh(new THREE.PlaneGeometry(L.x[1] - L.x[0], lh), side.material);
+  sideN.rotation.y = Math.PI; sideN.position.set((L.x[0] + L.x[1]) / 2, (L.y[0] + L.y[1]) / 2, L.z[0] - 0.012); add(sideN, 'Amazon-locker-side-north');
   // Lit hood across the top front.
   box('Amazon-locker-hood', [L.x[0], L.y[1], L.z[0] - 0.02, L.x[1] + 0.08, L.y[1] + 0.08, L.z[1] + 0.02], std(0x2f3742, 0.5, 0.2));
   const hoodLight = ledMat(null, { color: 0xeef4ff });

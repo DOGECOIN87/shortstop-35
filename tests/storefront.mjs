@@ -66,6 +66,15 @@ for (const name of ['Emergency-shutoff-sign', 'Extinguisher-cabinet', 'Vape-post
 const fascia = local(named('Fascia')[0]), parapet = local(named('Parapet')[0]);
 assert.ok(fascia.max.x > 10.4 && fascia.min.y <= 3.3 && fascia.max.y >= 4.1 && fascia.min.z < -10.3 && fascia.max.z > 10.5, 'fascia band runs past both corners');
 assert.ok(parapet.min.y <= fascia.max.y + 1e-6 && parapet.max.y >= 4.99 && parapet.max.x >= 10.1 && parapet.max.x < fascia.max.x, 'parapet set back above the band');
+// North-side and back-corner photos: the band and its LED strip wrap all four walls.
+for (const side of ['north', 'south', 'back']) {
+  for (const n of [`Fascia-${side}`, `Fascia-${side}-LED-strip`, `Fascia-${side}-soffit`]) assert.equal(named(n).length, 1, n);
+  const b = local(named(`Fascia-${side}`)[0]);
+  assert.ok(Math.abs(b.min.y - S.fasciaY[0]) < 1e-6 && Math.abs(b.max.y - S.fasciaY[1]) < 1e-6, `${side} band at the front band's height`);
+}
+assert.ok(local(named('Fascia-north')[0]).min.z < S.band.northZ - 0.4 && local(named('Fascia-back')[0]).min.x < S.band.backX - 0.4, 'side and back bands project like the front');
+assert.equal(all.filter(o => /^Roofline-light/.test(o.name)).length, 0, 'no LEDs on the coping (photos)');
+assert.equal(named('Amazon-locker-side-north').length, 1, 'amazon hub panel on the locker north end');
 const led = local(named('LED-light-strip')[0]);
 assert.ok(led.max.y <= fascia.min.y + 1e-6 && led.min.z <= -9.9 && led.max.z >= 10.1);
 
@@ -106,7 +115,7 @@ delineators.forEach((p, i) => assert.deepEqual(p.position.toArray(), posts[i]));
 // Everything stays in the storefront zone and is finite.
 group.rotation.y = 0; group.updateMatrixWorld(true);
 const zone = new THREE.Box3(); group.traverse(o => { if (o.isMesh) zone.expandByObject(o); }); group.rotation.y = S.heading;
-assert.ok(zone.min.x > S.band.backX - 0.1 && zone.max.x < 12.2 && zone.min.y >= S.walkY - 0.65 && zone.max.y < 5.8 && zone.min.z > -10.5 && zone.max.z < 10.7,
+assert.ok(zone.min.x > S.band.backX - S.fasciaDepth - 0.05 && zone.max.x < 12.2 && zone.min.y >= S.walkY - 0.65 && zone.max.y < 5.8 && zone.min.z > -10.5 && zone.max.z < 10.7,
   `storefront zone ${zone.min.toArray()} .. ${zone.max.toArray()}`);
 for (const o of all) if (o.isMesh) {
   const p = o.geometry.attributes.position.array;

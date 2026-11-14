@@ -46,18 +46,9 @@ export function createReferenceDesign({M,ctex,font}) {
     for(let i=0;i<8;i++){c.fillStyle='#c9c5ba';c.fillRect(i*16,0,2,h);c.fillStyle='#ffffff';c.fillRect(i*16+2,0,2,h);}
   },CANOPY.width/1.28,1);
   const underside=new THREE.MeshStandardMaterial({map:slatMap,color:0xffffff,roughness:0.8,emissive:0xe3ddca,emissiveIntensity:0.2});
-  const stone=new THREE.MeshStandardMaterial({color:0xd8cfbb,roughness:0.9});
   const edge=new THREE.MeshStandardMaterial({color:0xa50d26,roughness:0.5});
   const rimMat=new THREE.MeshStandardMaterial({color:0x1c1e21,roughness:0.45,metalness:0.25});
   const liningMat=new THREE.MeshStandardMaterial({color:0x8d9093,roughness:0.9});
-  const brickMap=ctex(512,512,(c,w,h)=>{
-    c.fillStyle='#a49a81';c.fillRect(0,0,w,h);
-    const colors=['#b7a485','#c3b092','#ad9c7e','#bdad91'];
-    for(let y=0;y<16;y++)for(let x=-1;x<5;x++){
-      c.fillStyle=colors[(x+y*3+8)%4];c.fillRect(x*128+(y%2)*64+1,y*32+1,125,29);
-    }
-  },1,3);
-  const masonry=new THREE.MeshStandardMaterial({map:brickMap,roughness:0.96});
 
   function roundRect(c,x,y,w,h,r){c.beginPath();c.moveTo(x+r,y);c.arcTo(x+w,y,x+w,y+h,r);c.arcTo(x+w,y+h,x,y+h,r);c.arcTo(x,y+h,x,y,r);c.arcTo(x,y,x+w,y,r);c.closePath();}
   function starPath(c,cx,cy,ro,ri){c.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,q=i%2?ri:ro;const x=cx+Math.cos(a)*q,y=cy+Math.sin(a)*q;if(i)c.lineTo(x,y);else c.moveTo(x,y);}c.closePath();}
@@ -433,13 +424,41 @@ export function createReferenceDesign({M,ctex,font}) {
       graphic.name='Soffit-Techron-graphic';graphic.rotation.set(Math.PI/2,0,k?Math.PI/2:-Math.PI/2);
       graphic.position.set(x,C.clearance-0.004,k?C.startZ+0.3*L:C.endZ-0.3*L);g.add(graphic);
     });
+    // Columns (night canopy photo): white round steel columns with a black
+    // base jacket carrying the accessibility notice, and a framed "Save up to
+    // 90c/gal" Texaco Rewards poster on each face toward the dispensers.
+    const columnWhite=new THREE.MeshStandardMaterial({color:0xf3f3f0,roughness:0.35,metalness:0.2});
+    const jacketMat=new THREE.MeshStandardMaterial({color:0x26292c,roughness:0.55,metalness:0.2});
+    const posterMap=ctex(256,360,(c,w,h)=>{
+      c.fillStyle='#ffffff';c.fillRect(0,0,w,h);
+      c.fillStyle='#c8102e';c.font='bold 22px Arial';c.textAlign='left';c.textBaseline='alphabetic';c.fillText('SAVE UP TO',16,34);
+      c.font='bold 92px Arial';c.fillText('90',14,116);c.font='bold 40px Arial';c.fillText('\u00a2',112,80);
+      c.fillStyle='#222';c.font='bold 22px Arial';c.fillText('/gal',112,112);
+      c.font='12px Arial';['when you join Texaco Rewards','AND open a Techron Advantage Card.','Combine your savings at the pump.'].forEach((t,i)=>c.fillText(t,16,140+i*15));
+      c.beginPath();c.moveTo(0,h*0.62);c.lineTo(w,h*0.5);c.lineTo(w,h);c.lineTo(0,h);c.closePath();c.fillStyle='#c8102e';c.fill();
+      c.fillStyle='#2b2f35';c.fillRect(24,196,48,92);c.fillStyle='#e8eaec';c.fillRect(29,203,38,76);c.fillStyle='#c8102e';c.fillRect(34,212,28,22);
+      c.fillStyle='#ffffff';c.font='bold 30px Arial';c.fillText('+',92,252);
+      c.fillStyle='#1d1f22';c.fillRect(124,214,104,62);c.fillStyle='#3a3d42';c.fillRect(132,224,88,44);
+      for(const qx of [150,196]){c.fillStyle='#ffffff';c.fillRect(qx,298,38,38);c.fillStyle='#111';for(let i=0;i<36;i++)if((i*7+qx)%3)c.fillRect(qx+3+(i%6)*5.5,301+Math.floor(i/6)*5.5,4.5,4.5);}
+    });
+    const posterMat=new THREE.MeshStandardMaterial({map:posterMap,roughness:0.5,emissive:0xffffff,emissiveMap:posterMap,emissiveIntensity:0.08});
+    const frameBlack=new THREE.MeshStandardMaterial({color:0x111214,roughness:0.4,metalness:0.3});
     islandZ.forEach((z,idx)=>{
       const colTop=C.clearance+0.05,colH=colTop-0.3;
-      box(g,0.84,colH,0.84,masonry,0,0.3+colH/2,z,'Tan-masonry-column');
-      box(g,0.92,0.42,0.92,masonry,0,0.44,z,'Column-base-collar');
-      box(g,0.96,0.06,0.96,stone,0,0.66,z,'Column-stone-band');
-      box(g,0.94,0.08,0.94,stone,0,C.clearance-0.75,z,'Column-stone-band');
-      box(g,0.98,0.12,0.98,white,0,C.clearance-0.06,z,'Column-capital');
+      const col=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,colH,28),columnWhite);
+      col.name='Canopy-column';col.position.set(0,0.3+colH/2,z);col.castShadow=col.receiveShadow=true;g.add(col);
+      const jacket=new THREE.Mesh(new THREE.CylinderGeometry(0.26,0.26,1.35,28),jacketMat);
+      jacket.name='Column-base-jacket';jacket.position.set(0,0.3+0.675,z);jacket.castShadow=jacket.receiveShadow=true;g.add(jacket);
+      for(const sx of [-1,1]){
+        const fx=sx*0.27,fy=2.2;
+        box(g,0.05,0.96,0.72,white,fx,fy,z,'Column-poster-frame');
+        box(g,0.012,0.86,0.62,frameBlack,fx+sx*0.03,fy,z,'Column-poster-bezel');
+        const poster=new THREE.Mesh(new THREE.PlaneGeometry(0.56,0.8),posterMat);
+        poster.name='Column-poster';poster.rotation.y=sx*Math.PI/2;poster.position.set(fx+sx*0.0375,fy,z);g.add(poster);
+        // accessibility notice on the jacket
+        const isa=new THREE.Mesh(new THREE.PlaneGeometry(0.16,0.16),new THREE.MeshStandardMaterial({color:0x1f4fbf,roughness:0.6}));
+        isa.name='Column-access-sign';isa.rotation.y=sx*Math.PI/2;isa.position.set(sx*0.262,1.45,z);g.add(isa);
+      }
       // Pump-number flags project from the column toward each dispenser.
       [[-1,idx*4+1],[1,idx*4+3]].forEach(([sx,n])=>{
         const flag=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.34,0.03),[edge,edge,edge,edge,flagMaterial(n+1),flagMaterial(n)]);

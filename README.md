@@ -104,6 +104,26 @@ Follow-up from the owner's two night storefront photos (2026-11-07):
 - a glass strip across the storefront in the model's merged "Car wash
   equipment window" mesh is now cut (it darkened the window signs).
 
+Follow-up from the owner's night photos of the yard, north side and canopy (2026-11-14):
+
+- the fascia band, its LED strip and soffit now wrap all four walls of the
+  store (north-side and back-corner photos); the coping has no LEDs;
+- the Amazon locker's north end carries the "amazon hub" panel too;
+- the propane exchange is the stainless, perforated RapidXchange cabinet
+  (about 1.15 x 1.0 x 1.7 m, printed front door, price strip), flanked by the
+  Swisher Sweets and MOJO floor stands; its island gets a crape myrtle,
+  landscape rocks and a "Thank You / Drive Safely." sign;
+- three shrubs stand in the grass strip along the north wall;
+- the car-wash-side pole light is a square black pole on a tall round
+  concrete base with two round LED heads;
+- canopy columns are white round steel with black base jackets (blue
+  accessibility notice) and framed "Save up to 90c/gal" posters toward the
+  dispensers, replacing the tan masonry columns.
+
+The cabinet, stand and sign artwork is redrawn, not the original print files;
+the tree, sign and shrub positions are placed from the photos and the model's
+grass areas, not surveyed.
+
 ## Sidewalk props, propane exchange and palm — 2026-11-02
 
 `scripts/site-fixes.js` clears the sidewalk props the owner marked on the live

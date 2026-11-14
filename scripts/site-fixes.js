@@ -8,9 +8,14 @@ import { STOREFRONT } from './storefront.js';
 //     also removed triangles from the merged walk and curb beneath it;
 //   * the plain grey box beside the south corner is cut without cutting the
 //     merged walk or curb surfaces;
-//   * the model's loose propane bottles are replaced by a white mesh exchange
-//     cabinet on the paved edge beside the car-wash-side tree island;
-//   * the palm and restored streetlight stand on the grass island by the car wash.
+//   * the model's loose propane bottles are replaced by the stainless,
+//     perforated RapidXchange propane exchange cabinet (owner's night photos)
+//     on the paved edge of the car-wash-side tree island, with the Swisher
+//     Sweets and MOJO floor stands either side of it, and the island gets its
+//     crape myrtle, landscape rocks and "Thank You / Drive Safely" sign;
+//   * three shrubs stand in the grass strip along the store's north wall;
+//   * the palm and restored twin-head pole light stand on the grass island by
+//     the car wash.
 //
 // Everything here is in the storefront frame used by scripts/storefront.js:
 // +X out of the storefront toward the pumps, +Z south along the front wall,
@@ -36,61 +41,192 @@ export const SITE_FIXES = Object.freeze({
     // Local -Z is the door side. Turn it toward +Z (the parked vehicles),
     // leaving the back along -Z against the nearer grass-island edge.
     rotation: Math.PI,
-    width: 1.72, depth: 0.98, height: 2.02
-  })
+    // RapidXchange cabinet in the photos: portrait front ~1.15 x 1.7 m.
+    width: 1.15, depth: 0.98, height: 1.72
+  }),
+  // Floor stands either side of the cabinet front (photos): Swisher Sweets
+  // on the left as you face it, MOJO on the right.
+  stands: Object.freeze([
+    Object.freeze({ kind: 'swisher', at: [PROPANE_AT[0] - 0.98, -16.66] }),
+    Object.freeze({ kind: 'mojo', at: [PROPANE_AT[0] + 0.98, -16.72] })
+  ]),
+  // The tree island behind the cabinet (grass x 12.3-16.3, z -20..-18).
+  tree: Object.freeze({ at: [13.7, -19.0], height: 4.3 }),
+  thankYou: Object.freeze({ at: [15.3, -19.05], rotation: -Math.PI / 2 }), // faces drivers leaving toward the pumps
+  // Grass strip along the north wall (z -13.5..-11.5).
+  shrubs: Object.freeze([[9.0, -12.5], [4.6, -12.5], [0.4, -12.4]])
 });
 
 /* ------------------------------------------------------------------ materials */
-function canvasTexture(size, draw) {
+function canvasTex(w, h, draw) {
   if (typeof document === 'undefined' || !document.createElement) return null;
   const c = document.createElement('canvas');
-  c.width = c.height = size;
-  draw(c.getContext('2d'), size);
+  c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.anisotropy = 4;
   return t;
 }
+function canvasTexture(size, draw) { return canvasTex(size, size, (c, w) => draw(c, w)); }
 
 function materials(lampMaterial = null) {
-  const mesh = canvasTexture(64, (c, w) => {
-    c.clearRect(0, 0, w, w);
-    c.strokeStyle = '#e9ecec';
-    c.lineWidth = 3;
-    for (let i = 0; i <= w; i += 16) {
-      c.beginPath(); c.moveTo(i, 0); c.lineTo(i, w); c.stroke();
-      c.beginPath(); c.moveTo(0, i); c.lineTo(w, i); c.stroke();
+  // Stainless sheet with staggered oval perforations (cabinet sides and back).
+  const perf = canvasTex(128, 128, (c, w, h) => {
+    c.fillStyle = '#c4c8cb'; c.fillRect(0, 0, w, h);
+    for (let y = 0; y < h; y += 2) { c.fillStyle = y % 4 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)'; c.fillRect(0, y, w, 1); }
+    c.globalCompositeOperation = 'destination-out';
+    for (let r = 0; r < 4; r++) for (let k = -1; k < 3; k++) {
+      c.beginPath(); c.ellipse(k * 64 + (r % 2) * 32 + 32, r * 32 + 16, 22, 8, 0, 0, Math.PI * 2); c.fill();
     }
   });
-  if (mesh) mesh.repeat.set(6, 3);
-  const sign = canvasTexture(512, (c, w) => {
-    c.fillStyle = '#f4f4f1'; c.fillRect(0, 0, w, w);
-    c.fillStyle = '#1f2fa8'; c.fillRect(0, 0, w, w * 0.5);
-    c.fillStyle = '#ffffff';
-    c.font = 'bold 96px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
-    c.fillText('PROPANE', w / 2, w * 0.26);
-    c.fillStyle = '#c8202c'; c.fillRect(0, w * 0.5, w, w * 0.06);
-    c.fillStyle = '#12141a'; c.font = 'bold 74px Arial';
-    c.fillText('$19.99', w / 2, w * 0.72);
-    c.font = 'bold 40px Arial';
-    c.fillText('EXCHANGE', w / 2, w * 0.88);
+  if (perf) perf.repeat.set(4, 6);
+  const header = canvasTex(512, 64, (c, w, h) => {
+    c.fillStyle = '#f4f4f2'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#1d3fae'; c.fillRect(6, 6, 150, h - 12);
+    c.fillStyle = '#ffffff'; c.font = 'italic bold 25px Arial'; c.textBaseline = 'middle'; c.fillText('RapidXchange', 14, h / 2 + 1);
+    c.strokeStyle = '#c8202c'; c.lineWidth = 3; c.strokeRect(164, 6, 82, h - 12);
+    c.fillStyle = '#1d1f2a'; c.font = 'bold 13px Arial'; ['Propane', 'Cylinder', 'Xchange'].forEach((t, i) => c.fillText(t, 172, 18 + i * 14));
+    for (const x of [254, 382]) { c.strokeRect(x, 8, 120, h - 16); c.font = 'bold 26px Arial'; c.fillText('$', x + 8, h / 2 + 1); }
   });
+  const front = canvasTex(512, 720, rapidXchangeArt);
+  const swisher = canvasTex(256, 768, (c, w, h) => standeeArt(c, w, h, 'FRESH'));
+  const swisherBack = canvasTex(256, 768, (c, w, h) => standeeArt(c, w, h, 'RICH'));
+  const mojo = canvasTex(256, 720, mojoArt);
+  const thanks = canvasTex(512, 384, (c, w, h) => {
+    c.fillStyle = '#fbfbf8'; c.fillRect(0, 0, w, h);
+    c.fillStyle = '#1f6b3a'; c.font = 'bold 104px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText('Thank', w / 2, 82); c.fillText('You', w / 2, 186);
+    c.fillStyle = '#e8762c'; c.fillRect(0, 252, w, 14);
+    c.fillStyle = '#1f6b3a'; c.fillRect(0, 266, w, h - 266);
+    c.fillStyle = '#ffffff'; c.font = 'bold 66px Arial'; c.fillText('Drive Safely.', w / 2, 326);
+  });
+  const steel = new THREE.MeshStandardMaterial({ color: 0xd7dadb, roughness: 0.42, metalness: 0.55 });
   return {
-    steel: new THREE.MeshStandardMaterial({ color: 0xd7dadb, roughness: 0.42, metalness: 0.55 }),
+    steel,
+    stainless: new THREE.MeshStandardMaterial({ color: 0xc9cdd0, roughness: 0.34, metalness: 0.72 }),
     mesh: new THREE.MeshStandardMaterial({
-      map: mesh, color: 0xeceeee, roughness: 0.5, metalness: 0.4,
-      transparent: !!mesh, alphaTest: mesh ? 0.3 : 0, side: THREE.DoubleSide
+      map: perf, color: 0xffffff, roughness: 0.36, metalness: 0.7,
+      transparent: false, alphaTest: perf ? 0.5 : 0, side: THREE.DoubleSide
     }),
+    front: new THREE.MeshStandardMaterial({ map: front, color: front ? 0xffffff : 0x5a6ec8, roughness: 0.45, metalness: 0.1 }),
+    sign: new THREE.MeshStandardMaterial({ map: header, color: header ? 0xffffff : 0xf0f0ec, roughness: 0.5 }),
     bottle: new THREE.MeshStandardMaterial({ color: 0xe8e9e6, roughness: 0.38, metalness: 0.3 }),
     cap: new THREE.MeshStandardMaterial({ color: 0x5b5f63, roughness: 0.6, metalness: 0.4 }),
-    sign: new THREE.MeshStandardMaterial({ map: sign, color: sign ? 0xffffff : 0xf0f0ec, roughness: 0.6 }),
+    swisher: new THREE.MeshStandardMaterial({ map: swisher, color: swisher ? 0xffffff : 0x161616, roughness: 0.55 }),
+    swisherBack: new THREE.MeshStandardMaterial({ map: swisherBack, color: swisherBack ? 0xffffff : 0x161616, roughness: 0.55 }),
+    standeeEdge: new THREE.MeshStandardMaterial({ color: 0xf1f1ee, roughness: 0.6 }),
+    mojo: new THREE.MeshStandardMaterial({ map: mojo, color: mojo ? 0xffffff : 0x7b3fe4, roughness: 0.5 }),
+    mojoEdge: new THREE.MeshStandardMaterial({ color: 0x6a33cc, roughness: 0.55 }),
+    cup: new THREE.MeshStandardMaterial({ color: 0xf6f6f4, roughness: 0.45 }),
+    thanks: new THREE.MeshStandardMaterial({ map: thanks, color: thanks ? 0xffffff : 0xf4f4f0, roughness: 0.55, side: THREE.DoubleSide }),
+    post: new THREE.MeshStandardMaterial({ color: 0xa9adb0, roughness: 0.45, metalness: 0.6 }),
+    bark: new THREE.MeshStandardMaterial({ color: 0x7d6b58, roughness: 0.85 }),
+    leaves: new THREE.MeshStandardMaterial({ color: 0x5f7b3b, roughness: 0.85, flatShading: true }),
+    leavesWarm: new THREE.MeshStandardMaterial({ color: 0x7c7a3e, roughness: 0.85, flatShading: true }),
+    shrub: new THREE.MeshStandardMaterial({ color: 0x46703a, roughness: 0.9, flatShading: true }),
+    rock: new THREE.MeshStandardMaterial({ color: 0xc9c3b4, roughness: 0.95, flatShading: true }),
     trunk: new THREE.MeshStandardMaterial({ color: 0x8a7256, roughness: 0.9 }),
     frond: new THREE.MeshStandardMaterial({ color: 0x3f7a33, roughness: 0.75, side: THREE.DoubleSide }),
-    lightBase: new THREE.MeshStandardMaterial({ color: 0x85837b, roughness: 0.92 }),
+    lightBase: new THREE.MeshStandardMaterial({ color: 0xbab6aa, roughness: 0.92 }),
+    poleBlack: new THREE.MeshStandardMaterial({ color: 0x1e2023, roughness: 0.5, metalness: 0.45 }),
     lamp: lampMaterial || new THREE.MeshStandardMaterial({
       color: 0xfff2cf, emissive: 0xffdf9e, emissiveIntensity: 0.15, roughness: 0.3
     })
   };
+}
+
+/* ------------------------------------------------------------- sign artwork */
+// RapidXchange cabinet front, redrawn after the photos (no source artwork).
+function rapidXchangeArt(c, w, h) {
+  const top = h * 0.56;
+  const g = c.createRadialGradient(w * 0.5, top * 0.35, 20, w * 0.5, top * 0.4, w * 0.75);
+  g.addColorStop(0, '#ffffff'); g.addColorStop(0.45, '#dfe6fb'); g.addColorStop(1, '#2a46b8');
+  c.fillStyle = g; c.fillRect(0, 0, w, top);
+  c.save(); c.globalAlpha = 0.35; c.fillStyle = '#ffffff';
+  for (let i = 0; i < 14; i++) { const a = -Math.PI + i * Math.PI / 13; c.beginPath(); c.moveTo(w / 2, top * 0.3); c.lineTo(w / 2 + Math.cos(a) * w, top * 0.3 + Math.sin(a) * w); c.lineTo(w / 2 + Math.cos(a + 0.08) * w, top * 0.3 + Math.sin(a + 0.08) * w); c.fill(); }
+  c.restore();
+  // lower half: red into blue, with the door's perforations
+  const lg = c.createLinearGradient(0, top, 0, h * 0.86); lg.addColorStop(0, '#c62a42'); lg.addColorStop(1, '#3b3f9e');
+  c.fillStyle = lg; c.fillRect(0, top, w, h * 0.86 - top);
+  // big X and the logo
+  c.fillStyle = '#2442b4'; c.font = 'bold 230px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('X', w * 0.58, top * 0.3);
+  c.fillStyle = '#5aa6ff'; c.beginPath(); c.moveTo(w * 0.58, 22); c.quadraticCurveTo(w * 0.62, 56, w * 0.58, 70); c.quadraticCurveTo(w * 0.54, 56, w * 0.58, 22); c.fill();
+  c.lineJoin = 'round'; c.font = 'italic bold 66px Arial'; c.lineWidth = 9; c.strokeStyle = '#ffffff';
+  c.strokeText('Rapid  change', w / 2, top * 0.32); c.fillStyle = '#d4243c'; c.fillText('Rapid  change', w / 2, top * 0.32);
+  c.fillStyle = '#1d2a6e'; c.font = 'italic 18px Arial'; c.fillText('Quality and Safety to Go', w * 0.66, top * 0.42);
+  c.fillStyle = '#ffffff'; c.font = 'bold 24px Arial'; c.fillText('Relax – It’s Filled with Safety!', w * 0.62, top * 0.53);
+  c.fillStyle = '#d4243c'; c.beginPath(); c.roundRect ? c.roundRect(w * 0.47, top * 0.6, w * 0.4, 34, 17) : c.rect(w * 0.47, top * 0.6, w * 0.4, 34); c.fill();
+  c.fillStyle = '#ffffff'; c.font = 'bold 20px Arial'; c.fillText('RapidXchange.com', w * 0.67, top * 0.6 + 18);
+  c.fillStyle = '#1f3fa8'; c.fillRect(w * 0.55, top * 0.75, 30, 30); c.fillStyle = '#ffffff'; c.font = 'bold 24px Arial'; c.fillText('f', w * 0.55 + 15, top * 0.75 + 17);
+  c.font = 'bold 20px Arial'; c.textAlign = 'left'; c.fillText('facebook!', w * 0.55 + 38, top * 0.75 + 17); c.textAlign = 'center';
+  // mascot with a cylinder
+  const mx = w * 0.27, my = top * 0.62;
+  c.fillStyle = '#5a6c9a'; c.fillRect(mx - 52, my + 40, 104, 200);                 // coveralls
+  c.fillStyle = '#f1c9a5'; c.beginPath(); c.arc(mx, my, 44, 0, Math.PI * 2); c.fill();  // face
+  c.fillStyle = '#7d8fb8'; c.beginPath(); c.arc(mx, my - 18, 46, Math.PI, 0); c.fill(); c.fillRect(mx - 46, my - 22, 120, 14); // cap
+  c.fillStyle = '#ffffff'; c.beginPath(); c.arc(mx - 14, my + 2, 8, 0, Math.PI * 2); c.arc(mx + 14, my + 2, 8, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#111'; c.beginPath(); c.arc(mx - 12, my + 3, 3.5, 0, Math.PI * 2); c.arc(mx + 16, my + 3, 3.5, 0, Math.PI * 2); c.fill();
+  c.strokeStyle = '#7a2a1a'; c.lineWidth = 4; c.beginPath(); c.arc(mx, my + 14, 18, 0.2, Math.PI - 0.2); c.stroke();
+  c.fillStyle = '#d4243c'; c.font = 'bold 40px Arial'; c.fillText('Q', mx + 22, my + 110);
+  c.fillStyle = '#f2f2f0'; c.beginPath(); c.roundRect ? c.roundRect(mx - 120, my + 70, 82, 110, 26) : c.rect(mx - 120, my + 70, 82, 110); c.fill();
+  c.fillStyle = '#d4243c'; c.font = 'italic bold 15px Arial'; c.fillText('RapidX', mx - 79, my + 128);
+  // flame drop
+  const fx = w * 0.72, fy = h * 0.72;
+  const fg = c.createLinearGradient(0, fy - 110, 0, fy + 80); fg.addColorStop(0, '#9fd2ff'); fg.addColorStop(1, '#1d3fae');
+  c.fillStyle = fg; c.beginPath(); c.moveTo(fx, fy - 120); c.bezierCurveTo(fx + 30, fy - 60, fx + 90, fy - 10, fx + 80, fy + 30);
+  c.bezierCurveTo(fx + 70, fy + 90, fx - 70, fy + 90, fx - 80, fy + 30); c.bezierCurveTo(fx - 90, fy - 10, fx - 30, fy - 60, fx, fy - 120); c.fill();
+  c.fillStyle = '#ffffff'; c.font = 'italic bold 22px Arial'; c.fillText('RapidXchange', w * 0.48, h * 0.66);
+  c.fillStyle = '#f6e04a'; c.save(); c.translate(w * 0.5, h * 0.76); c.rotate(Math.PI / 4); c.fillRect(-14, -14, 28, 28); c.restore();
+  // perforation slots across the lower panel
+  c.fillStyle = 'rgba(12,14,30,0.75)';
+  for (let r = 0; r < 7; r++) for (let k = 0; k < 9; k++) {
+    const x = 32 + k * 56 + (r % 2) * 28, y = top + 36 + r * 34;
+    if (x > w * 0.36 && x < w * 0.62 && y < h * 0.79) continue;
+    c.beginPath(); c.ellipse(x, y, 17, 6, 0, 0, Math.PI * 2); c.fill();
+  }
+  // bottom warning band
+  c.fillStyle = '#f4f4f2'; c.fillRect(0, h * 0.86, w, h * 0.14);
+  c.fillStyle = '#c8202c'; c.font = 'bold 26px Arial'; c.fillText('NO SMOKING  PROPANE FLAMMABLE', w / 2, h * 0.885);
+  c.font = '13px Arial'; c.fillText('DO NOT BRING LP-GAS CYLINDERS INTO THE BUILDING', w / 2, h * 0.913);
+  c.font = '24px Arial'; c.fillText('24-Hour Emergency Number:', w / 2, h * 0.945); c.fillText('(910) 592-0199', w / 2, h * 0.977);
+  c.fillStyle = 'rgba(12,14,30,0.7)';
+  for (const y of [h * 0.95, h * 0.982]) for (const x of [36, 80, 432, 476]) { c.beginPath(); c.ellipse(x, y, 14, 5, 0, 0, Math.PI * 2); c.fill(); }
+}
+
+// Swisher Sweets floor standee (front "FRESH", back "RICH" in the photos).
+function standeeArt(c, w, h, word) {
+  c.fillStyle = '#121212'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#ffffff'; c.fillRect(14, 14, w - 28, 150);
+  c.fillStyle = '#111'; c.font = '17px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle';
+  ['WARNING:', 'This product', 'contains nicotine.', 'Nicotine is an', 'addictive chemical.'].forEach((t, i) => c.fillText(t, w / 2, 38 + i * 24));
+  c.fillStyle = '#e0302a'; c.font = 'bold 76px Arial Narrow, Arial'; c.fillText(word, w / 2, 230);
+  c.fillStyle = '#7a1418'; c.beginPath(); c.moveTo(w / 2 - 70, 290); c.lineTo(w / 2 + 70, 290); c.lineTo(w / 2 + 62, 350); c.lineTo(w / 2, 372); c.lineTo(w / 2 - 62, 350); c.closePath(); c.fill();
+  c.fillStyle = '#f4e3c0'; c.font = 'bold 22px Arial'; c.fillText('SWISHER', w / 2, 316); c.font = 'bold 15px Arial'; c.fillText('SWEETS', w / 2, 340);
+  c.fillStyle = '#ffffff'; c.font = 'bold 26px Arial'; c.fillText('ROLLED TO', w / 2, 408); c.fillText('REFRESH', w / 2, 438);
+  c.fillStyle = '#d8642a'; c.fillRect(w / 2 - 72, 476, 144, 252);
+  c.fillStyle = '#2a1608'; c.fillRect(w / 2 - 60, 492, 120, 220);
+  c.fillStyle = '#7a1418'; c.fillRect(w / 2 - 50, 510, 100, 54);
+  c.fillStyle = '#f4e3c0'; c.font = 'bold 18px Arial'; c.fillText('SWISHER', w / 2, 537);
+  c.fillStyle = '#f2f2f2'; c.font = 'bold 44px Arial'; c.fillText('LEAF', w / 2, 640);
+}
+
+// MOJO energy pouch floor standee.
+function mojoArt(c, w, h) {
+  const g = c.createLinearGradient(0, 0, 0, h); g.addColorStop(0, '#8a4cf0'); g.addColorStop(1, '#6a2fd6');
+  c.fillStyle = g; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#2d6be8'; c.fillRect(0, 30, w, 70);
+  c.fillStyle = '#ffffff'; c.font = 'bold 54px Arial'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('MOJO', w / 2, 62);
+  c.font = 'bold 12px Arial'; c.fillText('ENERGY POUCHES', w / 2, 92);
+  c.fillStyle = '#f4f2ee'; c.fillRect(w / 2 - 70, 130, 140, 240);
+  c.fillStyle = '#f08a2c'; c.fillRect(w / 2 - 54, 150, 108, 118);
+  c.fillStyle = '#20202a'; c.font = 'bold 36px Arial'; c.fillText('MO', w / 2, 190); c.fillText('JO', w / 2, 228);
+  c.fillStyle = '#e9e9f2'; c.fillRect(w / 2 - 46, 290, 92, 60);
+  c.fillStyle = '#ffffff'; c.font = 'bold 15px Arial'; c.textAlign = 'left';
+  [['#ff5a7a', 'POP INTO MOUTH.'], ['#ff8a2c', 'ENJOY FOR ABOUT'], ['#f6d32c', 'CRUSH YOUR DAY.']].forEach(([col, t], i) => {
+    c.fillStyle = col; c.fillRect(26, 432 + i * 82, 22, 18); c.fillStyle = '#ffffff'; c.fillText(t, 58, 442 + i * 82);
+  });
 }
 
 /* ---------------------------------------------------------------------- palm */
@@ -133,90 +269,185 @@ export function buildPalm({ height = 7, trunkMat, frondMat, seed = 1 }) {
 }
 
 /* ------------------------------------------------ grass-island streetlight */
+// Owner's night photos: a square black pole on a tall round concrete base,
+// with two round flat LED heads on short arms either side of the top.
 export function buildGrassIslandLight({ height = 8.1, poleMat, baseMat, lensMat }) {
   const group = new THREE.Group();
   group.name = 'Car-wash-grass-island-light';
   const add = (mesh, name) => { mesh.name = name; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh); return mesh; };
-  const footing = add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.28, 0.28, 20), baseMat), 'Grass-island-light-concrete-footing');
-  footing.position.y = 0.14;
-  const shaftH = height - 0.28;
-  const shaft = add(new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.105, shaftH, 16), poleMat), 'Grass-island-light-pole');
-  shaft.position.y = 0.28 + shaftH / 2;
-  const arm = add(new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.05, 1.0, 10), poleMat), 'Grass-island-light-arm');
-  arm.rotation.z = -Math.PI / 2;
-  arm.position.set(0.42, height - 0.12, 0);
-  const head = add(new THREE.Mesh(new THREE.BoxGeometry(0.48, 0.12, 0.28), poleMat), 'Grass-island-light-head');
-  head.position.set(0.88, height - 0.12, 0);
-  const lens = add(new THREE.Mesh(new THREE.BoxGeometry(0.39, 0.025, 0.20), lensMat), 'Grass-island-light-lens');
-  lens.position.set(0.9, height - 0.19, 0);
-  const light = new THREE.SpotLight(0xffe8bb, 0, 22, Math.PI / 4, 0.72, 2);
+  const baseH = 0.95;
+  const footing = add(new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.32, baseH, 24), baseMat), 'Grass-island-light-concrete-footing');
+  footing.position.y = baseH / 2;
+  const cover = add(new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.16, 0.36), poleMat), 'Grass-island-light-base-cover');
+  cover.position.y = baseH + 0.08;
+  const shaftH = height - baseH - 0.16;
+  const shaft = add(new THREE.Mesh(new THREE.BoxGeometry(0.13, shaftH, 0.13), poleMat), 'Grass-island-light-pole');
+  shaft.position.y = baseH + 0.16 + shaftH / 2;
+  for (const sx of [-1, 1]) {
+    const arm = add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.06, 0.06), poleMat), 'Grass-island-light-arm');
+    arm.position.set(sx * 0.3, height - 0.12, 0);
+    const head = add(new THREE.Mesh(new THREE.CylinderGeometry(0.29, 0.29, 0.08, 28), poleMat), 'Grass-island-light-head');
+    head.position.set(sx * 0.78, height - 0.1, 0);
+    const lens = add(new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.25, 0.012, 28), lensMat), 'Grass-island-light-lens');
+    lens.position.set(sx * 0.78, height - 0.146, 0); lens.castShadow = false;
+  }
+  const light = new THREE.SpotLight(0xf2f5ff, 0, 26, Math.PI / 2.6, 0.7, 1.8);
   light.name = 'Grass-island-light-source';
-  light.position.set(0.9, height - 0.2, 0);
-  light.target.position.set(1.4, 0.02, 0);
+  light.position.set(0, height - 0.2, 0);
+  light.target.position.set(0.4, 0.02, 0);
   light.castShadow = false;
   group.add(light, light.target);
   return { group, light };
 }
 
 /* ----------------------------------------------------- propane exchange cage */
-// A white steel mesh cabinet: corner posts, rails, mesh panels on three sides,
-// a door on the front, a branded header over it and six 20 lb bottles inside.
+// RapidXchange cabinet (owner's night photos): stainless frame and lid,
+// perforated stainless sides and back, a full-height printed front door with
+// a lock, the price strip across the top and the cylinders inside.
 // Built centred on the origin with its front facing -Z, base at y = 0.
-export function buildPropaneCabinet(width = 1.72, depth = 0.98, height = 2.02, mats) {
+export function buildPropaneCabinet(width = 1.15, depth = 0.98, height = 1.72, mats) {
   const g = new THREE.Group();
   g.name = 'Propane-exchange-cabinet';
-  const hw = width / 2, hd = depth / 2;
-  const bodyH = height - 0.42, rail = 0.045;
+  const hw = width / 2, hd = depth / 2, legH = 0.05, headerH = 0.13, bodyTop = height - headerH;
   const add = (mesh, name) => { mesh.name = name; mesh.castShadow = true; mesh.receiveShadow = true; g.add(mesh); return mesh; };
   const box = (name, [x0, y0, z0, x1, y1, z1], mat) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), mat);
     m.position.set((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2);
     return add(m, name);
   };
-  // Frame.
+  const steel = mats.stainless || mats.steel;
   for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-    box('cage-post', [sx * hw - 0.035, 0.03, sz * hd - 0.035, sx * hw + 0.035, bodyH, sz * hd + 0.035], mats.steel);
+    box('cage-foot', [sx * (hw - 0.06) - 0.03, 0, sz * (hd - 0.06) - 0.03, sx * (hw - 0.06) + 0.03, legH, sz * (hd - 0.06) + 0.03], steel);
+    box('cage-post', [sx * hw - 0.025, legH, sz * hd - 0.025, sx * hw + 0.025, bodyTop, sz * hd + 0.025], steel);
   }
-  for (const y of [0.03, bodyH * 0.52, bodyH - rail]) {
-    box('cage-rail', [-hw - 0.03, y, -hd - 0.03, hw + 0.03, y + rail, -hd + 0.03], mats.steel);
-    box('cage-rail', [-hw - 0.03, y, hd - 0.03, hw + 0.03, y + rail, hd + 0.03], mats.steel);
-    box('cage-rail', [-hw - 0.03, y, -hd - 0.03, -hw + 0.03, y + rail, hd + 0.03], mats.steel);
-    box('cage-rail', [hw - 0.03, y, -hd - 0.03, hw + 0.03, y + rail, hd + 0.03], mats.steel);
-  }
-  // Mesh panels: back, both sides and the door.
+  box('cage-floor', [-hw, legH, -hd, hw, legH + 0.03, hd], steel);
+  box('cage-lid', [-hw - 0.015, bodyTop, -hd - 0.015, hw + 0.015, bodyTop + 0.03, hd + 0.015], steel);
+  for (const y of [legH + 0.03, bodyTop - 0.04]) box('cage-rail', [-hw, y, hd - 0.025, hw, y + 0.04, hd + 0.005], steel);
+  // Perforated panels on the back and both sides.
   const panel = (name, w, h, x, y, z, ry) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mats.mesh);
     m.position.set(x, y, z); m.rotation.y = ry;
     return add(m, name);
   };
-  const panelH = bodyH - 0.12, panelY = bodyH / 2;
-  panel('cage-mesh-back', width - 0.1, panelH, 0, panelY, hd - 0.02, 0);
-  panel('cage-mesh-left', depth - 0.1, panelH, -hw + 0.02, panelY, 0, Math.PI / 2);
-  panel('cage-mesh-right', depth - 0.1, panelH, hw - 0.02, panelY, 0, Math.PI / 2);
-  panel('cage-mesh-door', width * 0.46, panelH, -width * 0.245, panelY, -hd + 0.02, 0);
-  panel('cage-mesh-door', width * 0.46, panelH, width * 0.245, panelY, -hd + 0.02, 0);
-  // Header over the door.
-  box('cage-header', [-hw - 0.04, bodyH, -hd - 0.06, hw + 0.04, height, hd + 0.04], mats.steel);
-  const face = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.06, height - bodyH - 0.04), mats.sign);
+  const panelH = bodyTop - legH - 0.06, panelY = legH + 0.03 + panelH / 2;
+  panel('cage-mesh-back', width - 0.05, panelH, 0, panelY, hd - 0.005, 0);
+  panel('cage-mesh-left', depth - 0.05, panelH, -hw + 0.005, panelY, 0, Math.PI / 2);
+  panel('cage-mesh-right', depth - 0.05, panelH, hw - 0.005, panelY, 0, Math.PI / 2);
+  // Printed front door, hinged on the left, lock on the right.
+  box('cage-door', [-hw + 0.02, legH + 0.03, -hd - 0.02, hw - 0.02, bodyTop - 0.01, -hd + 0.005], steel);
+  const art = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.08, bodyTop - legH - 0.08), mats.front);
+  art.name = 'cage-door-graphic'; art.rotation.y = Math.PI; art.position.set(0, (legH + 0.03 + bodyTop - 0.01) / 2, -hd - 0.022);
+  art.receiveShadow = true; g.add(art);
+  const lock = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.03, 16), steel);
+  lock.name = 'cage-lock'; lock.rotation.x = Math.PI / 2; lock.position.set(hw - 0.085, bodyTop * 0.6, -hd - 0.035); g.add(lock);
+  // Price strip across the top front.
+  box('cage-header', [-hw - 0.015, bodyTop + 0.03, -hd - 0.015, hw + 0.015, height, -hd + 0.05], steel);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(width - 0.04, headerH - 0.05), mats.sign);
   face.name = 'cage-header-sign';
-  face.position.set(0, (bodyH + height) / 2, -hd - 0.07);
+  face.position.set(0, (bodyTop + 0.03 + height) / 2, -hd - 0.017);
   face.rotation.y = Math.PI;
-  face.castShadow = true;
   g.add(face);
-  // Six bottles: two rows of three, as the exchange racks are loaded.
-  const rows = Math.ceil(6 / 3), perRow = 3;
-  for (let r = 0; r < rows; r++) for (let i = 0; i < perRow; i++) {
-    const x = (i - (perRow - 1) / 2) * (width - 0.42) / (perRow - 1);
-    const z = (r - (rows - 1) / 2) * (depth - 0.42) / Math.max(rows - 1, 1);
-    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.62, 14), mats.bottle);
-    b.position.set(x, 0.34, z); b.castShadow = b.receiveShadow = true;
-    g.add(b);
+  // Six 20 lb cylinders on the floor, seen through the perforations.
+  for (let r = 0; r < 2; r++) for (let i = 0; i < 3; i++) {
+    const x = (i - 1) * (width - 0.4) / 2, z = (r - 0.5) * (depth - 0.42);
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.155, 0.155, 0.6, 14), mats.bottle);
+    b.position.set(x, legH + 0.33, z); b.castShadow = b.receiveShadow = true; g.add(b);
     const collar = new THREE.Mesh(new THREE.CylinderGeometry(0.062, 0.062, 0.11, 10), mats.cap);
-    collar.position.set(x, 0.7, z); collar.castShadow = true;
-    g.add(collar);
-    const skirt = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.05, 14), mats.cap);
-    skirt.position.set(x, 0.045, z);
-    g.add(skirt);
+    collar.position.set(x, legH + 0.69, z); g.add(collar);
+  }
+  return g;
+}
+
+/* --------------------------------------------- floor stands beside the cage */
+// Swisher Sweets: a tall black standee; MOJO: a purple board on a white cup.
+// Built with the printed face toward -Z, base at y = 0.
+export function buildFloorStand(kind, mats) {
+  const g = new THREE.Group();
+  const add = (mesh, name, shadow = true) => { mesh.name = name; mesh.castShadow = shadow; mesh.receiveShadow = true; g.add(mesh); return mesh; };
+  if (kind === 'swisher') {
+    g.name = 'Swisher-Sweets-stand';
+    const w = 0.34, h = 0.98, d = 0.16;
+    const body = add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats.standeeEdge), 'Stand-body');
+    body.position.y = h / 2;
+    const front = add(new THREE.Mesh(new THREE.PlaneGeometry(w - 0.01, h - 0.01), mats.swisher), 'Stand-face', false);
+    front.rotation.y = Math.PI; front.position.set(0, h / 2, -d / 2 - 0.002);
+    const back = add(new THREE.Mesh(new THREE.PlaneGeometry(w - 0.01, h - 0.01), mats.swisherBack), 'Stand-face', false);
+    back.position.set(0, h / 2, d / 2 + 0.002);
+  } else {
+    g.name = 'MOJO-stand';
+    const cup = add(new THREE.Mesh(new THREE.CylinderGeometry(0.085, 0.075, 0.13, 20), mats.cup), 'Stand-cup');
+    cup.position.y = 0.065;
+    const w = 0.3, h = 0.86, d = 0.1, y0 = 0.11;
+    const body = add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mats.mojoEdge), 'Stand-body');
+    body.position.y = y0 + h / 2;
+    const front = add(new THREE.Mesh(new THREE.PlaneGeometry(w - 0.01, h - 0.01), mats.mojo), 'Stand-face', false);
+    front.rotation.y = Math.PI; front.position.set(0, y0 + h / 2, -d / 2 - 0.002);
+  }
+  return g;
+}
+
+/* ------------------------------------------------ island tree, rocks, signs */
+// Multi-stem crape myrtle with an open, irregular crown (photos).
+export function buildCrapeMyrtle({ height = 4.3, mats, seed = 3 }) {
+  const g = new THREE.Group();
+  g.name = 'Crape-myrtle';
+  const rnd = (k) => { const x = Math.sin(seed * 91.7 + k * 12.9898) * 43758.5453; return x - Math.floor(x); };
+  const stemTop = height * 0.45;
+  for (let i = 0; i < 3; i++) {
+    const a = i * 2.1 + rnd(i), lean = 0.22 + rnd(i + 5) * 0.12;
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.06, stemTop / Math.cos(lean), 8), mats.bark);
+    stem.name = 'Tree-stem';
+    stem.position.set(Math.cos(a) * Math.tan(lean) * stemTop / 2, stemTop / 2, Math.sin(a) * Math.tan(lean) * stemTop / 2);
+    stem.rotation.set(Math.sin(a) * lean, 0, -Math.cos(a) * lean);
+    stem.castShadow = true; g.add(stem);
+  }
+  for (let i = 0; i < 11; i++) {
+    const a = i * 2.39 + rnd(i) * 0.6, r = 0.35 + rnd(i + 20) * 1.0, y = stemTop + 0.3 + rnd(i + 40) * (height - stemTop - 0.9);
+    const blob = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5 + rnd(i + 60) * 0.35, 1), i % 4 === 1 ? mats.leavesWarm : mats.leaves);
+    blob.name = 'Tree-foliage';
+    blob.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    blob.scale.set(1, 0.72, 1); blob.castShadow = true; blob.receiveShadow = true; g.add(blob);
+  }
+  return g;
+}
+
+export function buildRocks(mats, count = 5) {
+  const g = new THREE.Group();
+  g.name = 'Landscape-rocks';
+  for (let i = 0; i < count; i++) {
+    const r = 0.1 + (i % 3) * 0.05;
+    const rock = new THREE.Mesh(new THREE.DodecahedronGeometry(r, 0), mats.rock);
+    rock.name = 'Landscape-rock';
+    rock.position.set(Math.cos(i * 1.7) * (0.4 + i * 0.08), r * 0.45, Math.sin(i * 1.7) * (0.35 + i * 0.06));
+    rock.rotation.set(i, i * 0.7, i * 0.3); rock.scale.y = 0.7; rock.castShadow = true; rock.receiveShadow = true;
+    g.add(rock);
+  }
+  return g;
+}
+
+// "Thank You / Drive Safely." sign on two posts, face toward +Z.
+export function buildThankYouSign(mats) {
+  const g = new THREE.Group();
+  g.name = 'Thank-you-sign';
+  for (const x of [-0.3, 0.3]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.04, 1.32, 0.04), mats.post);
+    post.name = 'Sign-post'; post.position.set(x, 0.66, -0.03); post.castShadow = true; g.add(post);
+  }
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.76, 0.57), mats.thanks);
+  panel.name = 'Thank-you-panel'; panel.position.set(0, 1.0, 0); panel.castShadow = true; g.add(panel);
+  return g;
+}
+
+// Low rounded shrub of clustered lumps, ~1.1 m tall.
+export function buildShrub(mats, seed = 1) {
+  const g = new THREE.Group();
+  g.name = 'Wall-shrub';
+  for (let i = 0; i < 7; i++) {
+    const a = i * 2.4 + seed, r = i ? 0.28 + (i % 3) * 0.08 : 0;
+    const lump = new THREE.Mesh(new THREE.IcosahedronGeometry(0.34 + ((i + seed) % 3) * 0.06, 1), mats.shrub);
+    lump.name = 'Shrub-lump';
+    lump.position.set(Math.cos(a) * r, 0.42 + (i ? (i % 2) * 0.22 : 0.4), Math.sin(a) * r);
+    lump.castShadow = true; lump.receiveShadow = true; g.add(lump);
   }
   return g;
 }
@@ -323,6 +554,28 @@ export function applySiteFixes(root, { frame, lampMaterial } = {}) {
   cage.position.set(F.propane.at[0], groundAt(F.propane.at[0], F.propane.at[1]) - 0.02, F.propane.at[1]);
   cage.rotation.y = F.propane.rotation;
   added.add(cage);
+
+  for (const s of F.stands) {
+    const stand = buildFloorStand(s.kind, mats);
+    stand.position.set(s.at[0], groundAt(s.at[0], s.at[1]) - 0.01, s.at[1]);
+    stand.rotation.y = F.propane.rotation; // faces the parking, like the cabinet
+    added.add(stand);
+  }
+  const tree = buildCrapeMyrtle({ height: F.tree.height, mats });
+  tree.position.set(F.tree.at[0], groundAt(F.tree.at[0], F.tree.at[1]) - 0.05, F.tree.at[1]);
+  added.add(tree);
+  const rocks = buildRocks(mats);
+  rocks.position.set(F.tree.at[0] + 0.2, groundAt(F.tree.at[0] + 0.2, F.tree.at[1]) - 0.02, F.tree.at[1]);
+  added.add(rocks);
+  const thanks = buildThankYouSign(mats);
+  thanks.position.set(F.thankYou.at[0], groundAt(F.thankYou.at[0], F.thankYou.at[1]) - 0.05, F.thankYou.at[1]);
+  thanks.rotation.y = F.thankYou.rotation;
+  added.add(thanks);
+  F.shrubs.forEach(([x, z], i) => {
+    const shrub = buildShrub(mats, i + 1);
+    shrub.position.set(x, groundAt(x, z) - 0.05, z);
+    added.add(shrub);
+  });
 
   root.updateMatrixWorld(true);
   return { cut, hidden, props: added.children.length, lights: [islandLight.light] };

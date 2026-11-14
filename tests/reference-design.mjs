@@ -16,7 +16,9 @@ for(const n of [1,3,5,7,9,11,13,15]){
  const b=new THREE.Box3().setFromObject(pump);assert.ok(b.min.y>0.2 && b.max.y<3.1);
 }
 const canopy=design.canopy([-17,-6,5,16]);
-assert.equal(canopy.children.filter(m=>m.name==='Tan-masonry-column').length,4);
+assert.equal(canopy.children.filter(m=>m.name==='Canopy-column').length,4);
+assert.equal(canopy.children.filter(m=>m.name==='Column-base-jacket').length,4);
+assert.equal(canopy.children.filter(m=>m.name==='Column-poster').length,8);
 assert.equal(canopy.children.filter(m=>m.name==='Raised-TEXACO-letters').length,2);
 assert.equal(canopy.children.filter(m=>m.name==='White-fascia').length,1);
 assert.equal(canopy.children.filter(m=>m.name==='Long-red-ribbon').length,2);
@@ -82,4 +84,4 @@ for(const n of [1,3]){const p=[];design.pump(n).traverse(m=>p.push(m));
  for(let i=0;i<pos.count;i++){const x=Math.abs(pos.getX(i)),y=pos.getY(i);if(y>0.49)top=Math.max(top,x);if(y<0.01)bottom=Math.max(bottom,x);}
  assert.ok(top>bottom+0.04,'header ends slant outward toward the top (pump photo)');
  for(const f of p.filter(m=>m.name==='Techron-numbered-face'))assert.equal(f.geometry.type,'ShapeGeometry','face follows the slanted header outline');}
-console.log('PASS: 8 double-faced dispensers, headers, controls, raised lettering, white/red canopy 4 masonry columns, brand-corner roundels above a level roof line, diagonal white/red long sides with neon and corner trim, number flags, slanted pump headers, detailed dispensers; no ad boards or forecourt light poles');
+console.log('PASS: 8 double-faced dispensers, headers, controls, raised lettering, white/red canopy with 4 white round columns (black base jackets, posters), brand-corner roundels above a level roof line, diagonal white/red long sides with neon and corner trim, number flags, slanted pump headers, detailed dispensers; no ad boards or forecourt light poles');

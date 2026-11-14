@@ -31,7 +31,7 @@ for (const b of badges) { const bb = new THREE.Box3().setFromObject(b); assert.o
 assert.equal(canopy.children.filter(c => c.name === 'Soffit-Techron-graphic').length, 2, 'with TECHRON soffit graphics on both sides');
 const soffit = canopy.getObjectByName('White-soffit');
 near(soffit.position.y - soffit.geometry.parameters.height / 2, CANOPY.clearance, 1e-9, 'soffit underside');
-for (const col of canopy.children.filter(c => c.name === 'Tan-masonry-column')) {
+for (const col of canopy.children.filter(c => c.name === 'Canopy-column')) {
   const top = col.position.y + col.geometry.parameters.height / 2;
   assert.ok(top >= CANOPY.clearance && top <= CANOPY.clearance + 0.1, 'columns meet the soffit');
 }

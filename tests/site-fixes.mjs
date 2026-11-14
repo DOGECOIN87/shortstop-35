@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import { STOREFRONT as S } from '../scripts/storefront.js';
-import { SITE_FIXES as F, applySiteFixes, buildGrassIslandLight, buildPalm, buildPropaneCabinet, cutMesh } from '../scripts/site-fixes.js';
+import { SITE_FIXES as F, applySiteFixes, buildGrassIslandLight, buildPalm, buildPropaneCabinet, buildFloorStand, cutMesh } from '../scripts/site-fixes.js';
 
 const close = (a, b, eps = 1e-6) => Math.abs(a - b) <= eps;
 
@@ -48,7 +48,8 @@ cage.updateMatrixWorld(true);
 const cb = new THREE.Box3().setFromObject(cage);
 const size = cb.getSize(new THREE.Vector3());
 assert.ok(close(size.x, F.propane.width, 0.2) && close(size.z, F.propane.depth, 0.2), 'cage footprint');
-assert.ok(size.y > 1.9 && size.y < 2.2, 'cage is head height, not a wall');
+assert.ok(size.y > 1.6 && size.y < 1.85, 'RapidXchange cabinet is about 1.7 m tall (photos)');
+assert.ok(size.y > size.x, 'portrait front, as in the photos');
 assert.ok(close(cb.min.y, 0, 0.02), 'cage sits on its base');
 cage.rotation.y = F.propane.rotation;
 cage.position.fromArray([F.propane.at[0], 0, F.propane.at[1]]);
@@ -67,8 +68,8 @@ assert.ok(close(pb.min.z, F.propane.at[1] - F.propane.depth / 2, 0.1), 'back edg
 assert.ok(close(pb.min.z, -17.74, 0.05), 'cabinet back is moved up to the grass-side edge of the strip');
 const names = [];
 cage.traverse(o => names.push(o.name));
-for (const n of ['cage-header-sign', 'cage-mesh-door', 'cage-mesh-back']) assert.ok(names.includes(n), n);
-assert.equal(names.filter(n => n === 'cage-mesh-door').length, 2, 'two door leaves');
+for (const n of ['cage-header-sign', 'cage-door', 'cage-door-graphic', 'cage-lock', 'cage-mesh-back', 'cage-mesh-left', 'cage-mesh-right']) assert.ok(names.includes(n), n);
+assert.equal(names.filter(n => n === 'cage-door').length, 1, 'one printed front door');
 assert.ok(names.filter(n => n === 'cage-post').length === 4, 'four corner posts');
 
 // --- the palm ---------------------------------------------------------------
@@ -111,7 +112,14 @@ assert.equal(airWater.visible, false, 'applySiteFixes hides the named air/water 
 assert.equal(walk.geometry.index.count, walkTriangles, 'the sidewalk is not cut where the removed box stood');
 assert.equal(curb.geometry.index.count, curbTriangles, 'the curb is not cut where the removed box stood');
 assert.equal(summary.hidden, 2, 'the air/water machine and bottles are hidden');
-assert.equal(summary.props, 3, 'palm, grass-island light and cage added');
+assert.equal(summary.props, 11, 'palm, light, cage, two floor stands, tree, rocks, thank-you sign and three shrubs added');
+// Floor stands flank the cabinet front without touching it; the tree and sign stand in the island behind.
+const standsAt = F.stands.map(s => s.at[0]);
+assert.ok(Math.min(...standsAt) < F.propane.at[0] - F.propane.width / 2 - 0.15 && Math.max(...standsAt) > F.propane.at[0] + F.propane.width / 2 + 0.15, 'stands either side of the cabinet');
+for (const s of F.stands) assert.ok(s.at[1] > F.propane.at[1], 'stands in front of the cabinet');
+for (const p of [F.tree.at, F.thankYou.at]) assert.ok(p[0] > 12.3 && p[0] < 16.3 && p[1] > -20 && p[1] < -18, 'in the tree island behind the cabinet');
+for (const [x, z] of F.shrubs) assert.ok(z > -13.5 && z < -11.5 && x > -1 && x < 9.8, 'shrub in the grass strip along the north wall');
+for (const k of ['swisher', 'mojo']) { const st = buildFloorStand(k, mats); st.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(st); assert.ok(b.min.y > -0.01 && b.max.y > 0.9 && b.max.y < 1.05, `${k} stand height`); }
 assert.equal(summary.lights.length, 1, 'spotlight is returned for time-of-day control');
 const group = root.getObjectByName('Site-fixes');
 assert.ok(group, 'props live in one group');
