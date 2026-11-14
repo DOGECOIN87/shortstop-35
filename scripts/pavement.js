@@ -8,15 +8,20 @@ import { STOREFRONT } from './storefront.js';
 //
 //   * moves the lot/forecourt concrete triangles (one palette cell of the
 //     merged ground mesh) into their own mesh: smooth, warm beige-grey
-//     concrete in ~6 m panels with faint saw-cut joints, soft tonal patches,
-//     sparse gum spots, faint oil drips and one spalled crack (photos);
+//     concrete in 6 m panels with thin saw-cut joints, soft tonal patches,
+//     sparse gum spots and faint oil drips (photos);
 //   * gives the sidewalks tooled 1.5 m squares with a finer broom finish, the
 //     curbs weathered concrete with exposed aggregate, and the roads asphalt
-//     with aggregate, sealed cracks and patches;
+//     with aggregate and oil drips;
 //   * maps all of them in metres in the storefront frame (box projection on
-//     the curb and walk edges), so joints line up with the store and the
-//     texture scale is the same everywhere; a large, slowly varying tone
-//     layer stops the repeat from showing across the lot.
+//     the curb and walk edges), so joints line up with the store.
+//
+// No visible repeat (owner, Nov 2026): the base textures hold only fine,
+// featureless grain; the shader samples them twice at offsets chosen by a
+// noise field and blends the two (texture-repetition breaking), draws the
+// joints from the metre coordinates, shifts each slab's tone by a hash of
+// its index, and lays stains and broad tone changes from a separate layer
+// at a much larger scale (also de-tiled) and from procedural noise.
 //
 // Storefront frame (scripts/storefront.js): +X out of the storefront toward
 // the pumps, +Z south along the front wall, Y up.
@@ -25,13 +30,12 @@ export const PAVEMENT = Object.freeze({
   lotCell: 0.4814, cellTolerance: 0.0015,
   lotMaterial: 'PaletteMaterial001',
   walkMaterial: 'SS Walk concrete', curbMaterial: 'SS Curb concrete', asphaltMaterial: 'SS Asphalt',
-  // Texture tile sizes in metres. The lot tile holds 2 x 2 saw-cut panels.
-  lotPanel: 6.0, walkPanel: 1.5, curbTile: 1.2, asphaltTile: 4.0,
+  // Texture tile sizes and joint spacings in metres.
+  lotTile: 5.0, lotPanel: 6.0, walkPanel: 1.5, curbTile: 1.2, asphaltTile: 4.0,
   // Joint grid origins: walk joints start at the storefront wall and the
   // north wall, so the front and north walks get transverse joints only.
   walkOrigin: Object.freeze([STOREFRONT.wallX, STOREFRONT.band.northZ]),
   lotOrigin: Object.freeze([STOREFRONT.wallX + 1.7, STOREFRONT.band.northZ]),
-  macroScale: 0.137, // tone-variation layer repeats ~7x more slowly than the base tile
   // Model paint corrected from the owner's photos, by palette cell inside a
   // store-frame box [x0, z0, x1, z1]: the van-accessible stall is bare
   // concrete (its blue square is drawn by scripts/north-yard.js), and the
@@ -179,13 +183,6 @@ function speckle(c, w, h, rand, count, cols, rMin, rMax) {
   }
 }
 
-// Saw-cut / tooled joint along the tile edges (drawn on both wrap edges).
-function joints(c, w, h, every, colour, width) {
-  c.fillStyle = colour;
-  for (let x = 0; x <= w; x += every) { c.fillRect(x - width / 2, 0, width, h); }
-  for (let y = 0; y <= h; y += every) { c.fillRect(0, y - width / 2, w, width); }
-}
-
 // Soft irregular blotch: a few overlapping elliptical radial fades.
 function stain(c, x, y, rx, ry, a, rand, col = '30,26,22') {
   for (let k = 0; k < 3; k++) {
@@ -197,50 +194,26 @@ function stain(c, x, y, rx, ry, a, rand, col = '30,26,22') {
   }
 }
 
-function crack(c, x, y, len, rand) {
-  c.strokeStyle = 'rgba(60,56,50,0.55)'; c.lineWidth = 1.1; c.beginPath(); c.moveTo(x, y);
-  let a = rand() * Math.PI * 2;
-  for (let s = 0; s < 14; s++) { a += (rand() - 0.5) * 0.9; x += Math.cos(a) * len / 14; y += Math.sin(a) * len / 14; c.lineTo(x, y); }
-  c.stroke();
-}
-
-// Lot: 1024 px = 2 x 2 panels of 6 m (12 mm per pixel). The photos show a
-// smooth trowelled slab, not a broom finish: soft lighter/darker patches,
-// sparse dark gum spots, faint drips, thin joints and one spalled crack.
+// Lot: 1024 px = 5 m (5 mm per pixel). Featureless trowelled slab: fine
+// grain, faint smudges, sparse gum spots; joints, slab tones and stains are
+// added in the shader so nothing repeats.
 export function drawLotConcrete(c, w, h) {
   const rand = rng(46);
-  concreteBase(c, w, h, [198, 191, 179], rand, { grain: 4, mottle: 18, cells: 3 });
-  // slightly different pour in each panel
-  [[0, 0, 0.03], [1, 0, -0.025], [0, 1, -0.012], [1, 1, 0.02]].forEach(([i, j, k]) => {
-    c.fillStyle = k > 0 ? `rgba(255,252,244,${k})` : `rgba(60,52,42,${-k})`; c.fillRect(i * w / 2, j * h / 2, w / 2, h / 2);
-  });
-  // trowel swirls / soft smudges
-  for (let k = 0; k < 18; k++) stain(c, rand() * w, rand() * h, 40 + rand() * 90, 20 + rand() * 50, 0.025 + rand() * 0.03, rand, rand() < 0.5 ? '90,82,70' : '250,246,236');
-  broom(c, w, h, rand, 300, 0.012);
-  speckle(c, w, h, rand, 500, ['rgba(110,102,92,0.16)', 'rgba(240,236,226,0.18)'], 0.5, 1.1);
-  // sparse gum spots and small dark drips (hatch-area photo)
-  speckle(c, w, h, rand, 46, ['rgba(52,46,40,0.6)', 'rgba(70,62,54,0.5)'], 1.2, 2.6);
-  speckle(c, w, h, rand, 8, ['rgba(110,84,60,0.4)'], 2.5, 4);
-  for (let k = 0; k < 4; k++) stain(c, rand() * w, rand() * h, 26 + rand() * 30, 16 + rand() * 18, 0.05 + rand() * 0.04, rand);
-  // spalled crack wandering across one panel (storefront lot photo)
-  c.save(); c.globalAlpha = 0.8; crack(c, w * 0.08, h * 0.62, 300, rand); c.restore();
-  // thin saw-cut joints: a faint dark kerf, barely lighter edges
-  joints(c, w, h, w / 2, 'rgba(225,220,210,0.25)', 4);
-  joints(c, w, h, w / 2, 'rgba(92,86,78,0.5)', 1.6);
+  concreteBase(c, w, h, [198, 191, 179], rand, { grain: 5, mottle: 8, cells: 4 });
+  for (let k = 0; k < 14; k++) stain(c, rand() * w, rand() * h, 60 + rand() * 120, 30 + rand() * 60, 0.012 + rand() * 0.014, rand, rand() < 0.5 ? '90,82,70' : '250,246,236');
+  broom(c, w, h, rand, 260, 0.01);
+  speckle(c, w, h, rand, 900, ['rgba(110,102,92,0.16)', 'rgba(240,236,226,0.18)'], 0.5, 1.1);
+  speckle(c, w, h, rand, 22, ['rgba(52,46,40,0.55)', 'rgba(70,62,54,0.45)'], 1.2, 2.4);
 }
 
-// Sidewalk: 512 px = one 1.5 m tooled square (3 mm per pixel).
+// Sidewalk: 512 px = 1.5 m (3 mm per pixel), finer broom finish; the tooled
+// joints are drawn by the shader.
 export function drawWalkConcrete(c, w, h) {
   const rand = rng(15);
-  concreteBase(c, w, h, [206, 199, 187], rand, { grain: 5, mottle: 12, cells: 3 });
+  concreteBase(c, w, h, [206, 199, 187], rand, { grain: 5, mottle: 8, cells: 3 });
   broom(c, w, h, rand, 500, 0.02);
   speckle(c, w, h, rand, 400, ['rgba(105,98,88,0.2)', 'rgba(240,236,226,0.22)'], 0.5, 1.1);
-  speckle(c, w, h, rand, 10, ['rgba(45,42,40,0.5)'], 1.2, 2.6);
-  stain(c, w * 0.62, h * 0.4, 70, 50, 0.04, rand);
-  // tooled joint: rounded groove with smooth troweled margins either side
-  joints(c, w, h, w, 'rgba(232,228,218,0.3)', 18);
-  joints(c, w, h, w, 'rgba(120,112,100,0.45)', 5);
-  joints(c, w, h, w, 'rgba(84,78,70,0.7)', 2.2);
+  speckle(c, w, h, rand, 6, ['rgba(45,42,40,0.45)'], 1.2, 2.2);
 }
 
 // Curb: weathered concrete with exposed aggregate, 512 px = 1.2 m.
@@ -248,32 +221,72 @@ export function drawCurbConcrete(c, w, h) {
   const rand = rng(77);
   concreteBase(c, w, h, [196, 189, 176], rand, { grain: 10, mottle: 14, cells: 4 });
   speckle(c, w, h, rand, 5200, ['rgba(150,138,118,0.55)', 'rgba(110,104,96,0.5)', 'rgba(222,216,204,0.55)', 'rgba(170,160,140,0.5)', 'rgba(80,76,72,0.45)'], 0.8, 2.6);
-  for (let k = 0; k < 5; k++) stain(c, rand() * w, rand() * h, 60 + rand() * 60, 30 + rand() * 30, 0.06, rand, '70,64,56');
+  for (let k = 0; k < 5; k++) stain(c, rand() * w, rand() * h, 60 + rand() * 60, 30 + rand() * 30, 0.03, rand, '70,64,56');
 }
 
-// Road asphalt, 512 px = 4 m: aggregate, a sealed crack and a patch.
+// Road asphalt, 512 px = 4 m: worn aggregate, no one-off features.
 export function drawAsphalt(c, w, h) {
   const rand = rng(8);
-  concreteBase(c, w, h, [62, 62, 64], rand, { grain: 16, mottle: 10, cells: 5 });
+  concreteBase(c, w, h, [62, 62, 64], rand, { grain: 16, mottle: 6, cells: 5 });
   speckle(c, w, h, rand, 4200, ['rgba(140,138,134,0.45)', 'rgba(30,30,32,0.5)', 'rgba(110,106,100,0.4)'], 0.5, 1.5);
-  c.fillStyle = 'rgba(25,25,27,0.35)'; c.fillRect(w * 0.55, h * 0.12, w * 0.3, h * 0.22);       // patch
-  c.strokeStyle = 'rgba(18,18,20,0.75)'; c.lineWidth = 4; c.beginPath(); c.moveTo(0, h * 0.7);  // sealed crack
-  let x = 0, y = h * 0.7; while (x < w) { x += 18 + rand() * 20; y += (rand() - 0.5) * 18; c.lineTo(x, y); } c.stroke();
 }
 
-// Slow tone variation (linear data, centred on 0.5).
-export function drawMacro(c, w, h) {
-  const rand = rng(3), img = c.createImageData(w, h), d = img.data;
-  const a = tileNoise(w, h, 4, rand), b = tileNoise(w, h, 11, rand);
-  for (let i = 0; i < w * h; i++) {
-    const v = 128 + (a[i] - 0.5) * 34 + (b[i] - 0.5) * 16;
-    d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255;
-  }
-  c.putImageData(img, 0, 0);
+// Stain layer (linear multiplier, white = none), sampled at 9-17 m per tile:
+// oil drips, gum clusters and soft wear patches.
+export function drawStains(c, w, h) {
+  const rand = rng(31);
+  c.fillStyle = '#ffffff'; c.fillRect(0, 0, w, h);
+  for (let k = 0; k < 10; k++) stain(c, rand() * w, rand() * h, 90 + rand() * 160, 50 + rand() * 90, 0.05 + rand() * 0.05, rand, '120,112,100');
+  for (let k = 0; k < 16; k++) stain(c, rand() * w, rand() * h, 22 + rand() * 50, 14 + rand() * 30, 0.12 + rand() * 0.16, rand, '60,50,40');
+  for (let k = 0; k < 7; k++) { const x = rand() * w, y = rand() * h; for (let i = 0; i < 6; i++) stain(c, x + (rand() - 0.5) * 50, y + (rand() - 0.5) * 30, 6 + rand() * 10, 5 + rand() * 8, 0.3, rand, '40,34,28'); }
 }
+
+// Shader pieces shared by every pavement material (see the header).
+const PV_GLSL = `
+uniform float pvTile, pvJoint, pvJointW, pvJointDark, pvPanelTone, pvToneAmt, pvStain, pvStainScale;
+uniform sampler2D pvStainMap;
+float pvHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float pvNoise(vec2 p) {
+  vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(pvHash(i), pvHash(i + vec2(1.0, 0.0)), f.x), mix(pvHash(i + vec2(0.0, 1.0)), pvHash(i + vec2(1.0, 1.0)), f.x), f.y);
+}
+// Two samples at offsets picked by a noise field (m: metres), blended.
+vec4 pvSample(sampler2D t, vec2 uv, vec2 m) {
+#ifdef PV_GRAD
+  float k = pvNoise(m * 0.23) * 7.0, ia = floor(k), f = fract(k);
+  vec2 offa = sin(vec2(3.0, 7.0) * ia), offb = sin(vec2(3.0, 7.0) * (ia + 1.0));
+  vec2 dx = dFdx(uv), dy = dFdy(uv);
+  vec4 a = textureGrad(t, uv + offa, dx, dy), b = textureGrad(t, uv + offb, dx, dy);
+  return mix(a, b, smoothstep(0.2, 0.8, f - 0.1 * dot(a.rgb - b.rgb, vec3(1.0))));
+#else
+  return texture2D(t, uv);
+#endif
+}
+// Coverage of grid lines 'spacing' apart and 'w' wide, anti-aliased and
+// fading out (not shimmering) once thinner than a pixel.
+float pvLine(vec2 m, float spacing, float w) {
+  vec2 d = abs(fract(m / spacing + 0.5) - 0.5) * spacing;
+  vec2 fw = max(fwidth(m), vec2(1e-4));
+  vec2 c = clamp((0.5 * (w + fw) - d) / fw, 0.0, 1.0) * min(vec2(1.0), w / fw);
+  return max(c.x, c.y);
+}
+`;
+const PV_MAP = `
+#ifdef USE_MAP
+  vec2 pvM = vMapUv * pvTile;
+  vec4 sampledDiffuseColor = pvSample(map, vMapUv, pvM);
+  diffuseColor *= sampledDiffuseColor;
+  float pvTone = 1.0 + (pvNoise(pvM / 9.0) - 0.5) * pvToneAmt + (pvNoise(pvM / 31.0 + 17.0) - 0.5) * pvToneAmt * 0.8;
+  if (pvJoint > 0.0) pvTone *= 1.0 + (pvHash(floor(pvM / pvJoint) + 3.7) - 0.5) * pvPanelTone;
+  diffuseColor.rgb *= pvTone;
+  diffuseColor.rgb *= mix(vec3(1.0), pvSample(pvStainMap, pvM / pvStainScale, pvM * 0.55 + 40.0).rgb, pvStain);
+  if (pvJoint > 0.0) diffuseColor.rgb *= 1.0 - pvJointDark * pvLine(pvM, pvJoint, pvJointW);
+#endif
+`;
 
 // Materials. `canvas(w, h)` returns a 2D-capable canvas, or null in tests.
-export function pavementMaterials(canvas = null, anisotropy = 8) {
+// `webgl2` enables the de-tiling (it needs textureGrad); WebGL1 samples once.
+export function pavementMaterials(canvas = null, anisotropy = 8, { webgl2 = true } = {}) {
   const tex = (w, h, draw, colour = true) => {
     const cv = canvas ? canvas(w, h) : null;
     if (!cv) return null;
@@ -283,39 +296,48 @@ export function pavementMaterials(canvas = null, anisotropy = 8) {
     t.colorSpace = colour ? THREE.SRGBColorSpace : THREE.NoColorSpace;
     return t;
   };
-  const macro = tex(256, 256, drawMacro, false);
-  const make = (name, draw, size, roughness, bumpScale, tint = 0xffffff) => {
+  const stains = tex(1024, 1024, drawStains, false);
+  // o: { tile, joint, jointW, jointDark, panelTone, tone, stain, stainScale }
+  const make = (name, draw, size, roughness, o) => {
     const map = tex(size, size, draw);
-    const m = new THREE.MeshStandardMaterial({ name, map, bumpMap: map, bumpScale, roughness, metalness: 0, color: map ? tint : 0xc4c0b7, side: THREE.DoubleSide });
-    if (macro) {
+    const m = new THREE.MeshStandardMaterial({ name, map, roughness, metalness: 0, color: map ? 0xffffff : 0xc4c0b7, side: THREE.DoubleSide });
+    m.userData.pavement = o;
+    if (map) {
+      m.extensions = { derivatives: true };
+      if (webgl2) m.defines = { PV_GRAD: '' };
       m.onBeforeCompile = sh => {
-        sh.uniforms.macroMap = { value: macro };
-        sh.fragmentShader = 'uniform sampler2D macroMap;\n' + sh.fragmentShader.replace('#include <map_fragment>',
-          `#include <map_fragment>\n\tdiffuseColor.rgb *= texture2D( macroMap, vMapUv * ${P.macroScale.toFixed(3)} ).rgb * 2.0;`);
+        Object.assign(sh.uniforms, {
+          pvTile: { value: o.tile }, pvJoint: { value: o.joint || 0 }, pvJointW: { value: o.jointW || 0.01 },
+          pvJointDark: { value: o.jointDark || 0 }, pvPanelTone: { value: o.panelTone || 0 }, pvToneAmt: { value: o.tone },
+          pvStain: { value: stains ? o.stain : 0 }, pvStainScale: { value: o.stainScale }, pvStainMap: { value: stains || map }
+        });
+        sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + PV_GLSL).replace('#include <map_fragment>', PV_MAP);
       };
-      m.customProgramCacheKey = () => 'pavement-macro';
+      m.customProgramCacheKey = () => 'pavement-detiled-' + (webgl2 ? 2 : 1);
     }
     return m;
   };
   return {
-    lot: Object.assign(make(P.lotMaterial + ' (lot concrete)', drawLotConcrete, 1024, 0.88, 0.35), {
+    lot: Object.assign(make(P.lotMaterial + ' (lot concrete)', drawLotConcrete, 1024, 0.88,
+      { tile: P.lotTile, joint: P.lotPanel, jointW: 0.012, jointDark: 0.42, panelTone: 0.07, tone: 0.1, stain: 0.85, stainScale: 17 }), {
       // the model's paint (stalls, hatch, accessible space) is coplanar with the
       // slab; push the slab back so the paint always wins the depth test
       polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 4
     }),
-    walk: make(P.walkMaterial, drawWalkConcrete, 512, 0.86, 0.5),
-    curb: make(P.curbMaterial, drawCurbConcrete, 512, 0.92, 0.9),
-    asphalt: make(P.asphaltMaterial, drawAsphalt, 512, 0.95, 0.7)
+    walk: make(P.walkMaterial, drawWalkConcrete, 512, 0.86,
+      { tile: P.walkPanel, joint: P.walkPanel, jointW: 0.014, jointDark: 0.4, panelTone: 0.05, tone: 0.07, stain: 0.35, stainScale: 9 }),
+    curb: make(P.curbMaterial, drawCurbConcrete, 512, 0.92, { tile: P.curbTile, tone: 0.08, stain: 0.3, stainScale: 7 }),
+    asphalt: make(P.asphaltMaterial, drawAsphalt, 512, 0.95, { tile: P.asphaltTile, tone: 0.12, stain: 0.55, stainScale: 13 })
   };
 }
 
 /* ------------------------------------------------------------------ public */
 // Apply the finishes to the loaded glTF root. `toStore` maps world to the
 // storefront frame (storefrontFrame() x root.matrixWorld^-1).
-export function applyPavement(root, { toStore, canvas = null, skip = [] } = {}) {
+export function applyPavement(root, { toStore, canvas = null, skip = [], webgl2 = true } = {}) {
   root.updateMatrixWorld(true);
   const frame = toStore || new THREE.Matrix4().makeRotationY(-STOREFRONT.heading).multiply(root.matrixWorld.clone().invert());
-  const mats = pavementMaterials(canvas);
+  const mats = pavementMaterials(canvas, 8, { webgl2 });
   const stats = { lotMeshes: 0, lotTriangles: 0, walks: 0, curbs: 0, roads: 0 };
   const targets = [];
   root.traverse(o => {
@@ -330,7 +352,7 @@ export function applyPavement(root, { toStore, canvas = null, skip = [] } = {}) 
       const lot = splitLotTriangles(o, mats.lot, { repaint: P.repaint, toStore: frame });
       if (!lot) continue;
       lot.updateMatrixWorld(true);
-      mapToStoreFrame(lot, frame, P.lotPanel * 2, P.lotOrigin);
+      mapToStoreFrame(lot, frame, P.lotTile, P.lotOrigin);
       stats.lotMeshes++; stats.lotTriangles += lot.geometry.index.count / 3;
     } else if (name === P.walkMaterial) {
       o.material = mats.walk; mapToStoreFrame(o, frame, P.walkPanel, P.walkOrigin); stats.walks++;

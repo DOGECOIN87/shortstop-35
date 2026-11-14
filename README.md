@@ -190,7 +190,11 @@ drawn after the owner's night photos (no photo textures are used):
   aggregate, a patch and sealed cracks.
 
 All are mapped in metres in the storefront frame so joints line up with the
-store, and a slow tone layer breaks up the repeat. The painted markings,
+store. Nothing visibly repeats: the base textures hold only fine grain, the
+shader samples them twice at noise-chosen offsets and blends them, draws the
+saw-cut and tooled joints from the metre coordinates, shifts each slab's tone
+by a hash, and adds stains from a separate 7-17 m layer and broad tone
+changes from procedural noise (WebGL1 falls back to a single sample). The painted markings,
 grass and the model's other surfaces are unchanged.
 Test: `node --experimental-default-type=module tests/pavement.mjs`.
 

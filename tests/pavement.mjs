@@ -62,12 +62,12 @@ function mergedMesh(name = 'ADA_aisle_hatch_0') {
   assert.equal(walk.material, carWash.material, 'the car-wash walk shares the new walk finish');
   assert.equal(ourWalk.material.name, P.walkMaterial); assert.notEqual(ourWalk.material, walk.material, 'our own props are skipped');
   for (const m of [walk, curb, road]) assert.ok(m.material.side === THREE.DoubleSide, `${m.name} keeps double-sided like the model`);
-  // Lot UVs are store-frame metres over the 9.2 m (2 x 2 panel) tile.
+  // Lot UVs are store-frame metres over the lot texture tile.
   const lot = merged.getObjectByName('Lot-concrete-paving');
   const uv = lot.geometry.attributes.uv, pos = lot.geometry.attributes.position, h = -S.heading;
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), z = pos.getZ(i), xs = x * Math.cos(h) + z * Math.sin(h), zs = -x * Math.sin(h) + z * Math.cos(h);
-    assert.ok(close(uv.getX(i), (zs - P.lotOrigin[1]) / (2 * P.lotPanel), 1e-4) && close(uv.getY(i), (xs - P.lotOrigin[0]) / (2 * P.lotPanel), 1e-4), 'lot plan UVs');
+    assert.ok(close(uv.getX(i), (zs - P.lotOrigin[1]) / P.lotTile, 1e-4) && close(uv.getY(i), (xs - P.lotOrigin[0]) / P.lotTile, 1e-4), 'lot plan UVs');
   }
 }
 
@@ -110,4 +110,25 @@ let area = 0; const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new TH
 for (let t = 0; t < pi.length; t += 3) { a.fromBufferAttribute(pp, pi[t]); b.fromBufferAttribute(pp, pi[t + 1]); c.fromBufferAttribute(pp, pi[t + 2]); area += b.sub(a).cross(c.sub(a)).length() / 2 * real.scale.x * real.scale.z; }
 assert.ok(area > 5000, `lot concrete area ${area.toFixed(0)} m2 is the whole lot and forecourt`);
 assert.equal(real.geometry.index.count / 3 + pi.length / 3, before, 'no triangles lost');
+// No visible repeat: every material de-tiles in the shader, joints are drawn
+// from metres (none baked into the textures), and the stain layer is large.
+{
+  const { pavementMaterials, drawLotConcrete, drawWalkConcrete, drawAsphalt } = await import('../scripts/pavement.js');
+  const fakeCanvas = (w, h) => ({ width: w, height: h, getContext: () => new Proxy({}, { get: (t, k) => k === 'createImageData' ? (W, H) => ({ data: new Uint8ClampedArray(W * H * 4) }) : k === 'createRadialGradient' || k === 'createLinearGradient' ? () => ({ addColorStop() {} }) : () => {}, set: () => true }) });
+  const mats = pavementMaterials(fakeCanvas, 8, { webgl2: true });
+  for (const [k, m] of Object.entries(mats)) {
+    assert.ok(m.defines && 'PV_GRAD' in m.defines, `${k} de-tiles`);
+    const sh = { uniforms: {}, fragmentShader: '#include <common>\nvoid main(){\n#include <map_fragment>\n}' };
+    m.onBeforeCompile(sh);
+    assert.match(sh.fragmentShader, /textureGrad/); assert.match(sh.fragmentShader, /pvSample\(map, vMapUv/);
+    assert.ok(sh.uniforms.pvStainScale.value >= 7 && sh.uniforms.pvStainScale.value > sh.uniforms.pvTile.value * 3, `${k} stains on a much larger scale than the tile`);
+    assert.equal(m.bumpMap, null, `${k}: no repeating bump map`);
+  }
+  assert.equal(mats.lot.userData.pavement.joint, P.lotPanel); assert.equal(mats.walk.userData.pavement.joint, P.walkPanel);
+  assert.ok(P.lotTile !== P.lotPanel, 'texture tile and joint grid do not line up');
+  const src = [drawLotConcrete, drawWalkConcrete, drawAsphalt].map(f => f.toString()).join('\n');
+  assert.ok(!/joints\(|crack\(|fillRect\(w \* 0\.55/.test(src), 'no joints, cracks or patches baked into the textures');
+  const glFallback = pavementMaterials(fakeCanvas, 8, { webgl2: false }).lot;
+  assert.ok(!glFallback.defines || !('PV_GRAD' in glFallback.defines), 'WebGL1 samples once');
+}
 console.log(`PASS: pavement UVs, lot split (${(pi.length / 3)} triangles, ${area.toFixed(0)} m2 on the real model), walk/curb/road finishes, cars and props untouched`);
