@@ -1,7 +1,8 @@
 // node --experimental-default-type=module tests/north-yard.mjs
 // The yard between the store's north-east corner and the car wash follows the
 // owner's photos: a walk north to the car wash with a red ramp at the aisle,
-// a west walk, a lawn with the pole light and signs, the outlined aisle hatch,
+// the lawn wedge with the pole light and signs, the ENTER-end island and its
+// pole, the outlined aisle hatch,
 // a blue symbol square in the stall and the crossing to the car wash between
 // its red pads. Pavement repaint turns the model's blue stall back to concrete.
 import assert from 'node:assert/strict';
@@ -32,9 +33,17 @@ for (const k of ['pole', 'signPost', 'rogue']) assert.ok(insidePolygon(Y[k].at, 
 assert.ok(insidePolygon(Y.bush, Y.lawn), 'bush in the lawn');
 assert.ok(polygonArea(Y.lawn) > 3, 'lawn is big enough for the pole and signs');
 const cabinetX0 = SITE_FIXES.propane.at[0] - SITE_FIXES.propane.width / 2;
-for (const poly of [Y.northWalk, Y.westWalk, Y.lawn]) for (const [x] of poly) assert.ok(x < cabinetX0 - 0.5 && x < 12.1, 'west of the propane island');
+for (const poly of [Y.northWalk, Y.lawn]) for (const [x] of poly) assert.ok(x < cabinetX0 - 0.5 && x < 12.1, 'west of the propane island');
 // Nothing lands on the car wash or its sidewalk (wash x > curb + drive is the yard side).
-for (const poly of [Y.northWalk, Y.westWalk, Y.lawn]) for (const p of poly) assert.ok(storeToWash(p)[0] >= Y.curbWashX + Y.drive - 1e-6, 'yard stays on the store side of the drive');
+for (const poly of [Y.northWalk, Y.lawn]) for (const p of poly) assert.ok(storeToWash(p)[0] >= Y.curbWashX + Y.drive - 1e-6, 'yard stays on the store side of the drive');
+// The lawn wedge joins the north lawn strip; the ENTER island sits just outside
+// the ENTER-end walk curb, clear of the open bay, with its pole inside.
+assert.ok(Y.lawn.every(([, z]) => z <= Y.stripZ + 1e-9) && Y.lawn.some(([, z]) => Math.abs(z - Y.stripZ) < 1e-9), 'lawn wedge meets the north strip');
+const S = WASH.sidewalk;
+for (const [wx, wz] of Y.enterIslandWash) { assert.ok(wz > S.enterZ[1] && wz < S.enterZ[1] + 2.5, 'island in front of the ENTER walk'); assert.ok(wx >= WASH.x[1] - WASH.partialWallWidth - 0.15 && wx <= WASH.x[1], 'island clear of the open bay'); }
+assert.ok(insidePolygon(Y.enterPoleWash, Y.enterIslandWash), 'pole on the island');
+assert.ok(close(WASH.z[1], -17.81), 'car wash ends on the model\'s ENTER wall (11.4 m long)');
+assert.ok(Math.abs((WASH.z[1] - WASH.z[0]) - 11.4) < 0.1, 'car wash length as OSM / lidar');
 // The ramp lines up with the aisle.
 assert.ok(Y.rampZ[0] >= Y.aisle.z[0] && Y.rampZ[1] <= Y.aisle.z[1], 'ramp at the aisle');
 assert.ok(close(Y.aisle.z[1], Y.stall.z[0]), 'stall beside the aisle');
@@ -43,12 +52,12 @@ assert.ok(close(Y.aisle.z[1], Y.stall.z[0]), 'stall beside the aisle');
 const ground = (x, z) => 0.3 + 0.01 * x - 0.005 * z;
 const { group, lights } = buildNorthYard({ ground });
 const named = n => { const out = []; group.traverse(o => { if (o.name === n) out.push(o); }); return out; };
-for (const n of ['North-walk', 'West-walk', 'Corner-lawn', 'Red-stamped-curb-ramp', 'Accessible-symbol', 'Stall-line', 'Lawn-twin-pole-light', 'Van-accessible-sign', 'ROGUE-stake-sign', 'Lawn-shrub'])
+for (const n of ['North-walk', 'Corner-lawn', 'Enter-island', 'Enter-island-pole-light', 'Wash-Select-pay-station', 'Wash-Select-face', 'Pay-station-bollard', 'Red-stamped-curb-ramp', 'Accessible-symbol', 'Stall-line', 'Lawn-twin-pole-light', 'Van-accessible-sign', 'ROGUE-stake-sign', 'Lawn-shrub'])
   assert.equal(named(n).length, 1, n);
 assert.equal(named('Aisle-outline').length, 3, 'aisle outline (open at the walk)');
 assert.ok(named('Aisle-stripe').length >= 5, 'diagonal aisle stripes');
 assert.equal(named('Crossing-outline').length, 4); assert.equal(named('Crossing-stripe').length, 3);
-assert.equal(lights.length, 1, 'pole light handed to the lighting presets');
+assert.equal(lights.length, 2, 'both pole lights handed to the lighting presets');
 assert.equal(group.getObjectByName('North-walk').material.name, PAVEMENT.walkMaterial, 'walk gets the pavement finish');
 
 // Walk 6 in above the ground, down to the ramp at the aisle.
@@ -57,10 +66,25 @@ const walk = group.getObjectByName('North-walk');
 const zMid = (Y.rampZ[0] + Y.rampZ[1]) / 2;
 assert.ok(close(top(walk, 11.05, -19) - ground(11.05, -19), Y.walkHeight, 0.03), 'walk 6 in above the ground');
 assert.ok(top(walk, 11.05, zMid) - ground(11.05, zMid) < 0.05, 'ramp drops to the aisle');
-for (const o of [walk, group.getObjectByName('Corner-lawn')]) {
+for (const o of [walk, group.getObjectByName('Corner-lawn'), group.getObjectByName('Enter-island')]) {
   const n = o.geometry.attributes.normal; for (let i = 0; i < n.count; i++) assert.ok(n.getY(i) > 0.9, `${o.name} faces up`);
 }
 group.traverse(o => { if (o.isMesh) assert.ok(o.geometry.attributes.position.array.every(Number.isFinite), `${o.name} finite`); });
+
+// Pay station stands just outside the approach curb (wash x -17.7), on the
+// grass side, facing the lane; the model's box there is cut away.
+assert.ok(Y.payStationWash[0] < WASH.approachCurb[0][0] - 0.3 && Y.payStationWash[0] > WASH.approachCurb[0][0] - 1.0, 'pay station beside the approach curb');
+assert.ok(Y.payStationFacingWash[0] > 0.8, 'pay station faces the lane');
+{
+  const root = new THREE.Group();
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.4, 1.2, 0.4), new THREE.MeshStandardMaterial({ name: 'PaletteMaterial001' }));
+  box.position.set(-3.3, 1.6, -23.3);
+  const ground2 = new THREE.Mesh(new THREE.PlaneGeometry(4, 4).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ name: 'PaletteMaterial001' })); ground2.position.set(-3.3, 0.8, -23.3);
+  root.add(box, ground2);
+  const { cutModelPayStation } = await import('../scripts/north-yard.js');
+  const n = cutModelPayStation(root, new THREE.Matrix4());
+  assert.equal(n, 12, 'model pay-station box removed'); assert.equal(ground2.geometry.index.count, 6, 'ground under it kept');
+}
 
 // Height field from a model stand-in: a sloped plane, skipping walk tops.
 {
@@ -87,4 +111,4 @@ group.traverse(o => { if (o.isMesh) assert.ok(o.geometry.attributes.position.arr
   assert.equal(lot.geometry.index.count / 3, 4, 'lot plus the repainted stall');
   assert.equal(mesh.geometry.index.count / 3, 2, 'blue paint elsewhere is kept; old stripes dropped');
 }
-console.log(`PASS: north yard (walks, ${polygonArea(Y.lawn).toFixed(1)} m2 lawn with pole and signs, ramp at the aisle, aisle hatch, stall symbol, crossing between the pads) and stall repaint`);
+console.log(`PASS: north yard (walk, ${polygonArea(Y.lawn).toFixed(1)} m2 lawn wedge with pole and signs, ENTER island and pole, ramp at the aisle, aisle hatch, stall symbol, crossing between the pads) and stall repaint`);

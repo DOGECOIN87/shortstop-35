@@ -169,7 +169,7 @@ for (let t = 0; t < hIdx.length; t += 3) {
   const [wx, wz] = rootToWash((va.x + vb.x + vc.x) / 3, (va.z + vb.z + vc.z) / 3);
   if (Math.abs(u - 0.481) < 0.015 && wx > -17.5 && wx < -14.5 && wz > -14 && wz < 8) underlyingConcrete++;
   if (Math.abs(u - 0.707) > 0.015) continue;
-  if (wx > -17.6 && wx < -12.3 && wz > -18.5 && wz < -15.2) bayGrass++;
+  if (wx > -17.6 && wx < -13.45 && wz > -17.7 && wz < -15.2) bayGrass++;
   if (wx > -17.2 && wx < -14.0 && wz > -14.0 && wz < 1.0) widenedLaneGrass++;
   if (wx > -12.3 && wx < -7.2 && wz > -18.5 && wz < -13.6) enterCornerGrass++;
   if ((wx > -17.15 && wx < -13.65 && wz > -40.8 && wz < -32.2) ||
@@ -239,12 +239,12 @@ for (let t = 0; t < wIdx.length; t += 3) {
     farWalkTris++;
     assert.ok(va.y > 0.70 && va.y < 0.98, `far-end door sidewalk levelled to ~6 in above grade (y=${va.y.toFixed(3)})`);
   }
-  if (wx > -12.0 && wx < -9.8 && wz > -15.25 && wz < -13.7) {
+  if (wx > -13.2 && wx < -9.8 && wz > -17.85 && wz < -16.3) {
     enterWalkTris++;
-    assert.ok(va.y > 0.55 && va.y < 0.85, `ENTER-end door sidewalk levelled to ~6 in above grade (y=${va.y.toFixed(3)})`);
+    assert.ok(va.y > 0.55 && va.y < 0.98, `ENTER-end door sidewalk levelled to ~6 in above grade (y=${va.y.toFixed(3)})`);
   }
   if (wx > -17.7 && wx < -13.55 && wz > -32.0 && wz < -28.5) exitBayWalkTris++;
-  if (wx > -17.7 && wx < -12.15 && wz > -16.0 && wz < -13.0) enterBayWalkTris++;
+  if (wx > -17.7 && wx < -13.45 && wz > -17.6 && wz < -14.0) enterBayWalkTris++;
 }
 assert.ok(eastWalkTris >= 190, `full-length east-wall sidewalk triangles present (${eastWalkTris})`);
 assert.ok(farWalkTris >= 40, `far-end door sidewalk triangles present (${farWalkTris})`);

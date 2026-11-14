@@ -14,11 +14,14 @@ import { BLOCK_TILE } from './block-wall.js';
 //
 // Frame: the model's car wash turned by WASH.heading in the glTF root (measured
 // from shortstop_detailed.glb). Local +X faces the store (the banner side),
-// -Z runs from the ENTER end (z -15.2) to the far/EXIT end (z -29.22).
+// -Z runs from the ENTER end (z -17.81) to the far/EXIT end (z -29.22).
 export const WASH = Object.freeze({
   heading: -0.677,
   x: [-17.82, -9.88],     // west and east (banner/poster side) wall faces
-  z: [-29.22, -15.2],     // far (EXIT) end and ENTER end wall faces
+  // ENTER end on the model's own end wall (z -17.81): 11.4 m long, as OSM
+  // (11.5 m), lidar and the owner's aerial trace; it had been stretched 2.6 m
+  // toward the store, over the drive and island in the owner's photos.
+  z: [-29.22, -17.81],    // far (EXIT) end and ENTER end wall faces
   wallTop: 4.0,
   fascia: [3.4, 4.8],
   // Model parts replaced here (wash frame): door, window, red stripes, and
@@ -30,23 +33,25 @@ export const WASH = Object.freeze({
     [-9.95, 3.3, -30.2, -8.6, 4.95, -14.2],    // red fascia, east
     [-19.2, 3.3, -30.2, -17.75, 4.95, -14.2],  // red fascia, west
     [-19.2, 3.3, -30.4, -8.6, 4.95, -28.9],    // red fascia, far end
-    [-19.2, 3.3, -15.3, -8.6, 4.95, -14.0]     // red fascia, ENTER end
+    [-19.2, 3.3, -18.3, -8.6, 4.95, -16.9]     // red fascia, ENTER end
   ]),
-  door: Object.freeze({ x: -11.0, width: 0.92, height: 2.14 }),      // service door on ENTER end (+Z)
+  door: Object.freeze({ x: -11.62, width: 0.92, height: 2.14 }),     // service door on ENTER end (+Z), on the model's door
   farDoor: Object.freeze({ x: -11.68, width: 0.92, height: 2.14 }),  // service door on far/EXIT end (-Z)
-  partialWallWidth: 2.2,       // ENTER-end wall width (x: -12.08..-9.88); leaves ENTER bay open
+  partialWallWidth: 3.45,      // ENTER-end equipment-room wall (x: -13.33..-9.88, the model's); leaves ENTER bay open
   farPartialWallWidth: 3.605,  // far-end equipment-room wall width (x: -13.485..-9.88); flush with bay partition
   // U-shaped 6 in raised concrete sidewalk + 0.16 m curb wrapping the far/EXIT
   // end, the full east wall, and the ENTER end (replacing the erroneous GLB
   // grass/curb blob at the ENTER corner).
   sidewalk: Object.freeze({
     eastX: [-9.86, -8.51],          // walk slab across east wall (tucks 2 cm under curb [-8.53, -8.37])
-    eastZ: [-30.755, -13.75],       // palm-island curb (-30.755) to ENTER wrap (-13.75)
+    eastZ: [-30.755, -16.36],       // palm-island curb (-30.755) to ENTER wrap (-16.36)
     farX: [-13.345, -9.84],         // walk slab across far-end wall (west curb at [-13.485, -13.325])
     farZ: [-30.755, -29.20],        // north curb at [-30.915, -30.755] flush with palm-island curb
-    enterX: [-11.94, -9.84],        // walk slab across ENTER-end wall (west curb at [-12.08, -11.92])
-    enterZ: [-15.20, -13.75],       // south curb at [-13.75, -13.59] in front of ENTER door
-    clearEnterIsland: Object.freeze({ x: [-12.4, -7.1], z: [-18.6, -13.6] }),
+    enterX: [-13.19, -9.84],        // walk slab across ENTER-end wall (west curb at [-13.33, -13.17])
+    enterZ: [-17.81, -16.36],       // south curb at [-16.36, -16.20] in front of ENTER door
+    // model grass at the ENTER corner, cleared for the walk; scripts/north-yard.js
+    // builds the curbed island from the photos in front of it
+    clearEnterIsland: Object.freeze({ x: [-13.6, -7.1], z: [-18.6, -13.6] }),
     palmEastTieInRoot: Object.freeze({
       outer: Object.freeze([12.701, 1.288, -29.249]), // w(-8.424, -30.755)
       inner: Object.freeze([12.618, 1.288, -29.302])  // w(-8.530, -30.755)
@@ -94,7 +99,8 @@ export const WASH = Object.freeze({
   // pier (-17.70, -15.20) down to the rear drive south curb (-5.22, 13.45).
   curbWidth: 0.16,
   approachCurb: Object.freeze([
-    [-17.70, -15.20],
+    [-17.70, -17.81],
+    [-17.71, -15.20],
     [-17.72, -13.10],
     [-17.76,  -9.00],
     [-17.70,  -5.00],
@@ -113,7 +119,7 @@ export const WASH = Object.freeze({
   }),
   banner: { z: -21.6, y: 2.55, w: 4.7, h: 0.44 },
   posters: [-25.4, -26.7],
-  pads: [[-19.7, -16.5], [-25.6, -22.4]], // red stamped pads on the east sidewalk
+  pads: [[-20.9, -18.0], [-25.6, -22.4]], // red stamped pads on the east sidewalk, near each end (photos)
   hoses: [[-18.6, 0.55], [-19.1, 0.55], [-25.0, 1.0], [-25.4, 1.0]]
 });
 

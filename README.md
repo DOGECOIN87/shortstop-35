@@ -124,29 +124,39 @@ The cabinet, stand and sign artwork is redrawn, not the original print files;
 the tree, sign and shrub positions are placed from the photos and the model's
 grass areas, not surveyed.
 
-## Yard between the store and the car wash — 2026-11-14
+## Car wash and the yard around it — 2026-11-14
+
+The car wash is back to its real length. `scripts/car-wash.js` had stretched
+its ENTER end 2.6 m toward the store (to wash-frame z -15.2), over the drive,
+island and pay station in the owner's photos; it now ends on the detailed
+model's own end wall (z -17.81): 11.4 m long, matching OSM (11.5 m), the lidar
+roof (11.3 m) and the owner's aerial trace. The ENTER-end walk, door,
+equipment-room wall, red pads and approach curb follow it.
 
 `scripts/north-yard.js` rebuilds the ground between the store's north-east
 corner, the van-accessible stall, the propane island and the car wash from
-the owner's night photos (the model had plain lot concrete there and a fully
-blue stall):
+the owner's night photos:
 
 - a walk continues north from the storefront walk to the car wash, with a red
-  stamped-brick curb ramp where the van-accessible aisle meets it, and a short
-  walk runs west along the store's north lawn strip;
-- the lawn between them holds a twin-head pole light on a tall round concrete
-  base, the "Parking Only / Van Accessible" sign post, the ROGUE stake sign
-  and a shrub;
+  stamped-brick curb ramp at the van-accessible aisle, and a white hatched
+  trapezoid crosses the drive from its end to the car wash sidewalk between
+  the two red pads;
+- the store's north lawn strip widens into a wedge between that walk and the
+  drive, holding a twin-head pole light on a tall round concrete base, the
+  "Parking Only / Van Accessible" sign and the ROGUE stake sign;
+- a curbed grass island sits in front of the car wash's ENTER-end walk, with a
+  second twin-head pole at its west tip;
+- the "Wash Select" pay station (slanted stainless leg, blue and yellow face)
+  stands on a concrete pad in the grass beside the approach curb with a
+  red-banded white bollard, replacing the model's plain box;
 - the aisle is a bold white outline with diagonal stripes; the stall is bare
   concrete with a blue square and white wheelchair symbol (the model's blue
-  paint and thin stripes are replaced in `scripts/pavement.js`);
-- a white hatched trapezoid crosses the drive from the walk's end to the car
-  wash sidewalk between its two red pads.
+  paint and thin stripes are replaced in `scripts/pavement.js`).
 
-The car wash itself is not moved: the model's car wash centre is within
-about 2.3 m of the lidar-fitted layout (mostly along its long wall), inside
-that fit's own uncertainty. Walk widths, the drive width (4 m) and the
-props' positions are estimates from the photos.
+The car wash's long walls are not moved: the owner's aerial trace puts them
+about 2 m further toward the pumps, but the model, OSM and the lidar-fitted
+layout agree on their current line. Widths of the drive (4 m), walk and
+island, and the props' positions, are estimates from the photos.
 Test: `node --experimental-default-type=module tests/north-yard.mjs`.
 
 ## Pavement finishes — 2026-11-14

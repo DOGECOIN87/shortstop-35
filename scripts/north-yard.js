@@ -10,10 +10,15 @@ import { buildGrassIslandLight, buildShrub } from './site-fixes.js';
 //
 //   * a walk running north from the storefront walk to the car wash, with a
 //     red stamped-brick curb ramp where the van-accessible aisle meets it;
-//   * a short walk west from that corner along the store's north lawn strip;
-//   * a lawn between the two walks holding a twin-head pole light on a tall
-//     round concrete base, the "Parking Only / Van Accessible" sign post and a
-//     ROGUE nicotine-pouch stake sign;
+//   * the store's north lawn strip widening into a wedge between that walk and
+//     the curb of the drive to the car wash, holding a twin-head pole light on
+//     a tall round concrete base, the "Parking Only / Van Accessible" sign
+//     post and a ROGUE nicotine-pouch stake sign;
+//   * a curbed grass island in front of the car wash's ENTER-end walk, its
+//     west tip carrying a second twin-head pole light;
+//   * the "Wash Select" pay station on a concrete pad in the grass beside the
+//     approach curb, with a white bollard banded in red (replaces the model's
+//     plain box at the same spot);
 //   * the aisle as a bold white outline with diagonal stripes, the stall as
 //     bare concrete with a blue square and white wheelchair symbol;
 //   * a white hatched trapezoid crossing the drive from the walk's end to the
@@ -41,25 +46,36 @@ const driveEdgeX = z => { const c = Math.cos(WASH_TO_STORE), s = Math.sin(WASH_T
 
 const WALK_X = [10.05, 12.05];       // north walk: continues the storefront walk
 const JUNCTION_Z = -14.95;           // where it leaves the storefront walk
-const WEST_WALK_Z = [-15.05, -13.55]; // west walk, outside the north lawn strip's curb
+const STRIP_Z = -13.55;              // outside the curb of the store's north lawn strip
 const AISLE = Object.freeze({ x: [12.1, 17.5], z: [-16.45, -14.15] });
 const STALL = Object.freeze({ x: [12.1, 17.5], z: [-14.15, -11.5] });
 const RAMP_Z = [AISLE.z[0] + 0.1, AISLE.z[1] - 0.1];
 
 export const NORTH_YARD = Object.freeze({
-  walkX: WALK_X, junctionZ: JUNCTION_Z, westWalkZ: WEST_WALK_Z,
+  walkX: WALK_X, junctionZ: JUNCTION_Z, stripZ: STRIP_Z,
   aisle: AISLE, stall: STALL, rampZ: RAMP_Z,
   drive: DRIVE, curbWashX: CURB_WX,
   walkHeight: 0.152, rampHeight: 0.02, lawnHeight: 0.12,
   // north walk: from the junction to the drive edge (cut on the drive's line)
   northWalk: Object.freeze([[WALK_X[0], JUNCTION_Z], [WALK_X[1], JUNCTION_Z], [WALK_X[1], driveEdgeZ(WALK_X[1])], [WALK_X[0], driveEdgeZ(WALK_X[0])]]),
-  westWalk: Object.freeze([[WALK_X[0], WEST_WALK_Z[1]], [WALK_X[0], WEST_WALK_Z[0]], [driveEdgeX(WEST_WALK_Z[0]), WEST_WALK_Z[0]], [driveEdgeX(WEST_WALK_Z[1]), WEST_WALK_Z[1]]]),
-  lawn: Object.freeze([[WALK_X[0] - 0.02, WEST_WALK_Z[0] - 0.02], [WALK_X[0] - 0.02, driveEdgeZ(WALK_X[0] - 0.02) + 0.06], [driveEdgeX(WEST_WALK_Z[0] - 0.02) + 0.06, WEST_WALK_Z[0] - 0.02]]),
+  // lawn wedge: the north lawn strip's east end, between the walk and the drive
+  lawn: Object.freeze([[WALK_X[0] - 0.02, STRIP_Z], [WALK_X[0] - 0.02, driveEdgeZ(WALK_X[0] - 0.02) + 0.06], [driveEdgeX(STRIP_Z) + 0.06, STRIP_Z]]),
+  // island in front of the ENTER-end walk (wash frame): wide by the walk's
+  // east end, tapering to the pole at its west tip, clear of the open bay
+  enterIslandWash: Object.freeze([[-9.95, -16.18], [-9.95, -14.1], [-13.45, -15.5], [-13.45, -16.18]]),
+  enterPoleWash: Object.freeze([-13.05, -15.85]),
+  // pay station (wash frame): just outside the approach curb, facing the lane
+  payStationWash: Object.freeze([-18.25, -15.4]),
+  payStationFacingWash: Object.freeze([0.95, 0.32]),
+  // the model's pay station: store-frame box [x0, z0, x1, z1] and min height
+  modelPayStationBox: Object.freeze([-4.0, -24.0, -2.6, -22.6]),
   // trapezoid (wash frame): narrow end on the curb between the red pads,
   // wide end on the walk's end; the ENTER-side edge square to the wall
+  // narrow end in the gap between the car wash's two red pads (photo)
   crossingWash: Object.freeze((() => {
     const w = storeToWash([WALK_X[0], driveEdgeZ(WALK_X[0])]), e = storeToWash([WALK_X[1], driveEdgeZ(WALK_X[1])]);
-    return [[CURB_WX, w[1]], w, e, [CURB_WX, w[1] - 1.52]];
+    const gap = [WASH.pads[1][1], WASH.pads[0][0]], mid = (gap[0] + gap[1]) / 2;
+    return [[CURB_WX, mid + 0.65], w, e, [CURB_WX, mid - 0.65]];
   })()),
   pole: Object.freeze({ at: [9.35, -16.5], height: 8.6 }),
   signPost: Object.freeze({ at: [9.3, -15.75], facing: [0.89, 0.45] }),
@@ -265,6 +281,65 @@ function drawRogue(c, w, h) {
   c.fillStyle = '#123a44'; c.font = 'bold 34px Arial'; c.textAlign = 'center'; c.fillText('ROGUE', w * 0.62, 470);
 }
 
+// "Wash Select" pay station face (photo): gradient strip with the name,
+// navy panel with an instruction display, keypad, card slot and four wash
+// selection buttons with green displays.
+function drawWashSelect(c, w, h) {
+  const g = c.createLinearGradient(0, 0, 0, h);
+  g.addColorStop(0, '#29b8f0'); g.addColorStop(0.55, '#4fd18c'); g.addColorStop(1, '#f3e34a');
+  c.fillStyle = g; c.fillRect(0, 0, w * 0.3, h);
+  c.save(); c.translate(w * 0.17, h * 0.55); c.rotate(-Math.PI / 2);
+  c.fillStyle = '#1b2a8a'; c.font = 'italic bold 46px Georgia, serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('Wash Select', 0, 0);
+  c.restore();
+  c.fillStyle = '#22248e'; c.fillRect(w * 0.3, 0, w * 0.7, h);
+  const lcd = (x, y, ww, hh) => { c.fillStyle = '#e9f05a'; c.fillRect(x - 3, y - 3, ww + 6, hh + 6); c.fillStyle = '#9fd36a'; c.fillRect(x, y, ww, hh); };
+  c.fillStyle = '#f3e34a'; c.font = 'bold 15px Arial'; c.textAlign = 'center'; c.fillText('Instructions', w * 0.7, h * 0.18);
+  lcd(w * 0.5, h * 0.2, w * 0.4, h * 0.06);
+  c.fillStyle = '#c9ccd0'; for (let r = 0; r < 4; r++) for (let k = 0; k < 3; k++) c.fillRect(w * 0.6 + k * 20, h * 0.33 + r * 16, 15, 11);
+  c.fillStyle = '#2a2d33'; c.fillRect(w * 0.36, h * 0.42, w * 0.15, h * 0.14); c.fillStyle = '#0c0d10'; c.fillRect(w * 0.41, h * 0.44, w * 0.05, h * 0.1);
+  c.fillStyle = '#8f9399'; c.fillRect(w * 0.37, h * 0.6, w * 0.13, h * 0.06);
+  c.fillStyle = '#f3e34a'; c.font = 'bold 14px Arial'; c.fillText('Wash Selection', w * 0.7, h * 0.5);
+  for (let i = 0; i < 4; i++) {
+    const y = h * 0.53 + i * h * 0.07;
+    c.fillStyle = '#eef0f2'; c.beginPath(); c.arc(w * 0.56, y + 10, 9, 0, Math.PI * 2); c.fill();
+    lcd(w * 0.62, y + 2, w * 0.3, h * 0.04);
+  }
+  c.fillStyle = '#ffffff'; c.globalAlpha = 0.85; c.fillRect(w * 0.58, h * 0.06, w * 0.22, h * 0.05); c.globalAlpha = 1; // taped notice
+}
+function drawBollardBand(c, w, h) {
+  c.fillStyle = '#f4f4f2'; c.fillRect(0, 0, w, h);
+  c.fillStyle = '#d42a35'; c.save(); c.beginPath(); c.rect(0, 0, w, h); c.clip();
+  for (let x = -h; x < w + h; x += 26) { c.beginPath(); c.moveTo(x, h); c.lineTo(x + 13, h); c.lineTo(x + 13 + h, 0); c.lineTo(x + h, 0); c.closePath(); c.fill(); }
+  c.restore();
+}
+
+// Remove the model's pay-station box (and its screen) so the dressed unit can
+// stand in its place. Returns the number of triangles removed.
+export function cutModelPayStation(root, toStore) {
+  const [x0, z0, x1, z1] = NORTH_YARD.modelPayStationBox, v = new THREE.Vector3(), m = new THREE.Matrix4();
+  let removed = 0;
+  root.updateMatrixWorld(true);
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh) return;
+    if (o.name === 'Car_wash_entry_pay_station_screen' || o.name === 'Car wash entry pay station screen') { o.visible = false; return; }
+    if (o.material?.name !== 'PaletteMaterial001') return; // walks, curbs and the ground stay
+    const g = o.geometry, pos = g.attributes.position, ix = g.index ? g.index.array : null;
+    if (!pos) return;
+    m.multiplyMatrices(toStore, o.matrixWorld);
+    const tris = (ix ? ix.length : pos.count) / 3, kept = [];
+    for (let t = 0; t < tris; t++) {
+      const ids = [0, 1, 2].map(k => ix ? ix[t * 3 + k] : t * 3 + k);
+      const inside = ids.every(i => { v.fromBufferAttribute(pos, i).applyMatrix4(m); return v.x > x0 && v.x < x1 && v.z > z0 && v.z < z1 && v.y > 0.9; });
+      if (inside) removed++; else kept.push(...ids);
+    }
+    if (!removed) return;
+    const cut = new THREE.BufferGeometry();
+    for (const [n, a] of Object.entries(g.attributes)) cut.setAttribute(n, a);
+    cut.setIndex(kept); cut.boundingBox = g.boundingBox; cut.boundingSphere = g.boundingSphere; o.geometry = cut;
+  });
+  return removed;
+}
+
 /* ------------------------------------------------------------------ build */
 // `ground(x, z)` gives the model surface height at a store-frame point;
 // `mats.grass` is the model's lawn material (palette); `lawnUV` its palette cell.
@@ -298,13 +373,14 @@ export function buildNorthYard({ ground, mats = {}, lawnUV = [0.707, 0.707] }) {
   const ramp = slabGeometry(rampPoly, (x, z) => walkTop(x, z) + 0.004, { step: 0.35, uv: (x, z) => [z / 0.6, x / 0.6] });
   add(ramp.top, paint(brick ? 0xffffff : 0xb3232c, { map: brick, roughness: 0.7 }), 'Red-stamped-curb-ramp');
 
-  // ---- west walk along the north lawn strip ----
-  const ww = slabGeometry(Y.westWalk, (x, z) => ground(x, z) + Y.walkHeight, { step: 0.35, bottom: below });
-  add(ww.top, walkMat, 'West-walk'); add(ww.sides, walkMat, 'West-walk-edge');
-
-  // ---- lawn between the walks ----
+  // ---- lawn wedge at the store's north-east corner ----
   const lawn = slabGeometry(Y.lawn, (x, z) => ground(x, z) + Y.lawnHeight, { step: 0.35, bottom: below, uv: () => lawnUV });
   add(lawn.top, grassMat, 'Corner-lawn'); add(lawn.sides, curbMat, 'Corner-lawn-curb');
+
+  // ---- curbed island in front of the car wash ENTER-end walk ----
+  const islandPoly = Y.enterIslandWash.map(washToStore);
+  const island = slabGeometry(islandPoly, (x, z) => ground(x, z) + Y.lawnHeight, { step: 0.35, bottom: below, uv: () => lawnUV });
+  add(island.top, grassMat, 'Enter-island'); add(island.sides, curbMat, 'Enter-island-curb');
 
   // ---- van-accessible aisle: outline and diagonal stripes ----
   const lineW = 0.1, at = (x, z) => ground(x, z) + 0.006;
@@ -352,6 +428,13 @@ export function buildNorthYard({ ground, mats = {}, lawnUV = [0.707, 0.707] }) {
   pole.group.rotation.y = Math.PI / 2; // heads either side along the walk
   group.add(pole.group);
 
+  const enterPoleAt = washToStore(Y.enterPoleWash);
+  const pole2 = buildGrassIslandLight({ height: Y.pole.height, ...poleMats });
+  pole2.group.name = 'Enter-island-pole-light';
+  pole2.group.position.set(enterPoleAt[0], ground(...enterPoleAt) + Y.lawnHeight - 0.05, enterPoleAt[1]);
+  pole2.group.rotation.y = Math.PI / 2 + (WASH.heading - STOREFRONT.heading); // heads along the ENTER walk
+  group.add(pole2.group);
+
   const face = (dir) => Math.atan2(dir[0], dir[1]); // rotation.y that turns +Z toward dir
   const post = new THREE.Group(); post.name = 'Van-accessible-sign'; group.add(post);
   post.position.set(Y.signPost.at[0], ground(...Y.signPost.at) + Y.lawnHeight, Y.signPost.at[1]);
@@ -369,10 +452,34 @@ export function buildNorthYard({ ground, mats = {}, lawnUV = [0.707, 0.707] }) {
   const board = new THREE.Mesh(new THREE.PlaneGeometry(0.58, 1.0), std({ map: rt, color: rt ? 0xffffff : 0x3fb4c4, roughness: 0.55, side: THREE.DoubleSide }));
   board.position.y = 0.82; board.castShadow = true; board.name = 'ROGUE-board'; rogue.add(board);
 
+  // ---- Wash Select pay station on its pad, with the banded bollard ----
+  const payAt = washToStore(Y.payStationWash), payDir = washToStore(Y.payStationFacingWash);
+  const pay = new THREE.Group(); pay.name = 'Wash-Select-pay-station'; group.add(pay);
+  pay.position.set(payAt[0], ground(...payAt), payAt[1]); pay.rotation.y = face(payDir);
+  const stainless = std({ color: 0xc3c7ca, roughness: 0.32, metalness: 0.75 });
+  const padM = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.12, 1.25), walkMat); padM.position.set(-0.15, 0.04, 0.0); padM.receiveShadow = true; padM.name = 'Pay-station-pad'; pay.add(padM);
+  // Single stainless leg, narrower at the foot and slanting back from under
+  // the cabinet to its base plate (side and front photos).
+  const legV = [[-0.2, 0.08, -0.56], [0.2, 0.08, -0.56], [0.2, 0.08, -0.4], [-0.2, 0.08, -0.4], [-0.3, 1.0, -0.09], [0.3, 1.0, -0.09], [0.3, 1.0, 0.09], [-0.3, 1.0, 0.09]];
+  const legGeo = new THREE.BufferGeometry();
+  legGeo.setAttribute('position', new THREE.Float32BufferAttribute(legV.flat(), 3));
+  legGeo.setIndex([0, 2, 1, 0, 3, 2, 4, 5, 6, 4, 6, 7, 0, 1, 5, 0, 5, 4, 1, 2, 6, 1, 6, 5, 2, 3, 7, 2, 7, 6, 3, 0, 4, 3, 4, 7]);
+  const ped = new THREE.Mesh(legGeo.toNonIndexed(), stainless); ped.geometry.computeVertexNormals();
+  ped.castShadow = true; ped.name = 'Pay-station-pedestal'; pay.add(ped);
+  const basePlate = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.02, 0.3), stainless); basePlate.position.set(0, 0.09, -0.48); basePlate.name = 'Pay-station-base-plate'; pay.add(basePlate);
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.98, 0.32), stainless); cab.position.set(0, 1.49, 0); cab.castShadow = true; cab.name = 'Pay-station-cabinet'; pay.add(cab);
+  const faceTex = canvas(360, 460, drawWashSelect);
+  const facePanel = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 0.9), std({ map: faceTex, color: faceTex ? 0xffffff : 0x22248e, roughness: 0.4, emissive: 0xffffff, emissiveMap: faceTex, emissiveIntensity: 0.12 }));
+  facePanel.position.set(0, 1.49, 0.162); facePanel.name = 'Wash-Select-face'; pay.add(facePanel);
+  const bandTex = canvas(256, 64, drawBollardBand);
+  const bollardMat = std({ color: 0xf2f2f0, roughness: 0.5 });
+  const bol = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.05, 20), bollardMat); bol.position.set(-0.6, 0.62, 0.42); bol.castShadow = true; bol.name = 'Pay-station-bollard'; pay.add(bol);
+  if (bandTex) { const band = new THREE.Mesh(new THREE.CylinderGeometry(0.102, 0.102, 0.2, 20, 1, true), std({ map: bandTex, roughness: 0.5 })); band.position.set(-0.6, 0.86, 0.42); band.name = 'Pay-station-bollard-band'; pay.add(band); }
+
   const bush = buildShrub({ shrub: std({ color: 0x4a6e3a, roughness: 0.9, flatShading: true }) }, 4);
   bush.name = 'Lawn-shrub'; bush.scale.setScalar(0.75);
   bush.position.set(Y.bush[0], ground(...Y.bush) + Y.lawnHeight - 0.05, Y.bush[1]);
   group.add(bush);
 
-  return { group, lights: [pole.light] };
+  return { group, lights: [pole.light, pole2.light] };
 }
