@@ -124,6 +124,24 @@ The cabinet, stand and sign artwork is redrawn, not the original print files;
 the tree, sign and shrub positions are placed from the photos and the model's
 grass areas, not surveyed.
 
+## Pavement finishes — 2026-11-14
+
+`scripts/pavement.js` replaces the model's flat paving colours with finishes
+drawn after the owner's night photos (no photo textures are used):
+
+- lot and forecourt: light grey broom-finished concrete in 4.6 m saw-cut
+  panels, with oil drips, faint tyre paths, gum spots and a few hairline
+  cracks (split out of the merged ground mesh by its palette colour);
+- sidewalks: tooled 1.5 m squares with a finer broom finish, the joint grid
+  starting at the storefront and north walls;
+- curbs: weathered concrete with exposed aggregate; roads: asphalt with
+  aggregate, a patch and sealed cracks.
+
+All are mapped in metres in the storefront frame so joints line up with the
+store, and a slow tone layer breaks up the repeat. The painted markings,
+grass and the model's other surfaces are unchanged.
+Test: `node --experimental-default-type=module tests/pavement.mjs`.
+
 ## Sidewalk props, propane exchange and palm — 2026-11-02
 
 `scripts/site-fixes.js` clears the sidewalk props the owner marked on the live
