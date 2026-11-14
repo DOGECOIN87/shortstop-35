@@ -199,6 +199,32 @@ export function createReferenceDesign({M,ctex,font}) {
     const m=new THREE.MeshStandardMaterial({map,emissive:0xffffff,emissiveMap:map,emissiveIntensity:0,roughness:0.5});
     canopyGlow.push({material:m,night:0.55,golden:0.3});headerMats.set(n,m);return m;
   }
+  // Night canopy photo: a red LED strip traces each header's bottom edge and
+  // slanted ends, and the header ends carry red "Self" signs.
+  const headerLed=new THREE.MeshStandardMaterial({color:0x8a0d1e,emissive:0xff2236,emissiveIntensity:0,roughness:0.4});
+  canopyGlow.push({material:headerLed,night:2.4,golden:0.6});
+  const selfMap=ctex(256,180,(c,w,h)=>{
+    c.fillStyle='#c8102e';c.fillRect(0,0,w,h);
+    c.fillStyle='#ffffff';c.font='italic bold 92px Arial';c.textAlign='center';c.textBaseline='middle';c.fillText('Self',w/2,h/2+6);
+  });
+  const selfMat=new THREE.MeshStandardMaterial({map:selfMap,emissive:0xffffff,emissiveMap:selfMap,emissiveIntensity:0,roughness:0.5});
+  canopyGlow.push({material:selfMat,night:0.5,golden:0.25});
+  const endTilt=Math.atan2((headWt-headWb)/2,headH);
+  function headerTrim(g){
+    for(const sign of [-1,1]){
+      const z=sign*(headD/2+0.012);
+      const bottom=box(g,headWb,0.026,0.018,headerLed,0,headY+0.016,z,'Header-red-LED',false);bottom.castShadow=false;
+      for(const sx of [-1,1]){
+        const led=box(g,0.026,headH/Math.cos(endTilt),0.018,headerLed,sx*(headWb+headWt)/4,headY+headH/2,z,'Header-red-LED',false);
+        led.rotation.z=-sx*endTilt;led.castShadow=false;
+      }
+    }
+    for(const sx of [-1,1]){
+      const end=new THREE.Group();end.position.set(sx*((headWb+headWt)/4+0.006),headY+headH/2,0);end.rotation.z=-sx*endTilt;g.add(end);
+      const sign=new THREE.Mesh(new THREE.PlaneGeometry(headD-0.06,headH-0.06),selfMat);sign.name='Header-Self-sign';
+      sign.rotation.y=sx*Math.PI/2;end.add(sign);
+    }
+  }
   // Nozzle hung in its boot: black body, trigger guard, chrome spout into the
   // boot and a chrome swivel where the hose joins (pump photo).
   const guardGeo=new THREE.TorusGeometry(0.045,0.008,6,14,Math.PI);
@@ -224,6 +250,7 @@ export function createReferenceDesign({M,ctex,font}) {
     [-0.64,0.64].forEach(x=>{box(g,0.13,2.14,0.5,postMat,x,1.29,0,'Silver-frame');box(g,0.14,0.1,0.52,bootMat,x,0.27,0,'Post-foot');});
     const header=new THREE.Mesh(headerGeo,M.red);header.name='Slanted-header-body';header.position.y=headY;
     header.castShadow=header.receiveShadow=true;g.add(header);
+    headerTrim(g);
     for(const [sign,n] of [[-1,number],[1,number+1]]){
       const back=sign<0,fz=sign*0.283;
       const graphic=new THREE.Mesh(headerFaceGeo,headerMaterial(n));graphic.name='Techron-numbered-face';

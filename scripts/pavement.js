@@ -7,9 +7,9 @@ import { STOREFRONT } from './storefront.js';
 // noise textures. After the model loads this module:
 //
 //   * moves the lot/forecourt concrete triangles (one palette cell of the
-//     merged ground mesh) into their own mesh, with light grey broom-finished
-//     concrete in 4.6 m saw-cut panels, worn tyre paths, oil drips under the
-//     parked cars, gum spots and the odd hairline crack;
+//     merged ground mesh) into their own mesh: smooth, warm beige-grey
+//     concrete in ~6 m panels with faint saw-cut joints, soft tonal patches,
+//     sparse gum spots, faint oil drips and one spalled crack (photos);
 //   * gives the sidewalks tooled 1.5 m squares with a finer broom finish, the
 //     curbs weathered concrete with exposed aggregate, and the roads asphalt
 //     with aggregate, sealed cracks and patches;
@@ -26,7 +26,7 @@ export const PAVEMENT = Object.freeze({
   lotMaterial: 'PaletteMaterial001',
   walkMaterial: 'SS Walk concrete', curbMaterial: 'SS Curb concrete', asphaltMaterial: 'SS Asphalt',
   // Texture tile sizes in metres. The lot tile holds 2 x 2 saw-cut panels.
-  lotPanel: 4.6, walkPanel: 1.5, curbTile: 1.2, asphaltTile: 4.0,
+  lotPanel: 6.0, walkPanel: 1.5, curbTile: 1.2, asphaltTile: 4.0,
   // Joint grid origins: walk joints start at the storefront wall and the
   // north wall, so the front and north walks get transverse joints only.
   walkOrigin: Object.freeze([STOREFRONT.wallX, STOREFRONT.band.northZ]),
@@ -175,46 +175,49 @@ function crack(c, x, y, len, rand) {
   c.stroke();
 }
 
-// Lot: 1024 px = 2 x 2 panels of 4.6 m (9 mm per pixel).
+// Lot: 1024 px = 2 x 2 panels of 6 m (12 mm per pixel). The photos show a
+// smooth trowelled slab, not a broom finish: soft lighter/darker patches,
+// sparse dark gum spots, faint drips, thin joints and one spalled crack.
 export function drawLotConcrete(c, w, h) {
   const rand = rng(46);
-  concreteBase(c, w, h, [196, 192, 184], rand, { grain: 10, mottle: 12, cells: 6 });
+  concreteBase(c, w, h, [198, 191, 179], rand, { grain: 4, mottle: 18, cells: 3 });
   // slightly different pour in each panel
-  [[0, 0, 0.035], [1, 0, -0.03], [0, 1, -0.015], [1, 1, 0.025]].forEach(([i, j, k]) => {
-    c.fillStyle = k > 0 ? `rgba(255,255,250,${k})` : `rgba(40,36,30,${-k})`; c.fillRect(i * w / 2, j * h / 2, w / 2, h / 2);
+  [[0, 0, 0.03], [1, 0, -0.025], [0, 1, -0.012], [1, 1, 0.02]].forEach(([i, j, k]) => {
+    c.fillStyle = k > 0 ? `rgba(255,252,244,${k})` : `rgba(60,52,42,${-k})`; c.fillRect(i * w / 2, j * h / 2, w / 2, h / 2);
   });
-  broom(c, w, h, rand, 2600, 0.05);
-  speckle(c, w, h, rand, 2400, ['rgba(90,86,80,0.35)', 'rgba(120,116,108,0.3)', 'rgba(235,232,225,0.35)'], 0.5, 1.4);
-  // gum spots and drips
-  speckle(c, w, h, rand, 70, ['rgba(40,38,36,0.55)', 'rgba(55,52,48,0.45)'], 1.5, 3.5);
-  // oil drips where cars stand, and faint tyre paths
-  for (let k = 0; k < 7; k++) stain(c, rand() * w, rand() * h, 22 + rand() * 40, 14 + rand() * 26, 0.07 + rand() * 0.07, rand);
-  c.strokeStyle = 'rgba(60,56,50,0.05)'; c.lineWidth = 26;
-  for (let k = 0; k < 3; k++) { const y = rand() * h; c.beginPath(); c.moveTo(0, y); c.bezierCurveTo(w * 0.3, y + 60, w * 0.6, y - 40, w, y); c.stroke(); }
-  crack(c, w * 0.7, h * 0.22, 160, rand); crack(c, w * 0.18, h * 0.8, 110, rand);
-  // saw-cut joints with a dark kerf and a light worn arris
-  joints(c, w, h, w / 2, 'rgba(200,196,188,0.6)', 7);
-  joints(c, w, h, w / 2, 'rgba(70,66,60,0.85)', 2.6);
+  // trowel swirls / soft smudges
+  for (let k = 0; k < 18; k++) stain(c, rand() * w, rand() * h, 40 + rand() * 90, 20 + rand() * 50, 0.025 + rand() * 0.03, rand, rand() < 0.5 ? '90,82,70' : '250,246,236');
+  broom(c, w, h, rand, 300, 0.012);
+  speckle(c, w, h, rand, 500, ['rgba(110,102,92,0.16)', 'rgba(240,236,226,0.18)'], 0.5, 1.1);
+  // sparse gum spots and small dark drips (hatch-area photo)
+  speckle(c, w, h, rand, 46, ['rgba(52,46,40,0.6)', 'rgba(70,62,54,0.5)'], 1.2, 2.6);
+  speckle(c, w, h, rand, 8, ['rgba(110,84,60,0.4)'], 2.5, 4);
+  for (let k = 0; k < 4; k++) stain(c, rand() * w, rand() * h, 26 + rand() * 30, 16 + rand() * 18, 0.05 + rand() * 0.04, rand);
+  // spalled crack wandering across one panel (storefront lot photo)
+  c.save(); c.globalAlpha = 0.8; crack(c, w * 0.08, h * 0.62, 300, rand); c.restore();
+  // thin saw-cut joints: a faint dark kerf, barely lighter edges
+  joints(c, w, h, w / 2, 'rgba(225,220,210,0.25)', 4);
+  joints(c, w, h, w / 2, 'rgba(92,86,78,0.5)', 1.6);
 }
 
 // Sidewalk: 512 px = one 1.5 m tooled square (3 mm per pixel).
 export function drawWalkConcrete(c, w, h) {
   const rand = rng(15);
-  concreteBase(c, w, h, [204, 200, 192], rand, { grain: 8, mottle: 9, cells: 4 });
-  broom(c, w, h, rand, 900, 0.045);
-  speckle(c, w, h, rand, 900, ['rgba(95,90,84,0.3)', 'rgba(240,238,232,0.35)'], 0.5, 1.2);
+  concreteBase(c, w, h, [206, 199, 187], rand, { grain: 5, mottle: 12, cells: 3 });
+  broom(c, w, h, rand, 500, 0.02);
+  speckle(c, w, h, rand, 400, ['rgba(105,98,88,0.2)', 'rgba(240,236,226,0.22)'], 0.5, 1.1);
   speckle(c, w, h, rand, 10, ['rgba(45,42,40,0.5)'], 1.2, 2.6);
   stain(c, w * 0.62, h * 0.4, 70, 50, 0.04, rand);
   // tooled joint: rounded groove with smooth troweled margins either side
-  joints(c, w, h, w, 'rgba(232,229,222,0.45)', 26);
-  joints(c, w, h, w, 'rgba(120,116,108,0.6)', 7);
-  joints(c, w, h, w, 'rgba(78,74,68,0.85)', 3);
+  joints(c, w, h, w, 'rgba(232,228,218,0.3)', 18);
+  joints(c, w, h, w, 'rgba(120,112,100,0.45)', 5);
+  joints(c, w, h, w, 'rgba(84,78,70,0.7)', 2.2);
 }
 
 // Curb: weathered concrete with exposed aggregate, 512 px = 1.2 m.
 export function drawCurbConcrete(c, w, h) {
   const rand = rng(77);
-  concreteBase(c, w, h, [186, 181, 170], rand, { grain: 12, mottle: 14, cells: 4 });
+  concreteBase(c, w, h, [196, 189, 176], rand, { grain: 10, mottle: 14, cells: 4 });
   speckle(c, w, h, rand, 5200, ['rgba(150,138,118,0.55)', 'rgba(110,104,96,0.5)', 'rgba(222,216,204,0.55)', 'rgba(170,160,140,0.5)', 'rgba(80,76,72,0.45)'], 0.8, 2.6);
   for (let k = 0; k < 5; k++) stain(c, rand() * w, rand() * h, 60 + rand() * 60, 30 + rand() * 30, 0.06, rand, '70,64,56');
 }
@@ -266,7 +269,11 @@ export function pavementMaterials(canvas = null, anisotropy = 8) {
     return m;
   };
   return {
-    lot: make(P.lotMaterial + ' (lot concrete)', drawLotConcrete, 1024, 0.9, 0.6),
+    lot: Object.assign(make(P.lotMaterial + ' (lot concrete)', drawLotConcrete, 1024, 0.88, 0.35), {
+      // the model's paint (stalls, hatch, accessible space) is coplanar with the
+      // slab; push the slab back so the paint always wins the depth test
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 4
+    }),
     walk: make(P.walkMaterial, drawWalkConcrete, 512, 0.86, 0.5),
     curb: make(P.curbMaterial, drawCurbConcrete, 512, 0.92, 0.9),
     asphalt: make(P.asphaltMaterial, drawAsphalt, 512, 0.95, 0.7)

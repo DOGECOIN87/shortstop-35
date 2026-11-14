@@ -886,7 +886,7 @@ export function buildStorefront({ ctex, glowMat, logoMap = null, posts = [], wal
   const dayLens = new THREE.Color(0x9ea4a8), nightLens = new THREE.Color(0xffffff);
   const dayStrip = new THREE.Color(0xc9cdd0), nightStrip = new THREE.Color(0xffffff);
   group.userData.floodLights = floods.map(f => f.light);
-  group.userData.floodPower = 95;
+  group.userData.floodPower = 68;
   // w: preset weights { day, golden, night } (they sum to 1).
   group.userData.applyLighting = w => {
     const dusk = w.golden + w.night, p = group.userData.floodPower;

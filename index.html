@@ -445,26 +445,26 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/block-wall.js": "./scripts/block-wall.js?v=88f81afc16",
-  "./scripts/car-wash.js": "./scripts/car-wash.js?v=88f81afc16",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=88f81afc16",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=88f81afc16",
-  "./scripts/pavement.js": "./scripts/pavement.js?v=88f81afc16",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=88f81afc16",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=88f81afc16",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=88f81afc16",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=88f81afc16",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=88f81afc16",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=88f81afc16",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=88f81afc16",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=88f81afc16",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=88f81afc16",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=88f81afc16",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=88f81afc16",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=88f81afc16",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=88f81afc16",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=88f81afc16",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=88f81afc16"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=e83edb126d",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=e83edb126d",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=e83edb126d",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=e83edb126d",
+  "./scripts/pavement.js": "./scripts/pavement.js?v=e83edb126d",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=e83edb126d",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=e83edb126d",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=e83edb126d",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=e83edb126d",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=e83edb126d",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=e83edb126d",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=e83edb126d",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=e83edb126d",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=e83edb126d",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=e83edb126d",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=e83edb126d",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=e83edb126d",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=e83edb126d",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=e83edb126d",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=e83edb126d"
 } }
 </script>
 
@@ -484,7 +484,7 @@ import { TRAFFIC_LANES, TRAFFIC_SIGNALS } from './scripts/traffic-lanes.js';
 import { createSimulation, signalState } from './scripts/traffic-engine.js';
 import { createReferenceDesign } from './scripts/reference-design.js';
 import { STOREFRONT, buildStorefront, storefrontFrame, settleOnWalk } from './scripts/storefront.js';
-import { applySiteFixes } from './scripts/site-fixes.js';
+import { applySiteFixes, addPylonEmblems } from './scripts/site-fixes.js';
 import { blockMaterials } from './scripts/block-wall.js';
 import { buildCarWash, insideCarWashFootprint, reshapeCarWashApproach, WASH as WASH_DRESSING } from './scripts/car-wash.js';
 import { levelModelSidewalks } from './scripts/sidewalk-levels.js';
@@ -836,6 +836,7 @@ const canopySpots = [];
 const siteLamps = [];
 const islandZ = [-14, -5, 4, 13];
 const binGrey = new THREE.MeshStandardMaterial({ color:0x4a4f53, roughness:0.6, metalness:0.2 }); // charcoal island bins (pump photo)
+const trashLabelMat = new THREE.MeshStandardMaterial({ map:ctex(256,72,(c,w,h)=>{ c.clearRect(0,0,w,h); c.fillStyle='#c9ccce'; c.font='italic bold 52px Arial'; c.textAlign='center'; c.textBaseline='middle'; c.fillText('Trash',w/2,h/2+2); }), transparent:true, alphaTest:0.3, roughness:0.6 });
 let canopyGlowMaterials = []; // declared early; island base lights push to it at module load
 // Canopy footprint is measured (lidar/OSM: 32.4 x 12.8 m, see station-geometry.js).
 for (const lz of canopyLightRows()) for (let cix = 0; cix < 2; cix++) {
@@ -857,6 +858,11 @@ islandZ.forEach((z, idx) => {
     box(0.72,0.95,0.62,binGrey,x,0.695,z,fuelGroup); // grey trash/wash bins (new-design reference)
     box(0.78,0.09,0.68,M.steel,x,1.215,z,fuelGroup);
     box(0.46,0.19,0.025,M.tire,x,1.055,z+0.323,fuelGroup);
+    // "Trash" lettering round the top band (night canopy photo).
+    [[0,-0.312,Math.PI,0.72],[0.362,0,Math.PI/2,0.62],[-0.362,0,-Math.PI/2,0.62]].forEach(([dx,dz,ry,w])=>{
+      const t=new THREE.Mesh(new THREE.PlaneGeometry(w*0.5,w*0.14),trashLabelMat);t.name='Trash-label';
+      t.rotation.y=ry;t.position.set(x+dx,1.06,z+dz);fuelGroup.add(t);
+    });
   });
   const lamp = new THREE.SpotLight(0xffe8bb, 0, 15, Math.PI/3, 0.8, 1.2);
   lamp.position.set(0,CANOPY.clearance-0.1,z); lamp.target.position.set(0,0,z);
@@ -1427,10 +1433,12 @@ function updateWeatherEffects(dt) {
   }
   if (flash > 0) { flash = Math.max(0, flash - dt * 4); hemi.intensity = baseHemi + flash * 2.5; }
 }
-// Flag speed follows the real wind (1 = the original animation speed).
+// Flag speed follows the real wind (1 = the original animation speed), but
+// never drops below a steady breeze: the owner wants the flag always visibly
+// waving, even when the live wind is calm.
 function windFactor() {
   const wx = activeTime === 'live' && liveWeather && !liveWeather.stale ? liveWeather : null;
-  return wx && Number.isFinite(wx.windMph) ? Math.max(0.3, Math.min(2.4, 0.35 + wx.windMph / 14)) : 1;
+  return wx && Number.isFinite(wx.windMph) ? Math.max(0.85, Math.min(2.4, 0.35 + wx.windMph / 14)) : 1;
 }
 
 /* ================= CAMERA VIEWS ================= */
@@ -1564,7 +1572,8 @@ const reduceFlagMotion=window.matchMedia('(prefers-reduced-motion: reduce)').mat
 function tick() {
   requestAnimationFrame(tick);
   const dt = Math.min(clock.getDelta(), 0.05);
-  if(!reduceFlagMotion) windTime+=dt*windFactor();
+  // Always waving; visitors who ask for reduced motion get a gentler wave.
+  windTime+=dt*windFactor()*(reduceFlagMotion?0.5:1);
   if (window.__waveFlag) window.__waveFlag(windTime);
   sideLandscape.update(windTime,lightingPhase==='night');
   // LED signs and screens animate; with reduced motion they hold one frame.
@@ -2176,6 +2185,9 @@ try {
     applyTime(activeTime);
     console.info(`Site fixes: cut ${fx.cut} model triangles, replaced ${fx.hidden} parts, added ${fx.props} props.`);
   } catch (err) { console.warn('Could not apply the site fixes', err); }
+  // Texaco roundels on the blank top cabinets of both price pylons.
+  try { console.info(`Pylon emblems added: ${addPylonEmblems(root, { ctex, glowMat }).length}`); }
+  catch (err) { console.warn('Could not add the pylon emblems', err); }
   // Car wash walls, fascia and signs from the owner's photos (scripts/car-wash.js).
   try {
     root.updateMatrixWorld(true);

@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
 import { STOREFRONT } from './storefront.js';
+import { PYLONS } from './station-geometry.js';
 
 // Sidewalk and yard corrections the owner marked on screenshots of the live
 // page, applied to the detailed Blender model after it loads:
@@ -579,4 +580,80 @@ export function applySiteFixes(root, { frame, lampMaterial } = {}) {
 
   root.updateMatrixWorld(true);
   return { cut, hidden, props: added.children.length, lights: [islandLight.light] };
+}
+
+/* ------------------------------------------------------- pylon sign emblems */
+// The model's two price pylons have a blank light-grey cabinet face above the
+// prices (front and back). Find those faces (palette cell u ~ 0.113 near each
+// pylon, above the price panels) and lay the Texaco roundel over both sides:
+// red disc, white star, red T, on the dark cabinet, lit at night.
+export const PYLON_EMBLEM = Object.freeze({ cell: 0.113, tolerance: 0.0015, radius: 3.5, minY: 9.5, inset: 0.06, offset: 0.018 });
+
+export function drawPylonEmblem(c, w, h) {
+  c.fillStyle = '#17191c'; c.fillRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2, R = Math.min(w, h) * 0.43;
+  c.fillStyle = '#f4f4f2'; c.beginPath(); c.arc(cx, cy, R * 1.04, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#d0102c'; c.beginPath(); c.arc(cx, cy, R, 0, Math.PI * 2); c.fill();
+  c.fillStyle = '#f4f4f2'; c.beginPath();
+  for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? R * 0.4 : R * 0.93; c.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
+  c.closePath(); c.fill();
+  // red T with a flared foot, outlined in black like the brand mark
+  const T = () => { c.beginPath(); c.rect(cx - R * 0.3, cy - R * 0.22, R * 0.6, R * 0.13); c.rect(cx - R * 0.075, cy - R * 0.22, R * 0.15, R * 0.5);
+    c.moveTo(cx - R * 0.075, cy + R * 0.24); c.lineTo(cx - R * 0.17, cy + R * 0.33); c.lineTo(cx + R * 0.17, cy + R * 0.33); c.lineTo(cx + R * 0.075, cy + R * 0.24); c.closePath(); };
+  c.lineWidth = R * 0.03; c.strokeStyle = '#111'; T(); c.stroke();
+  c.fillStyle = '#d0102c'; T(); c.fill();
+}
+
+// Returns the emblem meshes added (2 per pylon found). `ctex(w, h, draw)`
+// makes a canvas texture; `glowMat(tex)` a time-of-day lit sign material.
+export function addPylonEmblems(root, { ctex, glowMat }) {
+  root.updateMatrixWorld(true);
+  const toRoot = new THREE.Matrix4().copy(root.matrixWorld).invert();
+  const E = PYLON_EMBLEM, centres = [PYLONS.north.trueXY, PYLONS.south.trueXY].map(([e, n]) => [e, -n]);
+  const found = centres.map(() => ({ pts: [], n: new THREE.Vector3(), ref: null }));
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), nrm = new THREE.Vector3();
+  root.traverse(o => {
+    if (!o.isMesh || o.isInstancedMesh || o.material?.name !== 'PaletteMaterial001') return;
+    const g = o.geometry, pos = g.attributes.position, uv = g.attributes.uv;
+    if (!uv) return;
+    const m = new THREE.Matrix4().multiplyMatrices(toRoot, o.matrixWorld);
+    const idx = g.index ? g.index.array : null, tris = (idx ? idx.length : pos.count) / 3;
+    const inCell = i => Math.abs(uv.getX(i) - E.cell) < E.tolerance;
+    for (let t = 0; t < tris; t++) {
+      const i0 = idx ? idx[t * 3] : t * 3, i1 = idx ? idx[t * 3 + 1] : t * 3 + 1, i2 = idx ? idx[t * 3 + 2] : t * 3 + 2;
+      if (!inCell(i0) || !inCell(i1) || !inCell(i2)) continue;
+      a.fromBufferAttribute(pos, i0).applyMatrix4(m); b.fromBufferAttribute(pos, i1).applyMatrix4(m); c.fromBufferAttribute(pos, i2).applyMatrix4(m);
+      const cy = (a.y + b.y + c.y) / 3, cx = (a.x + b.x + c.x) / 3, cz = (a.z + b.z + c.z) / 3;
+      if (cy < E.minY) continue;
+      const k = centres.findIndex(([x, z]) => Math.hypot(cx - x, cz - z) < E.radius);
+      if (k < 0) continue;
+      nrm.subVectors(b, a).cross(c.clone().sub(a));
+      const area = nrm.length() / 2; if (area < 1e-4) continue; nrm.normalize();
+      if (Math.abs(nrm.y) > 0.3) continue;
+      const f = found[k];
+      if (area > 0.05) { if (!f.ref) f.ref = nrm.clone(); f.n.addScaledVector(nrm, (nrm.dot(f.ref) < 0 ? -1 : 1) * area); }
+      f.pts.push(a.clone(), b.clone(), c.clone());
+    }
+  });
+  const added = [];
+  const group = new THREE.Group(); group.name = 'Pylon-emblems'; root.add(group);
+  found.forEach((f, k) => {
+    if (f.pts.length < 6 || f.n.lengthSq() < 1e-6) return;
+    const n = f.n.setY(0).normalize(), t = new THREE.Vector3(n.z, 0, -n.x);
+    const d = f.pts.map(p => p.dot(n)), tt = f.pts.map(p => p.dot(t)), yy = f.pts.map(p => p.y);
+    const [d0, d1] = [Math.min(...d), Math.max(...d)], [t0, t1] = [Math.min(...tt), Math.max(...tt)], [y0, y1] = [Math.min(...yy), Math.max(...yy)];
+    const size = Math.min(t1 - t0, y1 - y0) - 2 * E.inset;
+    const map = ctex(512, 512, drawPylonEmblem);
+    const mat = glowMat(map);
+    for (const side of [1, -1]) {
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(size, size), mat);
+      plane.name = 'Pylon-Texaco-emblem';
+      const dd = side > 0 ? d1 + E.offset : d0 - E.offset, tc = (t0 + t1) / 2, yc = (y0 + y1) / 2;
+      plane.position.copy(n).multiplyScalar(dd).addScaledVector(t, tc).setY(yc);
+      plane.lookAt(plane.position.clone().addScaledVector(n, side));
+      plane.castShadow = false; plane.receiveShadow = false;
+      group.add(plane); added.push(plane);
+    }
+  });
+  return added;
 }
