@@ -31,7 +31,15 @@ export const PAVEMENT = Object.freeze({
   // north wall, so the front and north walks get transverse joints only.
   walkOrigin: Object.freeze([STOREFRONT.wallX, STOREFRONT.band.northZ]),
   lotOrigin: Object.freeze([STOREFRONT.wallX + 1.7, STOREFRONT.band.northZ]),
-  macroScale: 0.137 // tone-variation layer repeats ~7x more slowly than the base tile
+  macroScale: 0.137, // tone-variation layer repeats ~7x more slowly than the base tile
+  // Model paint corrected from the owner's photos, by palette cell inside a
+  // store-frame box [x0, z0, x1, z1]: the van-accessible stall is bare
+  // concrete (its blue square is drawn by scripts/north-yard.js), and the
+  // model's thin aisle stripes give way to the photo's outlined hatch.
+  repaint: Object.freeze([
+    Object.freeze({ cell: 0.012, box: [11.9, -17.6, 18.6, -11.0], to: 'lot' }),
+    Object.freeze({ cell: 0.004, box: [11.9, -17.2, 18.6, -13.9], to: 'drop' })
+  ])
 });
 
 const P = PAVEMENT;
@@ -49,15 +57,36 @@ const isLotVertex = (uv, i) => Math.abs(uv.getX(i) - P.lotCell) < P.cellToleranc
 
 // Move the triangles whose three corners use the lot palette cell into a new
 // child mesh. Returns the new mesh (or null when the mesh has none).
-export function splitLotTriangles(mesh, material) {
+// `repaint` rules (see PAVEMENT.repaint) also move ('lot') or remove ('drop')
+// triangles of another cell whose centre lies in a store-frame box; they need
+// `toStore` (world -> storefront frame).
+export function splitLotTriangles(mesh, material, { repaint = [], toStore = null } = {}) {
   const g = mesh.geometry, uv = g?.attributes?.uv, pos = g?.attributes?.position;
   if (!uv || !pos) return null;
   const index = g.index ? g.index.array : null, tris = (index ? index.length : pos.count) / 3;
   const kept = [], moved = [];
+  const m = toStore && repaint.length ? new THREE.Matrix4().multiplyMatrices(toStore, mesh.matrixWorld) : null;
+  const ctr = new THREE.Vector3(), tmp = new THREE.Vector3();
+  const cellOf = i => uv.getX(i);
+  const rule = (a, b, c) => {
+    if (!m) return null;
+    const u = cellOf(a);
+    const r = repaint.find(r => Math.abs(u - r.cell) < P.cellTolerance && Math.abs(cellOf(b) - r.cell) < P.cellTolerance && Math.abs(cellOf(c) - r.cell) < P.cellTolerance);
+    if (!r) return null;
+    ctr.set(0, 0, 0); for (const i of [a, b, c]) ctr.add(tmp.fromBufferAttribute(pos, i).applyMatrix4(m));
+    ctr.divideScalar(3);
+    return ctr.x >= r.box[0] && ctr.x <= r.box[2] && ctr.z >= r.box[1] && ctr.z <= r.box[3] ? r.to : null;
+  };
+  let dropped = 0;
   for (let t = 0; t < tris; t++) {
     const a = index ? index[t * 3] : t * 3, b = index ? index[t * 3 + 1] : t * 3 + 1, c = index ? index[t * 3 + 2] : t * 3 + 2;
-    (isLotVertex(uv, a) && isLotVertex(uv, b) && isLotVertex(uv, c) ? moved : kept).push(a, b, c);
+    if (isLotVertex(uv, a) && isLotVertex(uv, b) && isLotVertex(uv, c)) { moved.push(a, b, c); continue; }
+    const to = rule(a, b, c);
+    if (to === 'lot') moved.push(a, b, c);
+    else if (to === 'drop') dropped++;
+    else kept.push(a, b, c);
   }
+  if (dropped && !moved.length) { const rest = new THREE.BufferGeometry(); for (const [n, at] of Object.entries(g.attributes)) rest.setAttribute(n, at); rest.setIndex(kept); mesh.geometry = rest; }
   if (!moved.length) return null;
   // Compact the moved vertices into their own buffers.
   const remap = new Map(), src = [];
@@ -298,7 +327,7 @@ export function applyPavement(root, { toStore, canvas = null, skip = [] } = {}) 
   for (const o of targets) {
     const name = o.material?.name || '';
     if (name === P.lotMaterial) {
-      const lot = splitLotTriangles(o, mats.lot);
+      const lot = splitLotTriangles(o, mats.lot, { repaint: P.repaint, toStore: frame });
       if (!lot) continue;
       lot.updateMatrixWorld(true);
       mapToStoreFrame(lot, frame, P.lotPanel * 2, P.lotOrigin);

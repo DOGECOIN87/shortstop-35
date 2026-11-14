@@ -124,6 +124,31 @@ The cabinet, stand and sign artwork is redrawn, not the original print files;
 the tree, sign and shrub positions are placed from the photos and the model's
 grass areas, not surveyed.
 
+## Yard between the store and the car wash — 2026-11-14
+
+`scripts/north-yard.js` rebuilds the ground between the store's north-east
+corner, the van-accessible stall, the propane island and the car wash from
+the owner's night photos (the model had plain lot concrete there and a fully
+blue stall):
+
+- a walk continues north from the storefront walk to the car wash, with a red
+  stamped-brick curb ramp where the van-accessible aisle meets it, and a short
+  walk runs west along the store's north lawn strip;
+- the lawn between them holds a twin-head pole light on a tall round concrete
+  base, the "Parking Only / Van Accessible" sign post, the ROGUE stake sign
+  and a shrub;
+- the aisle is a bold white outline with diagonal stripes; the stall is bare
+  concrete with a blue square and white wheelchair symbol (the model's blue
+  paint and thin stripes are replaced in `scripts/pavement.js`);
+- a white hatched trapezoid crosses the drive from the walk's end to the car
+  wash sidewalk between its two red pads.
+
+The car wash itself is not moved: the model's car wash centre is within
+about 2.3 m of the lidar-fitted layout (mostly along its long wall), inside
+that fit's own uncertainty. Walk widths, the drive width (4 m) and the
+props' positions are estimates from the photos.
+Test: `node --experimental-default-type=module tests/north-yard.mjs`.
+
 ## Pavement finishes — 2026-11-14
 
 `scripts/pavement.js` replaces the model's flat paving colours with finishes
