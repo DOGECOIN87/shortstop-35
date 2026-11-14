@@ -445,27 +445,29 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/block-wall.js": "./scripts/block-wall.js?v=7efe9e3b13",
-  "./scripts/car-wash.js": "./scripts/car-wash.js?v=7efe9e3b13",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=7efe9e3b13",
-  "./scripts/north-yard.js": "./scripts/north-yard.js?v=7efe9e3b13",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=7efe9e3b13",
-  "./scripts/pavement.js": "./scripts/pavement.js?v=7efe9e3b13",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=7efe9e3b13",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=7efe9e3b13",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=7efe9e3b13",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=7efe9e3b13",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=7efe9e3b13",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=7efe9e3b13",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=7efe9e3b13",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=7efe9e3b13",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=7efe9e3b13",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=7efe9e3b13",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=7efe9e3b13",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=7efe9e3b13",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=7efe9e3b13",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=7efe9e3b13",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=7efe9e3b13"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=58b082e062",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=58b082e062",
+  "./scripts/cinematic.js": "./scripts/cinematic.js?v=58b082e062",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=58b082e062",
+  "./scripts/north-yard.js": "./scripts/north-yard.js?v=58b082e062",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=58b082e062",
+  "./scripts/pavement.js": "./scripts/pavement.js?v=58b082e062",
+  "./scripts/post-blur.js": "./scripts/post-blur.js?v=58b082e062",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=58b082e062",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=58b082e062",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=58b082e062",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=58b082e062",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=58b082e062",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=58b082e062",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=58b082e062",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=58b082e062",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=58b082e062",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=58b082e062",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=58b082e062",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=58b082e062",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=58b082e062",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=58b082e062",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=58b082e062"
 } }
 </script>
 
@@ -490,6 +492,8 @@ import { blockMaterials } from './scripts/block-wall.js';
 import { buildCarWash, insideCarWashFootprint, reshapeCarWashApproach, WASH as WASH_DRESSING } from './scripts/car-wash.js';
 import { levelModelSidewalks } from './scripts/sidewalk-levels.js';
 import { applyPavement } from './scripts/pavement.js';
+import { createPostPipeline } from './scripts/post-blur.js';
+import { createCinematic } from './scripts/cinematic.js';
 import { buildNorthYard, heightField, cutModelPayStation } from './scripts/north-yard.js';
 import { CANOPY, STORE, WASH, INN, PYLONS, SITE_HEADING_DEG, canopyLightRows, trueToSite } from './scripts/station-geometry.js';
 import { sunPresetVector, solarPosition, skyVector, moonPosition, moonIllumination } from './scripts/sun-position.js';
@@ -527,6 +531,14 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.06;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+// Blur outside the station property, bloom and vignette (scripts/post-blur.js).
+// ?post=0 renders straight to the canvas; WebGL1 always does.
+let post = null;
+if (renderer.capabilities.isWebGL2 && new URLSearchParams(location.search).get('post') !== '0') {
+  try { post = createPostPipeline(renderer, { samples: mobileRendering ? 2 : 4 }); }
+  catch (err) { console.warn('Post-processing unavailable; rendering directly', err); post = null; }
+}
+const postSize = new THREE.Vector2();
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x87b5e0);
@@ -1343,6 +1355,7 @@ function renderLighting() {
     glow.emissiveIntensity = 0.12 + 0.55 * w.golden + 2.1 * w.night;
   });
   if (storefrontFX) storefrontFX.applyLighting(w);
+  if (post) post.setBloom(0.05 + 0.2 * w.golden + 0.5 * w.night);
   if (canopyUndersideMaterial) canopyUndersideMaterial.emissiveIntensity = 0.2 * (w.day + w.golden) + 0.45 * w.night;
   canopyGlowMaterials.forEach(g => g.material.emissiveIntensity = g.golden * w.golden + g.night * w.night);
   skyMat.uniforms.top.value.setHex(T.sky[0]);
@@ -1505,21 +1518,46 @@ controls.addEventListener('start',pauseTour);
 tourBtn.addEventListener('click',()=>{
   tourEnabled=!tourEnabled;tourPaused=false;tourDwell=0;
   lastInteraction=-Infinity;
+  if(tourEnabled&&cinematic)startCineBlend(3);
 });
 spinBtn.addEventListener('click',()=>{
   spinRequested=!(spinRequested??spinBeforeInteraction);
 });
+// Cinematic loop (scripts/cinematic.js), set once the detailed model loads:
+// the Tour flies it continuously, easing in from wherever the camera is.
+let cinematic = null, cineTime = 0, cineBlend = null, baseFov = 46, storeToWorld = null;
+const cineOut = { pos: new THREE.Vector3(), aim: new THREE.Vector3(), fov: 1 };
+function startCineBlend(dur = 4) {
+  cineBlend = { t: 0, dur, p0: camera.position.clone(), a0: controls.target.clone(), f0: camera.fov };
+}
+function cineFrame(t) {
+  cinematic.sample(t, cineOut);
+  cineOut.pos.applyMatrix4(storeToWorld); cineOut.aim.applyMatrix4(storeToWorld);
+  return cineOut;
+}
 function updateTour(dt){
-  if(tourEnabled&&tourPaused&&performance.now()-lastInteraction>=20000){tourPaused=false;tourDwell=0;}
+  if(tourEnabled&&tourPaused&&performance.now()-lastInteraction>=20000){tourPaused=false;tourDwell=0;if(cinematic)startCineBlend();}
   const running=tourEnabled&&!tourPaused;
-  if(running&&!fly){
+  if(cinematic&&running&&!fly){
+    cineTime=(cineTime+dt)%cinematic.duration;
+    const f=cineFrame(cineTime);let fov=baseFov*f.fov;
+    if(cineBlend){
+      cineBlend.t+=dt/cineBlend.dur;const k=cineBlend.t>=1?1:cineBlend.t*cineBlend.t*(3-2*cineBlend.t);
+      f.pos.lerpVectors(cineBlend.p0,f.pos,k);f.aim.lerpVectors(cineBlend.a0,f.aim,k);fov=cineBlend.f0+(fov-cineBlend.f0)*k;
+      if(cineBlend.t>=1)cineBlend=null;
+    }
+    camera.position.copy(f.pos);controls.target.copy(f.aim);
+    if(Math.abs(camera.fov-fov)>1e-3){camera.fov=fov;camera.updateProjectionMatrix();}
+    controls.autoRotate=false;
+  }else if(cinematic&&Math.abs(camera.fov-baseFov)>1e-3){camera.fov=baseFov;camera.updateProjectionMatrix();}
+  if(running&&!fly&&!cinematic){
     tourDwell+=dt;
     if(tourDwell>=12){
       tourDwell=0;
       flyTo(tourViews[(tourViews.indexOf(activeView)+1)%tourViews.length]);
     }
   }
-  controls.autoRotate=!fly&&(spinRequested??running);
+  if(!(cinematic&&running&&!fly))controls.autoRotate=!fly&&(spinRequested??running);
   controls.autoRotateSpeed=activeView==='site'?.15:.45;
   const label=tourEnabled?(tourPaused?'Tour: Paused':'Tour: On'):'Tour: Off';
   if(tourBtn.textContent!==label)tourBtn.textContent=label;
@@ -1608,13 +1646,17 @@ function tick() {
       h.el.style.top = ((-projV.y * 0.5 + 0.5) * stage.clientHeight) + 'px';
     }
   });
-  renderer.render(scene, camera);
+  if (post) {
+    try { post.render(scene, camera); }
+    catch (err) { console.warn('Post-processing failed; rendering directly', err); post = null; renderer.setRenderTarget(null); renderer.render(scene, camera); }
+  } else renderer.render(scene, camera);
 }
 function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   if (!w || !h) return;
   renderer.setSize(w, h, false);
-  camera.aspect = w / h; camera.fov = camera.aspect < 1.2 ? 60 : 46; camera.updateProjectionMatrix();
+  if (post) { renderer.getDrawingBufferSize(postSize); post.setSize(postSize.x, postSize.y); }
+  camera.aspect = w / h; baseFov = camera.aspect < 1.2 ? 60 : 46; camera.fov = baseFov; camera.updateProjectionMatrix();
 }
 new ResizeObserver(resize).observe(stage);
 window.addEventListener('resize', resize);
@@ -2258,6 +2300,13 @@ try {
       camera.fov = fov; camera.updateProjectionMatrix(); controls.update();
     };
   }
+  // Property blur frame and the cinematic tour, both in the storefront frame.
+  root.updateMatrixWorld(true);
+  storeToWorld = root.matrixWorld.clone().multiply(new THREE.Matrix4().makeRotationY(STOREFRONT.heading));
+  if (post) post.setPropertyFrame(storeToWorld.clone().invert());
+  try { cinematic = createCinematic(); if (tourEnabled) startCineBlend(4); console.info(`Cinematic tour: ${cinematic.duration.toFixed(0)} s loop.`); }
+  catch (err) { console.warn('Cinematic tour unavailable; using the view tour', err); }
+  if (window.__debugView) window.__cineAt = t => { const f = cineFrame(t); camera.position.copy(f.pos); controls.target.copy(f.aim); camera.fov = baseFov * f.fov; camera.updateProjectionMatrix(); controls.update(); };
   if (detailedFlag) {
     // Wave the flag on the page (the Blender wave is a geometry-nodes effect that glTF cannot carry).
     // The optimised GLB stores the flag as quantised int16 under a scaled node; bake it to float metres in root space.

@@ -124,6 +124,23 @@ The cabinet, stand and sign artwork is redrawn, not the original print files;
 the tree, sign and shrub positions are placed from the photos and the model's
 grass areas, not surveyed.
 
+## Cinematic tour and soft surroundings — 2026-11-14
+
+- **Tour** (`scripts/cinematic.js`): the Tour button now flies one seamless
+  ~57 s loop instead of hopping between preset views: high over the
+  north-east corner, out over the frontage road, down into the south pump
+  lane, curving north along the storefront (LED signs, FoodMart sign, Amazon
+  locker), over the van aisle and corner lawn, along the car wash, and back up.
+  It is a closed spline with eased speed (2-9 m/s), so there is no seam,
+  kink or jump; it pauses on any touch or drag and eases back in 20 s later.
+- **Blur** (`scripts/post-blur.js`): everything outside the station property
+  is softly blurred and slightly desaturated, fading in over 1-20 m past the
+  property line, with a gentle bloom on lit signs at night and a light
+  vignette. The freeway stays sharp: I-35's main lanes and bridges and the
+  frontage roads either side (corridors around their OpenStreetMap lines).
+  `?post=0` turns post-processing off; WebGL1 devices render without it.
+Test: `node --experimental-default-type=module tests/post-cinematic.mjs`.
+
 ## Car wash and the yard around it — 2026-11-14
 
 The car wash is back to its real length. `scripts/car-wash.js` had stretched
