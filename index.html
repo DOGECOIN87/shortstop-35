@@ -263,6 +263,7 @@
         <button class="tbtn on" data-view="overview">Overview</button>
         <button class="tbtn" data-view="pumps">Pumps</button>
         <button class="tbtn" data-view="store">Store</button>
+        <button class="tbtn" data-view="inside">Inside</button>
         <button class="tbtn" data-view="grounds">Flag & grounds</button>
         <button class="tbtn" data-view="road">From the road</button>
         <button class="tbtn" data-view="site">Aerial plan</button>
@@ -445,29 +446,30 @@
 { "imports": {
   "three": "./vendor/three.module.js",
   "three/addons/": "./vendor/jsm/",
-  "./scripts/block-wall.js": "./scripts/block-wall.js?v=e7688d6416",
-  "./scripts/car-wash.js": "./scripts/car-wash.js?v=e7688d6416",
-  "./scripts/cinematic.js": "./scripts/cinematic.js?v=e7688d6416",
-  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=e7688d6416",
-  "./scripts/north-yard.js": "./scripts/north-yard.js?v=e7688d6416",
-  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=e7688d6416",
-  "./scripts/pavement.js": "./scripts/pavement.js?v=e7688d6416",
-  "./scripts/post-blur.js": "./scripts/post-blur.js?v=e7688d6416",
-  "./scripts/reference-close.js": "./scripts/reference-close.js?v=e7688d6416",
-  "./scripts/reference-design.js": "./scripts/reference-design.js?v=e7688d6416",
-  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=e7688d6416",
-  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=e7688d6416",
-  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=e7688d6416",
-  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=e7688d6416",
-  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=e7688d6416",
-  "./scripts/station-details.js": "./scripts/station-details.js?v=e7688d6416",
-  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=e7688d6416",
-  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=e7688d6416",
-  "./scripts/storefront.js": "./scripts/storefront.js?v=e7688d6416",
-  "./scripts/sun-position.js": "./scripts/sun-position.js?v=e7688d6416",
-  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=e7688d6416",
-  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=e7688d6416",
-  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=e7688d6416"
+  "./scripts/block-wall.js": "./scripts/block-wall.js?v=6c19c19d5a",
+  "./scripts/car-wash.js": "./scripts/car-wash.js?v=6c19c19d5a",
+  "./scripts/cinematic.js": "./scripts/cinematic.js?v=6c19c19d5a",
+  "./scripts/interior.js": "./scripts/interior.js?v=6c19c19d5a",
+  "./scripts/live-conditions.js": "./scripts/live-conditions.js?v=6c19c19d5a",
+  "./scripts/north-yard.js": "./scripts/north-yard.js?v=6c19c19d5a",
+  "./scripts/osm-roads.js": "./scripts/osm-roads.js?v=6c19c19d5a",
+  "./scripts/pavement.js": "./scripts/pavement.js?v=6c19c19d5a",
+  "./scripts/post-blur.js": "./scripts/post-blur.js?v=6c19c19d5a",
+  "./scripts/reference-close.js": "./scripts/reference-close.js?v=6c19c19d5a",
+  "./scripts/reference-design.js": "./scripts/reference-design.js?v=6c19c19d5a",
+  "./scripts/reference-plan.js": "./scripts/reference-plan.js?v=6c19c19d5a",
+  "./scripts/road-clearance.js": "./scripts/road-clearance.js?v=6c19c19d5a",
+  "./scripts/sidewalk-levels.js": "./scripts/sidewalk-levels.js?v=6c19c19d5a",
+  "./scripts/site-circulation.js": "./scripts/site-circulation.js?v=6c19c19d5a",
+  "./scripts/site-fixes.js": "./scripts/site-fixes.js?v=6c19c19d5a",
+  "./scripts/station-details.js": "./scripts/station-details.js?v=6c19c19d5a",
+  "./scripts/station-geometry.js": "./scripts/station-geometry.js?v=6c19c19d5a",
+  "./scripts/store-side-landscape.js": "./scripts/store-side-landscape.js?v=6c19c19d5a",
+  "./scripts/storefront.js": "./scripts/storefront.js?v=6c19c19d5a",
+  "./scripts/sun-position.js": "./scripts/sun-position.js?v=6c19c19d5a",
+  "./scripts/surface-plan.js": "./scripts/surface-plan.js?v=6c19c19d5a",
+  "./scripts/traffic-engine.js": "./scripts/traffic-engine.js?v=6c19c19d5a",
+  "./scripts/traffic-lanes.js": "./scripts/traffic-lanes.js?v=6c19c19d5a"
 } }
 </script>
 
@@ -490,6 +492,7 @@ import { STOREFRONT, buildStorefront, storefrontFrame, settleOnWalk } from './sc
 import { applySiteFixes, addPylonEmblems } from './scripts/site-fixes.js';
 import { blockMaterials } from './scripts/block-wall.js';
 import { buildCarWash, insideCarWashFootprint, reshapeCarWashApproach, WASH as WASH_DRESSING } from './scripts/car-wash.js';
+import { buildInterior, INTERIOR } from './scripts/interior.js';
 import { levelModelSidewalks } from './scripts/sidewalk-levels.js';
 import { applyPavement } from './scripts/pavement.js';
 import { createPostPipeline } from './scripts/post-blur.js';
@@ -1464,13 +1467,23 @@ const VIEWS = {
   grounds:  { pos:[-9, 10, 37], tgt:[-32, 4.5, 14] },
   road:     { pos:[31, 2.1, 31],   tgt:[-2, 5, -8] },
   site:     { pos:[-6, 260, 20.01], tgt:[-6, 0, 20] },
-  reference:{ pos:[-20, 125, 9.21], tgt:[-20, 0, 9.2] }
+  reference:{ pos:[-20, 125, 9.21], tgt:[-20, 0, 9.2] },
+  // Inside the store (store frame of the detailed model; see scripts/interior.js).
+  inside:   { pos:INTERIOR.view.pos, tgt:INTERIOR.view.tgt, store:true }
 };
+let modelRoot = null;
+function interiorStoreToWorld(p) {
+  if (!modelRoot) return null;
+  modelRoot.updateMatrixWorld(true);
+  return modelRoot.localToWorld(new THREE.Vector3(...p).applyAxisAngle(new THREE.Vector3(0, 1, 0), STOREFRONT.heading));
+}
 function viewTarget(name) {
+  if (VIEWS[name].store && modelRoot) return interiorStoreToWorld(VIEWS[name].tgt);
   const p=new THREE.Vector3(...VIEWS[name].tgt);
   return siteToWorld(['site','reference'].includes(name) ? p : buildingToSite(p));
 }
 function viewPosition(name) {
+  if (VIEWS[name].store && modelRoot) return interiorStoreToWorld(VIEWS[name].pos);
   const view = VIEWS[name], localTarget = new THREE.Vector3(...view.tgt);
   const factor = ['site','reference'].includes(name) ? Math.min(1.9,Math.max(1,1/camera.aspect)) : name==='overview' ? Math.max(1,1.25/camera.aspect) : 1;
   if(['site','reference'].includes(name)) {
@@ -1488,6 +1501,7 @@ let activeView='overview';
 let fly = null;
 function flyTo(name) {
   const v = VIEWS[name]; if (!v) return;activeView=name;
+  controls.minDistance = v.store ? 0.5 : 5;
   fly = {
     t: 0, dur: 3.5,
     arc: Math.min(28,camera.position.distanceTo(viewPosition(name))*.16),
@@ -2229,6 +2243,27 @@ try {
     applyTime(activeTime);
     console.info(`Site fixes: cut ${fx.cut} model triangles, replaced ${fx.hidden} parts, added ${fx.props} props.`);
   } catch (err) { console.warn('Could not apply the site fixes', err); }
+  // Store interior from the owner's interior photos (scripts/interior.js).
+  try {
+    modelRoot = root;
+    root.updateMatrixWorld(true);
+    const inFrame = storefrontFrame().multiply(root.matrixWorld.clone().invert());
+    let inCut = 0, inHidden = 0;
+    const m4 = new THREE.Matrix4(), v3 = new THREE.Vector3(), zero = new THREE.Matrix4().makeScale(0, 0, 0), B = INTERIOR.cutBoxes[0];
+    root.traverse(o => {
+      if (!o.isMesh || /car/i.test(o.name)) return;
+      for (let a = o; a; a = a.parent) if (a.name === 'FoodMart-storefront' || a.name === 'Site-fixes') return;
+      if (!o.isInstancedMesh) { inCut += cutTriangles(o, inFrame, INTERIOR.cutBoxes); return; }
+      for (let i = 0; i < o.count; i++) {
+        o.getMatrixAt(i, m4); m4.premultiply(o.matrixWorld).premultiply(inFrame); v3.setFromMatrixPosition(m4);
+        if (v3.x > B[0] && v3.x < B[3] && v3.y > B[1] && v3.y < B[4] && v3.z > B[2] && v3.z < B[5]) { o.setMatrixAt(i, zero); inHidden++; }
+      }
+      o.instanceMatrix.needsUpdate = true;
+    });
+    root.add(buildInterior({ ctex }));
+    console.info(`Store interior built; cut ${inCut} model triangles, hid ${inHidden} instances.`);
+    if (requestedView === 'inside') { camera.position.copy(viewPosition('inside')); controls.target.copy(viewTarget('inside')); controls.minDistance = 0.5; }
+  } catch (err) { console.warn('Could not build the store interior', err); }
   // Texaco roundels on the blank top cabinets of both price pylons.
   try { console.info(`Pylon emblems added: ${addPylonEmblems(root, { ctex, glowMat }).length}`); }
   catch (err) { console.warn('Could not add the pylon emblems', err); }
