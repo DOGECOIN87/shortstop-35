@@ -4,21 +4,29 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>shortstop-judson | Full Commercial Kitchen for Rent</title>
-<meta name="description" content="Rent a full commercial kitchen inside the ShortStop Judson gas station: exhaust hood, fryers, flattop, rapid-cook ovens and a walk-in cooler and freezer, the same kitchen package newer 7-Eleven stores are built with. Book a walkthrough.">
+<meta name="description" content="Rent a full commercial kitchen inside the Short Stop Judson gas station: exhaust hood, fryers, flattop, rapid-cook ovens and a walk-in cooler and freezer, the same kitchen package newer 7-Eleven stores are built with. Book a walkthrough.">
 <link rel="canonical" href="https://shortstop35.store/shortstop-judson/">
 <meta property="og:type" content="website">
-<meta property="og:title" content="Commercial kitchen for rent | ShortStop Judson">
+<meta property="og:title" content="Commercial kitchen for rent | Short Stop Judson">
 <meta property="og:description" content="A full built-in commercial kitchen inside a privately owned gas station. Hood, fryers, flattop, rapid-cook ovens, walk-in cooler and freezer. Book a walkthrough.">
 <meta property="og:url" content="https://shortstop35.store/shortstop-judson/">
-<meta name="theme-color" content="#16191d">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23c8102e'/%3E%3Cpath d='M12 26h40l-5-10H17z' fill='%23fff'/%3E%3Crect x='16' y='32' width='14' height='18' rx='2' fill='%23fff'/%3E%3Crect x='34' y='32' width='14' height='18' rx='2' fill='%23fff'/%3E%3C/svg%3E">
+<meta property="og:image" content="https://shortstop35.store/shortstop-judson/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Short Stop logo with the words Full commercial kitchen for rent">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#143236">
+<link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preload" as="image" href="logo-256.webp" type="image/webp">
 <style>
   :root{
-    --ink:#16191d; --ink-2:#1f2328; --ink-3:#2a2f35;
+    /* from the Short Stop logo: teal ring, cream lettering, red car, sage ground, gold headlights */
+    --ink:#143236; --ink-2:#1c4044; --ink-3:#26504f; --teal:#204649;
     --steel:#c4cad1; --steel-2:#e6e9ec; --steel-3:#f3f4f5;
-    --paper:#f7f6f3; --line:#e2e0da; --muted:#5f6670; --muted-dark:#aab2bb;
-    --red:#c8102e; --red-2:#a50d26; --amber:#f4a12a; --amber-soft:#ffd58a;
-    --radius:16px; --shadow:0 18px 40px rgba(22,25,29,.12);
+    --paper:#f5f3e6; --sage:#ccddd1; --line:#dedbc9; --muted:#4f6266; --muted-dark:#a9c1c0;
+    --red:#d0341b; --red-2:#b92d18; --brand-red:#e93f24; --amber:#eebe54; --amber-soft:#f6dc9a;
+    --radius:16px; --shadow:0 18px 40px rgba(20,50,54,.14);
     --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
   }
   *{margin:0;padding:0;box-sizing:border-box}
@@ -34,11 +42,10 @@
   @media(max-width:600px){.wrap{padding:0 16px}}
 
   /* Header */
-  header{position:sticky;top:0;z-index:50;background:rgba(22,25,29,.94);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08);color:#fff}
+  header{position:sticky;top:0;z-index:50;background:rgba(20,50,54,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08);color:#fff}
   .nav{display:flex;align-items:center;justify-content:space-between;gap:16px;padding-top:12px;padding-bottom:12px}
   .brand{display:flex;align-items:center;gap:10px;text-decoration:none}
-  .badge{background:var(--red);color:#fff;font-weight:900;font-style:italic;padding:7px 12px;border-radius:9px;font-size:18px;line-height:1;letter-spacing:-.3px;white-space:nowrap}
-  .badge span{color:#ffd0d6}
+  .brand-logo{width:46px;height:46px;flex:0 0 46px;border-radius:50%;box-shadow:0 0 0 2px rgba(245,243,230,.9)}
   .brand-sub{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted-dark);line-height:1.2}
   .brand-sub b{display:block;color:#fff;letter-spacing:2.4px}
   .nav-links{display:flex;gap:24px;font-weight:600;font-size:15px}
@@ -55,25 +62,28 @@
   .btn-sm{padding:9px 16px;font-size:14px}
 
   /* Hero */
-  .hero{background:radial-gradient(1000px 520px at 85% 0%,rgba(244,161,42,.16),transparent 60%),linear-gradient(180deg,var(--ink) 0%,#1b1f24 100%);color:#fff;overflow:hidden}
-  .hero-inner{display:grid;grid-template-columns:1.02fr .98fr;gap:48px;align-items:center;padding-top:68px;padding-bottom:76px}
+  .hero{background:radial-gradient(1000px 520px at 85% 0%,rgba(238,190,84,.15),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgba(204,221,209,.08),transparent 70%),linear-gradient(180deg,#1d4346 0%,var(--ink) 100%);color:#fff;overflow:hidden}
+  .hero-inner{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center;padding-top:68px;padding-bottom:76px}
   @media(max-width:960px){.hero-inner{grid-template-columns:1fr;gap:36px;padding-top:44px;padding-bottom:56px}}
-  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--amber-soft);border:1px solid rgba(255,213,138,.35);border-radius:999px;padding:7px 14px}
+  .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--amber-soft);border:1px solid rgba(246,220,154,.35);border-radius:999px;padding:7px 14px}
   .eyebrow i{width:8px;height:8px;border-radius:50%;background:#46d17a;box-shadow:0 0 0 4px rgba(70,209,122,.18);font-style:normal}
-  .hero h1{font-size:clamp(38px,5.6vw,66px);line-height:1.02;font-weight:900;letter-spacing:-1.6px;margin:20px 0 18px}
+  .hero h1{font-size:clamp(38px,5.2vw,62px);line-height:1.02;font-weight:900;letter-spacing:-1.6px;margin:20px 0 18px}
   .hero h1 em{font-style:normal;color:var(--amber)}
-  .lead{font-size:clamp(17px,1.9vw,19px);color:#cfd5db;max-width:560px}
+  .lead{font-size:clamp(17px,1.9vw,19px);color:#d3e0dd;max-width:560px}
   .lead strong{color:#fff}
   .hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin:28px 0 30px}
-  .hero-facts{list-style:none;display:flex;flex-wrap:wrap;gap:10px 22px;font-size:14px;color:#cfd5db}
+  .hero-facts{list-style:none;display:flex;flex-wrap:wrap;gap:10px 22px;font-size:14px;color:#d3e0dd}
   .hero-facts li{display:flex;align-items:center;gap:8px}
   .hero-facts svg{width:18px;height:18px;color:var(--amber);flex:0 0 18px}
 
-  .scene{background:linear-gradient(180deg,#252a30,#1d2126);border:1px solid rgba(255,255,255,.08);border-radius:22px;padding:14px;box-shadow:0 30px 70px rgba(0,0,0,.45)}
+  .scene{position:relative;background:linear-gradient(180deg,#24494c,#1a3c3f);border:1px solid rgba(255,255,255,.1);border-radius:22px;padding:14px;box-shadow:0 30px 70px rgba(0,0,0,.45)}
   .scene svg{width:100%;height:auto;border-radius:12px}
-  .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 6px 2px;font-size:13px;color:#cfd5db}
+  .sticker{position:absolute;top:-30px;right:-26px;width:116px;height:116px;border-radius:50%;transform:rotate(8deg);box-shadow:0 0 0 5px var(--paper),0 14px 28px rgba(0,0,0,.4);background:var(--teal)}
+  @media(max-width:960px){.sticker{right:10px}}
+  @media(max-width:600px){.sticker{width:84px;height:84px;top:-24px;right:6px;box-shadow:0 0 0 4px var(--paper),0 10px 20px rgba(0,0,0,.4)}}
+  .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 6px 2px;font-size:13px;color:#d3e0dd}
   .legend li{display:flex;align-items:center;gap:7px}
-  .legend b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-family:var(--mono)}
+  .legend b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--brand-red);color:#fff;font-size:11px;font-family:var(--mono)}
   .scene figcaption{font-size:12px;color:var(--muted-dark);padding:8px 6px 2px}
   .steam{animation:rise 3.6s ease-in-out infinite;opacity:0}
   .steam.d2{animation-delay:1.2s}.steam.d3{animation-delay:2.4s}
@@ -87,14 +97,14 @@
   .strip-grid{display:grid;grid-template-columns:repeat(4,1fr)}
   .strip-item{padding:20px 22px;border-left:1px solid rgba(255,255,255,.22)}
   .strip-item:first-child{border-left:0;padding-left:0}
-  .strip-item .k{font-family:var(--mono);font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:#ffd0d6}
+  .strip-item .k{font-family:var(--mono);font-size:11px;letter-spacing:1.8px;text-transform:uppercase;color:#ffe3dc}
   .strip-item .v{font-weight:800;font-size:17px;line-height:1.3;margin-top:3px}
   @media(max-width:860px){.strip-grid{grid-template-columns:repeat(2,1fr)}.strip-item{padding:16px 14px}.strip-item:nth-child(3){border-left:0;padding-left:0}.strip-item:nth-child(n+3){border-top:1px solid rgba(255,255,255,.22)}}
 
   /* Sections */
   section{padding:84px 0;scroll-margin-top:64px}
   @media(max-width:600px){section{padding:60px 0}}
-  .kicker{font-family:var(--mono);color:var(--red);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px;margin-bottom:10px}
+  .kicker{font-family:var(--mono);color:var(--red-2);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px;margin-bottom:10px}
   h2{font-size:clamp(28px,3.8vw,42px);font-weight:900;letter-spacing:-.8px;line-height:1.1;margin-bottom:14px;max-width:760px}
   .sub{color:var(--muted);font-size:17px;max-width:660px}
   h3{font-size:18px;line-height:1.3;margin-bottom:6px}
@@ -111,28 +121,29 @@
   .spec p{color:var(--muted);font-size:15px}
   .note{font-size:13px;color:var(--muted);margin-top:18px;max-width:760px}
 
-  .uses{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .use-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:40px;border-top:1px solid var(--line)}
+  .uses{background:var(--sage);border-top:1px solid #b9cdbf;border-bottom:1px solid #b9cdbf}
+  .uses .kicker,.uses .use .tag{color:var(--teal)}
+  .use-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:40px;border-top:1px solid #a9c2b2}
   @media(max-width:860px){.use-grid{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:560px){.use-grid{grid-template-columns:1fr}}
-  .use{padding:24px 22px 26px 0;border-bottom:1px solid var(--line)}
-  .use + .use{padding-left:22px;border-left:1px solid var(--line)}
+  .use{padding:24px 22px 26px 0;border-bottom:1px solid #a9c2b2}
+  .use + .use{padding-left:22px;border-left:1px solid #a9c2b2}
   .use:nth-child(3n+1){padding-left:0;border-left:0}
-  @media(max-width:860px){.use:nth-child(3n+1){padding-left:22px;border-left:1px solid var(--line)}.use:nth-child(2n+1){padding-left:0;border-left:0}}
+  @media(max-width:860px){.use:nth-child(3n+1){padding-left:22px;border-left:1px solid #a9c2b2}.use:nth-child(2n+1){padding-left:0;border-left:0}}
   @media(max-width:560px){.use,.use + .use,.use:nth-child(3n+1){padding-left:0;border-left:0;padding-right:0}}
-  .use .tag{font-family:var(--mono);font-size:12px;color:var(--red);font-weight:700;letter-spacing:1px}
+  .use .tag{font-family:var(--mono);font-size:12px;color:var(--red-2);font-weight:700;letter-spacing:1px}
   .use h3{margin-top:6px}
   .use p{color:var(--muted);font-size:15px}
 
   .why{background:var(--ink);color:#fff}
   .why h2{color:#fff}
-  .why .sub{color:#b9c1c9}
+  .why .sub{color:#b5cac9}
   .why .kicker{color:var(--amber)}
   .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
   @media(max-width:860px){.why-grid{grid-template-columns:1fr}}
   .why-card{background:var(--ink-2);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:26px}
   .why-card .num{font-family:var(--mono);font-size:12px;letter-spacing:2px;color:var(--amber);margin-bottom:12px}
-  .why-card p{color:#b9c1c9;font-size:15px}
+  .why-card p{color:#b5cac9;font-size:15px}
 
   .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
   @media(max-width:900px){.plans{grid-template-columns:1fr}}
@@ -147,7 +158,7 @@
   .plan .rate{margin-top:auto;padding-top:14px;border-top:1px dashed var(--steel);font-weight:800;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
   .plan .rate span{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 
-  .steps{background:var(--steel-3);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .steps{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
   .step-list{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:40px;counter-reset:step}
   @media(max-width:900px){.step-list{grid-template-columns:repeat(2,1fr)}}
   @media(max-width:520px){.step-list{grid-template-columns:1fr}}
@@ -167,12 +178,15 @@
   .contact{background:var(--ink);color:#fff}
   .contact h2{color:#fff}
   .contact .kicker{color:var(--amber)}
-  .contact .sub{color:#b9c1c9}
+  .contact .sub{color:#b5cac9}
   .contact-grid{display:grid;grid-template-columns:.85fr 1.15fr;gap:28px;margin-top:40px;align-items:start}
   @media(max-width:900px){.contact-grid{grid-template-columns:1fr}}
   .info{background:var(--ink-2);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:26px}
   .info-row{display:grid;grid-template-columns:96px 1fr;gap:12px;padding:14px 0;border-top:1px solid rgba(255,255,255,.08);font-size:16px}
-  .info-row:first-child{border-top:0;padding-top:0}
+  .info-head{display:flex;align-items:center;gap:14px;padding-bottom:18px}
+  .info-head img{width:64px;height:64px;border-radius:50%;box-shadow:0 0 0 3px var(--paper)}
+  .info-head b{display:block;font-size:18px}
+  .info-head span{font-size:14px;color:var(--muted-dark)}
   .info-row .k{font-family:var(--mono);font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted-dark);padding-top:4px}
   .info-row a{color:var(--amber-soft);font-weight:700}
   .info .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
@@ -184,21 +198,23 @@
   .field label small{font-weight:500;color:var(--muted)}
   .field input,.field select,.field textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--steel-3);border:1px solid #d3d7dc;border-radius:10px;padding:12px 13px;width:100%;min-width:0}
   .field textarea{min-height:110px;resize:vertical}
-  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--ink);background:#fff;box-shadow:0 0 0 3px rgba(244,161,42,.35)}
+  .field input:focus,.field select:focus,.field textarea:focus{outline:none;border-color:var(--ink);background:#fff;box-shadow:0 0 0 3px rgba(238,190,84,.5)}
   .form-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
   .form-foot p{font-size:13px;color:var(--muted);max-width:360px}
   .form-msg{grid-column:1/-1;font-size:15px;border-radius:10px;padding:12px 14px;background:#fff6e5;border:1px solid #f3d395}
   .form-msg[hidden]{display:none}
 
-  footer{background:#101215;color:#9aa3ad;font-size:14px;padding:38px 0 46px}
+  footer{background:#0d2326;color:#a9c1c0;font-size:14px;padding:38px 0 46px}
+  .foot-brand{display:flex;align-items:center;gap:12px}
+  .foot-brand img{width:52px;height:52px;border-radius:50%}
   .foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px}
   .foot strong{color:#fff}
-  .fine{font-size:12px;color:#7d8690;margin-top:18px;max-width:820px}
+  .fine{font-size:12px;color:#8fa9a8;margin-top:18px;max-width:820px}
 
   /* Mobile action bar */
   .mbar{display:none}
   @media(max-width:700px){
-    .mbar{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(22,25,29,.96);border-top:1px solid rgba(255,255,255,.1)}
+    .mbar{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(20,50,54,.97);border-top:1px solid rgba(255,255,255,.1)}
     .mbar .btn{flex:1}
     body{padding-bottom:72px}
     .header-cta{display:none}
@@ -211,9 +227,9 @@
 
 <header>
   <div class="wrap nav">
-    <a class="brand" href="#top" aria-label="ShortStop Judson, back to top">
-      <span class="badge">Short<span>Stop</span></span>
-      <span class="brand-sub"><b>Judson</b>Kitchen for rent</span>
+    <a class="brand" href="#top" aria-label="Short Stop Judson, back to top">
+      <picture><source srcset="logo-256.webp" type="image/webp"><img class="brand-logo" src="logo-256.png" width="46" height="46" alt=""></picture>
+      <span class="brand-sub"><b>Short Stop Judson</b>Kitchen for rent</span>
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#kitchen">The kitchen</a>
@@ -229,7 +245,7 @@
   <div class="hero" id="top">
     <div class="wrap hero-inner">
       <div>
-        <span class="eyebrow"><i aria-hidden="true"></i>Now leasing · ShortStop Judson</span>
+        <span class="eyebrow"><i aria-hidden="true"></i>Now leasing · Short Stop Judson</span>
         <h1>A full commercial kitchen, <em>ready for your menu.</em></h1>
         <p class="lead">Rent the built-in kitchen inside our gas station. It's the <strong>same full kitchen newer 7&#8209;Eleven stores are built with</strong>: an exhaust hood, fryers, a flattop, rapid-cook ovens, and a walk-in cooler and freezer. The store is no longer a 7&#8209;Eleven. It's privately owned, and the kitchen is open to anyone with food to cook.</p>
         <div class="hero-cta">
@@ -244,13 +260,14 @@
       </div>
 
       <figure class="scene">
+        <picture><source srcset="logo-256.webp" type="image/webp"><img class="sticker" src="logo-256.png" width="116" height="116" alt="Short Stop logo"></picture>
         <svg viewBox="0 0 600 440" role="img" aria-labelledby="scene-title scene-desc">
           <title id="scene-title">Illustration of the kitchen line</title>
           <desc id="scene-desc">A stainless exhaust hood spans a cook line of fryers, a flattop griddle, a rapid-cook oven and a stainless prep table.</desc>
           <defs>
             <pattern id="tile" width="40" height="20" patternUnits="userSpaceOnUse">
-              <rect width="40" height="20" fill="#2b3036"/>
-              <path d="M0 19.5H40M19.5 0V10M39.5 10V20M0 10H40" stroke="#343a41" stroke-width="1"/>
+              <rect width="40" height="20" fill="#1f4245"/>
+              <path d="M0 19.5H40M19.5 0V10M39.5 10V20M0 10H40" stroke="#2a5154" stroke-width="1"/>
             </pattern>
             <pattern id="baffle" width="10" height="14" patternUnits="userSpaceOnUse">
               <rect width="10" height="14" fill="#6f7882"/>
@@ -291,7 +308,7 @@
           <g stroke="#ffffff" stroke-opacity=".12">
             <path d="M60 50H540M58 66H542M56 82H544M54 98H546"/>
           </g>
-          <rect x="230" y="56" width="140" height="26" rx="4" fill="#2a2f35"/>
+          <rect x="230" y="56" width="140" height="26" rx="4" fill="#143236"/>
           <text x="300" y="74" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" font-weight="700" fill="#ffd58a" letter-spacing="2">EXHAUST HOOD</text>
           <rect x="52" y="112" width="496" height="14" fill="url(#baffle)"/>
           <rect x="52" y="125" width="496" height="4" fill="#5d666f"/>
@@ -383,11 +400,11 @@
 
           <!-- callouts -->
           <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" font-weight="700" text-anchor="middle">
-            <circle cx="76" cy="70" r="12" fill="#c8102e"/><text x="76" y="74" fill="#fff">1</text>
-            <circle cx="100" cy="226" r="12" fill="#c8102e"/><text x="100" y="230" fill="#fff">2</text>
-            <circle cx="230" cy="226" r="12" fill="#c8102e"/><text x="230" y="230" fill="#fff">3</text>
-            <circle cx="360" cy="208" r="12" fill="#c8102e"/><text x="360" y="212" fill="#fff">4</text>
-            <circle cx="490" cy="244" r="12" fill="#c8102e"/><text x="490" y="248" fill="#fff">5</text>
+            <circle cx="76" cy="70" r="12" fill="#e93f24"/><text x="76" y="74" fill="#fff">1</text>
+            <circle cx="100" cy="226" r="12" fill="#e93f24"/><text x="100" y="230" fill="#fff">2</text>
+            <circle cx="230" cy="226" r="12" fill="#e93f24"/><text x="230" y="230" fill="#fff">3</text>
+            <circle cx="360" cy="208" r="12" fill="#e93f24"/><text x="360" y="212" fill="#fff">4</text>
+            <circle cx="490" cy="244" r="12" fill="#e93f24"/><text x="490" y="248" fill="#fff">5</text>
           </g>
         </svg>
         <ul class="legend" aria-label="Kitchen line key">
@@ -571,7 +588,7 @@
         </details>
         <details>
           <summary>Where is it?</summary>
-          <p><span data-address>Inside the ShortStop Judson gas station. The address is shared when you book a walkthrough.</span></p>
+          <p><span data-address>Inside the Short Stop Judson gas station. The address is shared when you book a walkthrough.</span></p>
         </details>
       </div>
     </div>
@@ -584,8 +601,8 @@
       <p class="sub">Send a few details and the owner will get back to you to set up a time.</p>
       <div class="contact-grid">
         <div class="info">
-          <div class="info-row"><span class="k">Kitchen</span><span>ShortStop Judson<br>Full commercial kitchen</span></div>
-          <div class="info-row"><span class="k">Location</span><span data-address>Inside the ShortStop Judson gas station. Address shared when you book a walkthrough.</span></div>
+          <div class="info-head"><picture><source srcset="logo-256.webp" type="image/webp"><img src="logo-256.png" width="64" height="64" alt="Short Stop logo" loading="lazy"></picture><div><b>Short Stop Judson</b><span>Full commercial kitchen for rent</span></div></div>
+          <div class="info-row"><span class="k">Location</span><span data-address>Inside the Short Stop Judson gas station. Address shared when you book a walkthrough.</span></div>
           <div class="info-row" data-needs="phone" hidden><span class="k">Call or text</span><span><a data-phone-link href="#">Phone</a></span></div>
           <div class="info-row" data-needs="email" hidden><span class="k">Email</span><span><a data-email-link href="#">Email</a></span></div>
           <div class="info-row"><span class="k">Rates</span><span data-rate="summary">Set with the owner</span></div>
@@ -644,10 +661,10 @@
 <footer>
   <div class="wrap">
     <div class="foot">
-      <div><strong>ShortStop Judson</strong> · Full commercial kitchen for rent</div>
+      <div class="foot-brand"><picture><source srcset="logo-256.webp" type="image/webp"><img src="logo-256.png" width="52" height="52" alt="Short Stop logo" loading="lazy"></picture><div><strong>Short Stop Judson</strong><br>Full commercial kitchen for rent</div></div>
       <div><a href="#top">Back to top ↑</a></div>
     </div>
-    <p class="fine">7&#8209;Eleven is a registered trademark of 7&#8209;Eleven, Inc. ShortStop Judson is privately owned and is not affiliated with, sponsored by or endorsed by 7&#8209;Eleven, Inc. The kitchen illustration is a drawing, not a photo; equipment is confirmed at the walkthrough. © <span id="year">2026</span> ShortStop Judson.</p>
+    <p class="fine">7&#8209;Eleven is a registered trademark of 7&#8209;Eleven, Inc. Short Stop Judson is privately owned and is not affiliated with, sponsored by or endorsed by 7&#8209;Eleven, Inc. The kitchen illustration is a drawing, not a photo; equipment is confirmed at the walkthrough. © <span id="year">2026</span> Short Stop Judson.</p>
   </div>
 </footer>
 
@@ -716,7 +733,7 @@ const LISTING = {
     if (d.email.trim() && !form.email.checkValidity()) { say("That email address doesn't look right."); form.email.focus(); return; }
 
     const body = [
-      "Hi, I'd like to set up a walkthrough of the kitchen at ShortStop Judson.",
+      "Hi, I'd like to set up a walkthrough of the kitchen at Short Stop Judson.",
       "",
       "Name: " + d.name,
       d.business ? "Business: " + d.business : "",
