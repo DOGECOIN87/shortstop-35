@@ -53,9 +53,26 @@ the building was built to (about 93 x 50 ft, storefront on the south):
   back corner, and the walk-in beer cave at the front corner (owner: at this
   location the beer cave is on the front side).
 
-Built in code to standard equipment sizes, in metres, with procedural
-materials and lighting; shelf products are drawn as instances so phones keep
-up. 32 labelled items; tap one for what it is and its typical size. Walls
+Built in code to standard equipment sizes, in metres. Rendering:
+
+- physically based materials: anisotropic brushed stainless (grain-aligned
+  highlights) with rounded, light-catching edges; sealed quarry tile and
+  polished porcelain plank with clear coat; lacquered wood-grain panels;
+  veined quartz tops; glass with reflections;
+- procedural PBR textures generated at load (colour, roughness and normal
+  maps from tileable noise): tile, plank, ceiling tile, corrugated deck,
+  concrete, wood, soffit tile, brushed steel;
+- shelf products as instances with printed packaging from generated atlases
+  (made-up brand names only), puffed chip bags, shaped bottles and cans,
+  printed cases;
+- reflections captured from the store itself (cube map from the sales
+  floor), soft shadows, ground-truth ambient occlusion, bloom on lights and
+  screens, 4x MSAA and ACES tone mapping;
+- phones get a lighter tier: standard materials, half-size textures, no
+  ambient occlusion, 2x MSAA.
+
+Post-processing modules (`vendor/jsm/`) are copied unmodified from three.js
+0.160.0, the same version as `vendor/three.module.js`. 32 labelled items; tap one for what it is and its typical size. Walls
 between the camera and the room are cut away automatically. Menu screens and
 signs show generic "your menu / your brand here" designs, no chain branding.
 `kitchen-3d-poster.jpg` is a render of the overview used on the page.
