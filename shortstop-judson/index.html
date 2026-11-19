@@ -274,13 +274,23 @@
   .no-js [data-open-3d],.no-js .value-tour{display:none}
   .no-js .tour-grid{grid-template-columns:1fr}
   @media print{
-    header,.mbar,.k3d,.hero-cta,.tour-poster,.value-tour,form.inquiry,.skip{display:none!important}
+    header,.mbar,.k3d,.hero-cta,.tour-poster,.value-tour,form.inquiry,.skip,.info .actions,[data-open-3d]{display:none!important}
     body{background:#fff;color:#000;padding:0}
-    .hero,.why,.contact,.strip,footer{background:#fff!important;color:#000!important}
+    .hero,.why,.contact,.strip,footer,.uses,.tour,.steps{background:#fff!important;color:#000!important}
     .hero *,.why *,.contact *,.strip *,footer *{color:#000!important}
-    section{padding:28px 0;break-inside:avoid-page}
-    .spec,.plan,.why-card,.step-list li,.info{break-inside:avoid;box-shadow:none}
-    .faq-list details p{display:block}
+    /* dark cards and the drawing's frame print on white, with a hairline */
+    .scene,.why-card,.info,.form-off,.info-soon{background:#fff!important;border:1px solid #999!important;box-shadow:none!important}
+    .legend b{background:#d0341b!important;color:#fff!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+    .sticker{box-shadow:none}
+    .strip-item{border-color:#999!important}
+    section{padding:28px 0}
+    .spec,.plan,.why-card,.step-list li,.info,.faq-list details,.use{break-inside:avoid;box-shadow:none}
+    h2,h3,.kicker{break-after:avoid}
+    /* every FAQ answer prints (the script also opens them before printing) */
+    .faq-list details::details-content{content-visibility:visible;display:block}
+    .faq-list summary::after{display:none}
+    .info-row a{text-decoration:none}
+    .foot a[href="#top"]{display:none}
   }
   [hidden]{display:none !important}
 </style>
@@ -830,6 +840,11 @@ const LISTING = {
   }));
   const hashView = /^#3d(?:-(\w+))?$/.exec(location.hash);
   if (hashView) open3d(hashView[1] || "overview", null);
+
+  // Print every FAQ answer: open the closed ones for printing, then close them again.
+  let printOpened = [];
+  addEventListener("beforeprint", () => { printOpened = $$(".faq-list details:not([open])"); printOpened.forEach((d) => { d.open = true; }); });
+  addEventListener("afterprint", () => { printOpened.forEach((d) => { d.open = false; }); printOpened = []; });
 
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
