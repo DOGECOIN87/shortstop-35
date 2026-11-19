@@ -218,10 +218,16 @@ Listing details live in one `LISTING` object near the bottom of `index.html`.
 Each is empty until the owner supplies it, and the page hides what is missing:
 
 - `phone`: shows Call and Text buttons (contact card and the phone bar).
-- `email`: the inquiry form opens the visitor's email app addressed here.
-  Without it the form asks visitors to call. With neither phone nor email the
-  form is shown switched off with a note that inquiries open soon (and a link
-  to the 3D model), and the contact copy stops promising a reply.
+- `email`: shows the inquiry form, which opens the visitor's email app
+  addressed here. The page only offers what works with the details given:
+  - email (with or without a phone): the form, as above;
+  - phone only: no form; the contact card's Call and Text buttons, and the
+    copy asks visitors to call or text;
+  - neither (today): no form; the contact card says online inquiries open
+    soon and offers the 3D model, and every "Book a walkthrough" button
+    (hero, header, phone bar, the value tour's end card) becomes "Explore in
+    3D" or "Walkthrough details", since nothing can be booked yet;
+  - JavaScript off: no form; the card says contact details need JavaScript.
 - `address`: set to "Loop 1604 & Judson Rd, San Antonio, TX" (owner); shown
   in the contact card and FAQ with an OpenStreetMap link. Replace with the
   street address when the owner wants it public.
@@ -230,15 +236,88 @@ Each is empty until the owner supplies it, and the page hides what is missing:
 
 ## Layout and edge cases
 
-Checked at 320, 360, 390, 414, 768, 834, 1024, 1280, 1440, 1920 and 2560 px
-wide and on phones held sideways (667 x 375, 740 x 360): no sideways scroll at
-any width; plan cards split into two columns on tablets; the tour list runs in
-two columns on tablets; anchor links land below the sticky header; on short
-landscape screens the header scrolls away and the action bar slims down; side
-padding clears a phone's notch; without JavaScript the 3D buttons are hidden;
-a print stylesheet drops the dark backgrounds and the interactive parts. The
-3D viewer on phones uses a one-line title and a shorter panel so the model
-gets most of the screen, and goes side by side on short landscape screens.
+Audited with the scripts in `audit/` (Playwright with axe-core; see its
+README) in Chromium, Firefox and WebKit.
+
+What was checked:
+
+- widths: phones 320, 360, 375, 390, 414 and 430 wide, phones sideways
+  (568 x 320, 667 x 375, 740 x 360, 844 x 390), tablets both ways (768,
+  820, 834, 1024), desktops 1280 to 2560, and a short 1280 x 600 window;
+- 200% and 400% browser zoom (reflow at 320 CSS px), text alone at 200%;
+- every `LISTING` state: empty, phone, email, both, rates, and very long
+  values (a 41-character email, a long street address, "$35/hour, 4-hour
+  minimum" as every rate), plus no address;
+- keyboard only, touch target sizes, forced colours (Windows High Contrast,
+  via Firefox), reduced motion, JavaScript off, images that fail, slow 3G,
+  print;
+- the 3D viewer on a phone both ways, a tablet and a desktop (software
+  rendering): opening and closing, focus, views, list, hotspots, the value
+  tour stop by stop, the end card, turning the device, `#3d-line` and
+  `#3d-tour` links, and no WebGL.
+
+What the page does now:
+
+- nothing scrolls sideways at any width, zoom or text size: grids use
+  `minmax(0, 1fr)`, long emails and addresses wrap, and a contact row puts
+  its value under its label when the row gets narrow; buttons wrap;
+- text passes WCAG AA contrast (measured, including on the gradients), form
+  field edges are 3.6:1, and the focus ring is ink on light sections and gold
+  on dark ones;
+- every button is at least 44 px tall and links in the nav, footer and
+  contact card have 44 px hit areas; in the 3D viewer, controls are 44 px on
+  touch screens and the numbered spots take taps 44 px across;
+- body text runs about 60 to 72 characters a line; headings, FAQ questions
+  and contact values never end on one short word;
+- cards share one corner radius and one light shadow;
+- composition: type on a 1.25 scale from 16 px (61 / 39 / 25 / 20 / 16 /
+  12.8, subtitles 18), spacing on an 8 px grid, golden-ratio splits for the
+  3D poster and its list and for the contact card and form, every section on
+  one left edge; on a 1366 x 768 screen the headline sits on the upper third,
+  the drawing near the right third, and the text and drawing share a centre;
+- no eyebrows: no small labels above headings (section kickers, the hero
+  pill, card tags, the tour card's zone line); the hero's location moved into
+  its list of facts;
+- the hero's headline and buttons show without scrolling at 390 x 844,
+  1366 x 768 and 1280 x 600; on phones the bottom action bar slides away
+  while the hero's own buttons are on screen (one booking button at a time)
+  and the header button does the same on wider screens;
+- anchors and keyboard focus stop clear of the sticky header and the phone
+  action bar; Skip to content moves focus to the page content;
+- form errors mark the field invalid and point at the message;
+- print: dark cards print on white, every FAQ answer prints, buttons are
+  left off;
+- forced colours: buttons keep outlines, the decorative "$" behind the value
+  tour button is dropped;
+- iOS: inputs are 16 px (no zoom on focus), the empty date field keeps its
+  height, viewer panels use `dvh`, and the footer leaves room for the action
+  bar and the home indicator;
+- images have fixed sizes, so nothing shifts as they load (layout shift 0 on
+  a fast connection, 0.02 on slow 3G as the hero drawing streams in).
+
+The 3D viewer:
+
+- it is a proper modal dialog: focus moves in as soon as it opens (before
+  the model has finished building), Tab cycles inside it, the page behind is
+  inert and doesn't scroll, Escape closes it (or first leaves the tour, or
+  folds the equipment list on phones), and focus goes back to the button that
+  opened it; from the tour's end card, to the contact section;
+- numbers that would overlap merge into a labelled group ("Kitchen 10");
+  tapping a group zooms in until its numbers separate;
+- value tour: the "+$" pin stays between the readouts at the top and the
+  price card (it used to be cut off or cover the running total on phones);
+  on phones the picture shifts so the item sits on the upper third, above the
+  card;
+  on phones the first stop looks down on the hood over the line instead of up
+  at its baffles; on short landscape screens the card sits bottom left with
+  the controls in a column on the right;
+- turning the device re-frames the current view or tour stop;
+- without WebGL, the equipment list opens with a card for each item, and the
+  view and tour buttons (which need the model) are hidden.
+
+Not covered here: a real screen reader (VoiceOver, NVDA) and a real iPhone;
+the accessibility tree and the dialog's roles were checked in Chromium, and
+iOS behaviour from the CSS and WebKit on Linux.
 
 ## What still needs the owner
 

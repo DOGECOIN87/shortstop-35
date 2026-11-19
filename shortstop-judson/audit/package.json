@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "description": "Layout, accessibility and 3D viewer checks for the Short Stop Judson page (not part of the site)",
+  "devDependencies": {
+    "axe-core": "4.10.2"
+  }
+}
