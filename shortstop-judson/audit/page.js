@@ -135,7 +135,7 @@ async function keyboardWalk(page, n = 60) {
   const steps = [];
   for (let i = 0; i < n; i++) {
     await page.keyboard.press('Tab');
-    await page.evaluate(async () => { let y = -1, n = 0; while (n < 40) { await new Promise((q) => setTimeout(q, 50)); if (scrollY === y) break; y = scrollY; n++; } });
+    await page.evaluate(async () => { await new Promise((q) => setTimeout(q, 250)); let y = -1, n = 0; while (n < 40) { await new Promise((q) => setTimeout(q, 50)); if (scrollY === y) break; y = scrollY; n++; } });
     const s = await page.evaluate(() => {
       const el = document.activeElement; if (!el || el === document.body) return null;
       const r = el.getBoundingClientRect(), cs = getComputedStyle(el);
