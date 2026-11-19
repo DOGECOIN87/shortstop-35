@@ -114,7 +114,9 @@ const VIEWS = {
 // and installer cost guides (2025-26); estimates for comparison, not quotes, and not an
 // appraisal of the equipment in this kitchen. The README lists the sources.
 const TOUR = [
-  { id: 'hood', cam: [[KW + 1.15, 1.5, KZC + 3.0], [KW + 0.55, 1.95, KZC - 1.2]], title: 'Exhaust hood system', price: 40000, range: [25000, 60000], basis: 'About 12 ft of hood with fans, duct and make-up air, installed. Installers quote roughly $950 to $2,800 a foot, plus $8,000 to $25,000 for make-up air.' },
+  // camNarrow: portrait and short screens (phones) see the hood from above the aisle (the wide shot,
+  // backed off for a narrow screen, ended up under the hood looking up at its baffles)
+  { id: 'hood', cam: [[KW + 1.15, 1.5, KZC + 3.0], [KW + 0.55, 1.95, KZC - 1.2]], camNarrow: [[KW + 2.52, 2.6, KZC + 3.53], [KW + 0.67, 1.65, KZC - 0.37]], title: 'Exhaust hood system', price: 40000, range: [25000, 60000], basis: 'About 12 ft of hood with fans, duct and make-up air, installed. Installers quote roughly $950 to $2,800 a foot, plus $8,000 to $25,000 for make-up air.' },
   { id: 'suppression', cam: [[KW + 2.2, 1.42, KZC + 0.6], [KW + 0.3, 1.9, KZC - 3.0]], title: 'Fire suppression system', price: 6500, range: [4000, 10000], basis: 'Wet-chemical system over the cook line, installed.' },
   { id: 'griddle', title: '36 in flattop griddle', price: 3500, range: [2200, 5000], basis: 'Commercial 36 to 48 in griddles. The refrigerated base under it is not counted.' },
   { id: 'range', title: '24 in four-burner range top', price: 1800, range: [850, 2600], basis: 'Dealer listings for 24 in, four-burner gas hot plates.' },
@@ -2794,6 +2796,7 @@ const CSS = `
 .k3d-stage canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
 .k3d-stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 100% at 50% 45%,transparent 60%,rgba(5,18,20,.45))}
 .k3d-spots,.k3d-dims{position:absolute;inset:0;pointer-events:none;z-index:2}
+.k3d-dims{z-index:1}
 .k3d-spot{position:absolute;left:0;top:0;pointer-events:auto;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;border:2px solid #f5f3e6;background:#d0341b;color:#fff;font:700 12px/22px ui-monospace,Menlo,Consolas,monospace;text-align:center;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.4);transition:background .2s;padding:0}
 .k3d-spot.on{background:#eebe54;color:#143236}
 .k3d-spot.off{opacity:0;pointer-events:none}
@@ -2819,14 +2822,14 @@ const CSS = `
   .k3d-title{flex:1}
   .k3d-views{order:3;width:100%;margin-left:0}
   .k3d-main{grid-template-columns:1fr;grid-template-rows:1fr auto}
-  .k3d-side{border-left:0;border-top:1px solid rgba(255,255,255,.1);max-height:40vh;padding:12px;gap:10px}
+  .k3d-side{border-left:0;border-top:1px solid rgba(255,255,255,.1);max-height:40vh;max-height:40dvh;padding:12px;gap:10px}
   .k3d-listbtn{display:block;align-self:flex-start}
   .k3d-list{display:none}
   .k3d-list.open{display:block}
   .k3d-spot{width:24px;height:24px;line-height:20px}
   .k3d-title span{display:none}
   .k3d-title b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .k3d-side{max-height:34vh}
+  .k3d-side{max-height:34vh;max-height:34dvh}
   .k3d-card{padding:10px 12px}
   .k3d-card h3{font-size:15px}
   .k3d-card p,.k3d-card ul{font-size:13px}
@@ -2834,7 +2837,7 @@ const CSS = `
 }
 .k3d-tourbtn{font:inherit;font-size:13px;font-weight:800;color:#143236;background:#eebe54;border:0;border-radius:999px;padding:8px 14px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:6px;align-items:center;flex:0 0 auto;animation:ktPulse 2.6s infinite}
 @keyframes ktPulse{0%{box-shadow:0 0 0 0 rgba(238,190,84,.55)}70%{box-shadow:0 0 0 11px rgba(238,190,84,0)}100%{box-shadow:0 0 0 0 rgba(238,190,84,0)}}
-.k3d.touring .k3d-tourbtn{animation:none;opacity:.5}
+.k3d.touring .k3d-tourbtn{animation:none;background:transparent;color:#eebe54;box-shadow:inset 0 0 0 1px #eebe54}
 .k3d.touring .k3d-spots,.k3d.touring .k3d-card,.k3d.touring .k3d-list,.k3d.touring .k3d-listbtn,.k3d.touring .k3d-side>.k3d-note{display:none!important}
 .k3d-tour{position:absolute;inset:0;z-index:4;pointer-events:none;font-variant-numeric:tabular-nums}
 .k3d-tour[hidden]{display:none}
@@ -2854,7 +2857,6 @@ const CSS = `
 .kt-tt{flex:0 0 156px;height:156px;align-self:flex-end;border-radius:4px;position:relative;box-shadow:0 22px 50px rgba(0,0,0,.45)}
 .kt-tt::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(238,190,84,.45),inset 0 -24px 34px rgba(0,0,0,.22);pointer-events:none}
 .kt-info{flex:1;min-width:0;display:flex;flex-direction:column;background:rgba(13,35,38,.93);border:1px solid rgba(238,190,84,.38);border-radius:16px;padding:11px 14px;box-shadow:0 22px 50px rgba(0,0,0,.45)}
-.kt-zone{font:700 10px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.5px;text-transform:uppercase;color:#a9c1c0}
 .kt-info h3{font-size:18px;margin:3px 0 6px;color:#fff;line-height:1.2}
 .kt-info small{font-size:12px;color:#cfdcdb}
 .kt-est{display:inline-block;font:700 9px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.2px;text-transform:uppercase;border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:1px 5px;margin-left:4px;color:#cfdcdb;vertical-align:1px}
@@ -2879,8 +2881,7 @@ const CSS = `
 .kt-end[hidden]{display:none}
 .kt-endcard{max-width:580px;margin:16px;text-align:center;background:rgba(20,50,54,.95);border:1px solid rgba(238,190,84,.5);border-radius:22px;padding:26px 24px 20px;box-shadow:0 30px 80px rgba(0,0,0,.5);animation:ktRise .7s cubic-bezier(.2,.9,.25,1.15) both}
 @keyframes ktRise{from{opacity:0;transform:translateY(34px) scale(.95)}to{opacity:1;transform:none}}
-.kt-kicker{font:800 11px ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;text-transform:uppercase;color:#eebe54;margin:0}
-.kt-endcard h3{font-size:19px;margin:8px 0 2px;color:#fff}
+.kt-endcard h3{font-size:19px;margin:0 0 2px;color:#fff}
 .kt-endcard .big{font-size:clamp(46px,8vw,72px);font-weight:900;color:#eebe54;line-height:1.05;letter-spacing:-1px;text-shadow:0 0 40px rgba(238,190,84,.35)}
 .kt-endcard p{color:#cfdcdb;font-size:14.5px;margin:8px 0;line-height:1.5}
 .kt-endcard .rent{font-size:19px;color:#fff;font-weight:800}
@@ -2904,7 +2905,7 @@ const CSS = `
 .k3d-receipt .k3d-note{margin-top:8px}
 @media (max-width:820px){
   .k3d-tourbtn{padding:7px 11px}
-  .k3d.touring .k3d-side{max-height:24vh}
+  .k3d.touring .k3d-side{max-height:24vh;max-height:24dvh}
   .kt-top{left:8px;top:8px;width:34%}
   .kt-lbl{display:none}
   .kt-total{right:8px;top:8px;min-width:0;padding:6px 10px}
@@ -2940,39 +2941,132 @@ const CSS = `
   .k3d-close{width:34px;height:34px;flex-basis:34px}
   .k3d-main{grid-template-columns:1fr minmax(210px,30%);grid-template-rows:1fr}
   .k3d-side,.k3d.touring .k3d-side{max-height:none;border-top:0;border-left:1px solid rgba(255,255,255,.1)}
-  .kt-card{left:8px;right:auto;width:min(400px,calc(100% - 16px));bottom:54px}
+  /* value tour on a short screen, whatever its width: step and total across the top, price card
+     bottom left, the controls in a column on the right, so nothing overlaps */
+  .kt-top{left:8px;top:8px;width:min(200px,34%)}
+  .kt-lbl{display:none}
+  .kt-total{right:8px;top:8px;min-width:0;padding:6px 10px}
+  .kt-total small{font-size:9px;letter-spacing:1px}
+  .kt-total b{font-size:19px}
+  .kt-card{left:8px;right:60px;bottom:8px;width:auto;max-width:440px;gap:8px}
   .kt-tt{flex-basis:70px;height:70px}
+  .kt-info{padding:8px 11px}
+  .kt-info h3{font-size:15px;margin:2px 0 3px}
   .kt-price{font-size:24px}
-  .kt-ctrl{justify-content:flex-start}
-  .kt-ctrl button{width:36px;height:36px}
+  .kt-basis{display:none}
+  .kt-ctrl{left:auto;right:8px;top:auto;bottom:8px;flex-direction:column;justify-content:flex-end}
+  .kt-ctrl button{width:40px;height:40px}
+  .kt-ctrl .kt-exit{width:40px;padding:0;font-size:0}
+  .kt-ctrl .kt-exit::before{content:"✕";font-size:16px;font-weight:400}
+  .kt-pin{font-size:13px;padding:4px 8px}
+  .kt-endcard{padding:14px 14px 12px;margin:8px}
+  .kt-endcard h3{font-size:15px}
+  .kt-endcard .big{font-size:38px}
+  .kt-endcard p{font-size:12.5px;margin:4px 0}
+  .kt-endcard .rent{font-size:15px}
+  .kt-endbtns{margin:8px 0 2px}
+  .kt-endbtns button{padding:8px 14px;font-size:13px}
 }
+/* the row of view buttons scrolls sideways on small screens: fade its edge while there is more */
+.k3d-views.more{-webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent);mask-image:linear-gradient(90deg,#000 calc(100% - 44px),transparent)}
+/* a group of numbers that would overlap: "Kitchen 8", tap to zoom in */
+.k3d-grp{width:auto;height:32px;padding:0 4px 0 12px;display:inline-flex;align-items:center;gap:8px;border-radius:999px;border:2px solid #eebe54;background:rgba(20,50,54,.94);color:#fff;font:700 13px/1 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;white-space:nowrap}
+.k3d-grp b{display:inline-grid;place-items:center;min-width:22px;height:22px;padding:0 5px;border-radius:999px;background:#eebe54;color:#143236;font:700 12px ui-monospace,Menlo,Consolas,monospace}
+.k3d-grp:hover{background:#204649}
+/* touch screens: every control is at least 44 px tall (mouse users keep the compact sizes);
+   the numbered spots keep their size but take taps 44 px across */
+@media (pointer:coarse){
+  .k3d-spot:not(.k3d-grp){width:44px;height:44px;line-height:44px;background:none;border:0;box-shadow:none;isolation:isolate}
+  .k3d-spot:not(.k3d-grp)::before{content:"";position:absolute;inset:9px;z-index:-1;border-radius:50%;border:2px solid #f5f3e6;background:#d0341b;box-shadow:0 4px 10px rgba(0,0,0,.4)}
+  .k3d-spot.on:not(.k3d-grp)::before{background:#eebe54}
+  .k3d-grp{height:44px;padding:0 6px 0 14px}
+  .kt-ctrl .kt-exit{min-width:44px;flex-basis:auto}
+  .k3d-views button,.k3d-listbtn,.k3d-tourbtn,.kt-endbtns button,.kt-ctrl .kt-exit{min-height:44px}
+  .k3d-close,.kt-ctrl button{width:44px;height:44px;flex-basis:44px}
+  .k3d-list button{min-height:44px}
+}
+/* no WebGL: the message on top, the equipment list and its cards below */
+.k3d.no3d .k3d-views,.k3d.no3d .k3d-tourbtn,.k3d.no3d .k3d-listbtn{display:none}
+.k3d.no3d .k3d-main{grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+.k3d.no3d .k3d-stage{background:none}
+.k3d.no3d .k3d-stage::after{display:none}
+.k3d.no3d .k3d-status{position:static;transform:none;max-width:640px;margin:16px;text-align:left}
+.k3d.no3d .k3d-side,.k3d.no3d.touring .k3d-side{max-height:none;border-left:0;border-top:1px solid rgba(255,255,255,.1)}
+.k3d.no3d .k3d-list{display:block;columns:2 260px;column-gap:24px}
+.k3d.no3d .k3d-list h4{break-after:avoid}
+.k3d.no3d .k3d-list ol{break-inside:avoid-column}
+.k3d.no3d .k3d-side > .k3d-note{display:block}
 .k3d.capture .k3d-top,.k3d.capture .k3d-side,.k3d.capture .k3d-spots{display:none}
 .k3d.capture .k3d-main{grid-template-columns:1fr}
 `;
 
 let K = null;   // the one viewer instance
+let creating = null;
+// The viewer is a modal dialog: while it is open the page behind is inert (no focus, no clicks,
+// hidden from screen readers) and doesn't scroll, Tab cycles inside it, and Escape works from
+// anywhere. Focus goes back to the button that opened it.
+const D = { host: null, opener: null, inert: [] };
+function lockPage(on) {
+  document.documentElement.style.overflow = on ? 'hidden' : '';
+  if (on) {
+    D.inert = [...document.body.children].filter((el) => el !== D.host && !el.inert && !/^(SCRIPT|STYLE|TEMPLATE)$/.test(el.tagName));
+    D.inert.forEach((el) => { el.inert = true; });
+  } else { D.inert.forEach((el) => { el.inert = false; }); D.inert = []; }
+}
+const focusables = (root) => [...root.querySelectorAll('button,[href],input,select,textarea,[tabindex]:not([tabindex="-1"])')].filter((el) => !el.disabled && el.tabIndex >= 0 && el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden');
+function onKey(e) {
+  if (!D.host || D.host.hidden) return;
+  if (e.key === 'Escape') {
+    e.preventDefault();
+    if (K && K.tour && K.tour.on) { K.tourStop(); K.setView('overview'); }
+    else if (K && K.closeList && K.closeList()) { /* closed the equipment list */ }
+    else close();
+    return;
+  }
+  if (e.key !== 'Tab') return;
+  const f = focusables(D.host); if (!f.length) return;
+  const first = f[0], last = f[f.length - 1], at = document.activeElement;
+  if (!D.host.contains(at)) { e.preventDefault(); (e.shiftKey ? last : first).focus(); }
+  else if (e.shiftKey && at === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && at === last) { e.preventDefault(); first.focus(); }
+}
 
 export async function open(host, { view = 'overview', opener } = {}) {
+  D.host = host; D.opener = opener || null;
+  const wasHidden = host.hidden;
   host.hidden = false;
-  document.documentElement.style.overflow = 'hidden';
-  if (!K) K = await create(host);
-  K.opener = opener || null;
+  if (wasHidden || !D.inert.length) lockPage(true);
+  document.removeEventListener('keydown', onKey); document.addEventListener('keydown', onKey);
+  if (!K) {
+    // the controls are on screen right away (the model builds behind a status message), so focus
+    // moves into the dialog at once instead of staying on the page behind
+    if (!creating) creating = create(host);
+    if (!host.contains(document.activeElement)) host.querySelector('.k3d-close').focus();
+    K = await creating;
+    if (host.hidden) return K;   // closed while it was loading
+  }
   K.open = true;
   const tourNow = view === 'tour';
   K.setView(view in VIEWS ? view : 'overview', !K.started);
   K.started = true;
   K.loop();
   if (tourNow && K.tourStart) K.tourStart();
-  host.querySelector('.k3d-close').focus();
+  if (!host.contains(document.activeElement)) host.querySelector('.k3d-close').focus();
   return K;
 }
 
-function close() {
-  if (!K) return;
-  if (K.tourStop) K.tourStop();
-  K.open = false; K.host.hidden = true;
-  document.documentElement.style.overflow = '';
-  if (K.opener) K.opener.focus();
+function close(focusTo) {
+  if (!D.host || D.host.hidden) return;
+  if (K && K.tourStop) K.tourStop();
+  if (K) K.open = false;
+  D.host.hidden = true;
+  lockPage(false);
+  document.removeEventListener('keydown', onKey);
+  // back to the button that opened it, or (for a link straight to #3d, or a button that is
+  // hidden now) to the start of the page content
+  const to = focusTo || D.opener;
+  if (to) to.focus({ preventScroll: !!focusTo });
+  if (!to || document.activeElement !== to) { const m = document.getElementById('main'); if (m) m.focus({ preventScroll: true }); }
   if (location.hash.startsWith('#3d')) history.replaceState(null, '', location.pathname + location.search);
 }
 
@@ -2988,14 +3082,14 @@ async function create(host) {
       <button type="button" class="k3d-close" aria-label="Close the 3D kitchen">✕</button>
     </div>
     <div class="k3d-main">
-      <div class="k3d-stage"><div class="k3d-spots"></div><div class="k3d-dims" aria-hidden="true"></div><p class="k3d-status" role="status">Building the kitchen…</p>
+      <div class="k3d-stage"><div class="k3d-spots" aria-hidden="true"></div><div class="k3d-dims" aria-hidden="true"></div><p class="k3d-status" role="status">Building the kitchen…</p>
         <div class="k3d-tour" hidden>
           <div class="kt-top"><span class="kt-step"><span class="kt-lbl">Value tour · </span><b>01</b> / ${TOUR.length}</span><div class="kt-bar"><i></i></div></div>
           <div class="kt-total"><small>Kitchen value so far</small><b>$0</b><div class="kt-meter"><i></i></div></div>
           <div class="kt-pin" hidden></div>
           <div class="kt-card">
             <div class="kt-tt" aria-hidden="true"></div>
-            <div class="kt-info"><span class="kt-zone"></span><h3></h3><small>If you bought it new <span class="kt-est">Estimate</span></small><b class="kt-price">$0</b><span class="kt-range"></span><p class="kt-basis"></p></div>
+            <div class="kt-info"><h3></h3><small>If you bought it new <span class="kt-est">Estimate</span></small><b class="kt-price">$0</b><span class="kt-range"></span><p class="kt-basis"></p></div>
           </div>
           <div class="kt-ctrl" role="group" aria-label="Tour controls">
             <button type="button" data-kt="prev" aria-label="Previous item"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zM9.5 12 18 6v12z"/></svg></button>
@@ -3005,7 +3099,6 @@ async function create(host) {
           </div>
           <div class="kt-end" hidden>
             <div class="kt-endcard" role="group" aria-label="Value tour summary">
-              <p class="kt-kicker">Value tour complete</p>
               <h3>Bought new, the equipment you just toured runs about</h3>
               <div class="big">$0</div>
               <p>Most of that is equipment alone, at typical new prices, before delivery, gas and electrical hookups, permits and the months it takes to build a kitchen out.</p>
@@ -3030,26 +3123,37 @@ async function create(host) {
   const stage = host.querySelector('.k3d-stage'), status = host.querySelector('.k3d-status'), card = host.querySelector('.k3d-card');
   const defaultCard = '<h3>Explore the kitchen</h3><p>Tap a number on the model, or pick from the list, to see each piece of equipment. Use the view buttons to jump around the room.</p>';
   card.innerHTML = defaultCard;
-  host.querySelector('.k3d-close').addEventListener('click', close);
-  host.addEventListener('keydown', (e) => {
-    const T = K.tour;
-    if (e.key === 'Escape') { if (T && T.on) { K.tourStop(); K.setView('overview'); } else close(); return; }
-    if (!T || !T.on || e.target.closest('input,textarea,select')) return;
-    const btn = (k) => host.querySelector(`[data-kt="${k}"]`);
-    if (e.key === 'ArrowRight') { e.preventDefault(); btn('next').click(); }
-    else if (e.key === 'ArrowLeft') { e.preventDefault(); btn('prev').click(); }
-    else if ((e.key === ' ' || e.key === 'k') && !e.target.closest('button')) { e.preventDefault(); btn('play').click(); }
-  });
+  host.querySelector('.k3d-close').addEventListener('click', () => close());
   const listBtn = host.querySelector('.k3d-listbtn'), list = host.querySelector('.k3d-list');
+  list.id = 'k3d-list'; listBtn.setAttribute('aria-controls', 'k3d-list');
+  const viewsRow = host.querySelector('.k3d-views');
+  const fadeViews = () => viewsRow.classList.toggle('more', viewsRow.scrollLeft + viewsRow.clientWidth < viewsRow.scrollWidth - 2);
+  viewsRow.addEventListener('scroll', fadeViews, { passive: true }); new ResizeObserver(fadeViews).observe(viewsRow);
   listBtn.addEventListener('click', () => { const o = list.classList.toggle('open'); listBtn.setAttribute('aria-expanded', o); });
+  // Escape first closes the equipment list where it is a pop-out (phones), then the viewer
+  const closeList = () => {
+    if (!list.classList.contains('open') || getComputedStyle(listBtn).display === 'none') return false;
+    list.classList.remove('open'); listBtn.setAttribute('aria-expanded', 'false'); listBtn.focus(); return true;
+  };
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
 
   let renderer;
   try {
     renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance', preserveDrawingBuffer: /[?&]capture/.test(location.search) });
   } catch (e) {
-    status.textContent = 'This device can’t show 3D. The equipment list on the side has everything in the kitchen.';
-    return { host, setView() {}, loop() {}, started: true };
+    // No WebGL: keep what still works. The camera views and the value tour need the model, so
+    // they go; the equipment list stays (open on phones) and each entry shows its card.
+    host.classList.add('no3d');
+    status.textContent = 'This device can’t show the 3D model. The equipment list has everything in the kitchen: pick an item to read about it.';
+    const all = Object.keys(ITEMS);
+    host.querySelectorAll('[data-item]').forEach((b) => b.addEventListener('click', () => {
+      const id = b.dataset.item, it = ITEMS[id];
+      host.querySelectorAll('[data-item]').forEach((q) => q.setAttribute('aria-current', q === b));
+      card.innerHTML = `<h3><i>${all.indexOf(id) + 1}</i>${it.name}</h3><ul>${it.lines.map((l) => `<li>${l}</li>`).join('')}</ul><p class="sz">Typical size · ${it.size}</p>`;
+      card.scrollIntoView({ block: 'nearest' });
+    }));
+    list.classList.add('open'); listBtn.setAttribute('aria-expanded', 'true');
+    return { host, setView() {}, loop() {}, started: true, closeList };
   }
   const mobile = matchMedia('(max-width: 820px), (pointer: coarse)').matches;
   HQ = !mobile;
@@ -3231,6 +3335,30 @@ async function create(host) {
     b.setAttribute('aria-label', it.name); b.addEventListener('click', (e) => { e.stopPropagation(); select(it.id, true); });
     spots.appendChild(b); it.el = b;
   });
+  // Numbers that would sit on top of each other (zoomed out, small screens) merge into one
+  // labelled group ("Kitchen 8"); tapping a group zooms in on its items until they separate.
+  // (Keyboard and screen-reader users have the equipment list, which lists every item.)
+  const groupEls = [];
+  const groupEl = (k) => {
+    if (groupEls[k]) return groupEls[k];
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'k3d-spot k3d-grp'; b.tabIndex = -1;
+    b.innerHTML = '<span></span><b></b>';
+    b.addEventListener('click', (e) => { e.stopPropagation(); if (b._items) zoomTo(b._items); });
+    spots.appendChild(b); groupEls[k] = b; return b;
+  };
+  const coarse = matchMedia('(pointer: coarse)').matches;
+  const groupLabel = (members) => {
+    const zs = new Set(members.map((q) => q.zone));
+    if (zs.size === 1) return { counter: 'Counter', kitchen: 'Kitchen', back: 'Back room', store: 'Store', doors: 'Doors' }[[...zs][0]];
+    // otherwise name the area most of them are in
+    const kit = (z) => z === 'kitchen' || z === 'counter' || z === 'doors', n = members.length;
+    const share = (f) => members.filter((q) => f(q.zone)).length / n;
+    if (share(kit) >= 0.75) return 'Kitchen';
+    if (share((z) => z === 'back') >= 0.75) return 'Back room';
+    if (share((z) => kit(z) || z === 'back') >= 0.75) return 'Kitchen and back room';
+    if (share((z) => z === 'store') >= 0.75) return 'Store';
+    return 'Items';
+  };
   const dimLabels = [
     { t: 'STORE ≈ 93 × 50 ft', p: new THREE.Vector3(0, 0.05, Z0 - 1.0) },
     { t: 'KITCHEN', p: new THREE.Vector3(KW + 1.6, 0.05, KZC + 1.1) },
@@ -3255,16 +3383,22 @@ async function create(host) {
   if (/[?&]debug/.test(location.search)) window.__k3d = { scene, camera, renderer, items, baked, THREE, K, M, occluders, flyBoxes, get controls() { return controls; }, get composer() { return composer; } };
   const ray = new THREE.Raycaster(), v = new THREE.Vector3(), ndc = new THREE.Vector2();
 
+  let shape = '', refitT = 0;
   function resize() {
     const w = stage.clientWidth || 1, h = stage.clientHeight || 1;
     renderer.setSize(w, h, false); composer.setPixelRatio(renderer.getPixelRatio()); composer.setSize(w, h);
     camera.aspect = w / h; camera.updateProjectionMatrix(); viewOffset(); K.needs = true;
+    // portrait, square-ish or landscape, and phone-size or not
+    const sh = (w / h < 0.9 ? 'tall' : w / h < 1.2 ? 'mid' : 'wide') + (w <= 820 || h <= 500 ? '-small' : '');
+    if (shape && sh !== shape && K.refit) { clearTimeout(refitT); refitT = setTimeout(() => K.refit(), 250); }
+    shape = sh;
   }
   // During the value tour on small screens the price card covers the lower part of the view:
   // shift the picture up so the item sits in the open part above the card.
   function viewOffset() {
     const w = stage.clientWidth || 1, h = stage.clientHeight || 1;
-    if (K.tour && K.tour.on && (w <= 820 || h <= 500)) camera.setViewOffset(w, h, 0, Math.round(h * 0.18), w, h);
+    // (portrait: the card spans the bottom; short landscape: the card sits in a corner, so less)
+    if (K.tour && K.tour.on && (w <= 820 || h <= 500)) camera.setViewOffset(w, h, 0, Math.round(h * (w / h > 1.2 ? 0.07 : 0.18)), w, h);
     else if (camera.view && camera.view.enabled) camera.clearViewOffset();
     K.needs = true;
   }
@@ -3290,6 +3424,7 @@ async function create(host) {
     const w = stage.clientWidth, h = stage.clientHeight;
     const active = occluders.filter((o) => !o.userData.wall || vis[o.userData.wall]);
     const top = camera.position.y > 7;
+    const shown = [];
     for (const it of items) {
       v.copy(it.anchorV).project(camera);
       let hide = v.z > 1 || v.x < -1.05 || v.x > 1.05 || v.y < -1.05 || v.y > 1.05 || !!(it.cut && !vis[it.cut]);
@@ -3299,13 +3434,54 @@ async function create(host) {
         const hit = ray.intersectObjects([...active, ...items.filter((o) => o !== it && !(o.cut && !vis[o.cut]) && o.id !== 'hood').map((o) => o.pick)], false)[0];
         if (hit && !(top && hit.object.userData.id)) hide = true;
       }
+      it.sx = (v.x * 0.5 + 0.5) * w; it.sy = (-v.y * 0.5 + 0.5) * h;
+      if (!hide) shown.push(it);
       it.el.classList.toggle('off', hide);
-      if (!hide) it.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${(-v.y * 0.5 + 0.5) * h}px) translate(-50%,-50%)`;
     }
+    // merge numbers closer than a fingertip (or than two numbers side by side, with a mouse)
+    const R = coarse ? 44 : 30, groups = [];
+    for (const it of shown) {
+      const g = groups.find((q) => Math.hypot(q.x - it.sx, q.y - it.sy) < R);
+      if (g) { g.m.push(it); g.x = g.m.reduce((a, q) => a + q.sx, 0) / g.m.length; g.y = g.m.reduce((a, q) => a + q.sy, 0) / g.m.length; }
+      else groups.push({ x: it.sx, y: it.sy, m: [it] });
+    }
+    // a group shows as a labelled pill, wider than a number: merge any whose boxes would overlap
+    const size = (g) => g.m.length === 1 ? [R, R] : [groupLabel(g.m).length * 7.6 + (coarse ? 54 : 48), coarse ? 48 : 36];
+    for (let merged = true; merged;) {
+      merged = false;
+      for (let a = 0; a < groups.length && !merged; a++) for (let b = a + 1; b < groups.length && !merged; b++) {
+        const A = groups[a], B = groups[b], [aw, ah] = size(A), [bw, bh] = size(B);
+        if (Math.abs(A.x - B.x) < (aw + bw) / 2 && Math.abs(A.y - B.y) < (ah + bh) / 2 && (A.m.length > 1 || B.m.length > 1)) {
+          A.m.push(...B.m); A.m.sort((p, q) => p.n - q.n); groups.splice(b, 1); merged = true;
+          A.x = A.m.reduce((s2, q) => s2 + q.sx, 0) / A.m.length; A.y = A.m.reduce((s2, q) => s2 + q.sy, 0) / A.m.length;
+        }
+      }
+    }
+    let k = 0;
+    for (const g of groups) {
+      if (g.m.length === 1) { const it = g.m[0]; it.el.style.transform = `translate(${it.sx}px, ${it.sy}px) translate(-50%,-50%)`; continue; }
+      for (const it of g.m) it.el.classList.add('off');
+      const b = groupEl(k++), key = g.m.map((q) => q.id).join();
+      if (b._key !== key) {
+        b._key = key; b._items = g.m;
+        const lbl = groupLabel(g.m);
+        b.firstChild.textContent = lbl; b.lastChild.textContent = g.m.length;
+        b.setAttribute('aria-label', `${lbl}: ${g.m.length} items (${g.m.map((q) => q.name).join(', ')}). Zoom in`);
+      }
+      b.classList.remove('off');
+      b.style.transform = `translate(${g.x}px, ${g.y}px) translate(-50%,-50%)`;
+    }
+    for (; k < groupEls.length; k++) { groupEls[k].classList.add('off'); groupEls[k]._key = ''; }
     for (const d of dimLabels) {
       const show = K.view === 'plan' && camera.position.y > 20;
       d.el.style.display = show ? '' : 'none';
-      if (show) { v.copy(d.p).project(camera); d.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${(-v.y * 0.5 + 0.5) * h}px) translate(-50%,-50%)`; }
+      if (show) {
+        // keep each label inside the stage (on a portrait floor plan the store's width label sits at the edge)
+        v.copy(d.p).project(camera);
+        const hw = (d.el.offsetWidth || 80) / 2 + 4, hh = (d.el.offsetHeight || 22) / 2 + 4;
+        const x = THREE.MathUtils.clamp((v.x * 0.5 + 0.5) * w, hw, w - hw), y = THREE.MathUtils.clamp((-v.y * 0.5 + 0.5) * h, hh, h - hh);
+        d.el.style.transform = `translate(${x}px, ${y}px) translate(-50%,-50%)`;
+      }
     }
   }
 
@@ -3421,6 +3597,7 @@ async function create(host) {
   K.setView = (name, instant) => {
     const vw = VIEWS[name]; K.view = name;
     host.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === name));
+    const pressed = host.querySelector(`[data-view="${name}"]`); if (pressed) pressed.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     if (instant && name === 'overview') { camera.position.set(22, 28, 34); controls.target.set(...vw.target); controls.update(); }
     // narrow screens: step back along the view so the same things fit
     const tgt = new THREE.Vector3(...vw.target), pos = new THREE.Vector3(...vw.pos);
@@ -3485,6 +3662,18 @@ async function create(host) {
     }
     return first;
   }
+  // fly in (keeping the current direction, looking down) until a group of items fills the view
+  function zoomTo(members) {
+    const box = new THREE.Box3(); members.forEach((q) => box.union(q.box));
+    const c = box.getCenter(new THREE.Vector3()), s = box.getSize(new THREE.Vector3());
+    const r = Math.max(s.x, s.z, 2.5) * 0.62, half = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+    const dist = THREE.MathUtils.clamp(r / half / Math.min(1, camera.aspect), 5, controls.maxDistance);
+    const dir = camera.position.clone().sub(controls.target).normalize();
+    if (dir.y < 0.6) { dir.y = 0.6; dir.normalize(); }
+    c.y = Math.min(c.y, 1.0);
+    host.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false')); K.view = null;
+    flyTo(c.clone().addScaledVector(dir, dist), c);
+  }
   function select(id, fly) {
     const it = items.find((q) => q.id === id);
     items.forEach((q) => q.el.classList.toggle('on', q === it));
@@ -3500,7 +3689,11 @@ async function create(host) {
     }
     K.needs = true;
   }
-  host.querySelectorAll('[data-item]').forEach((b) => b.addEventListener('click', () => { select(b.dataset.item, true); list.classList.remove('open'); listBtn.setAttribute('aria-expanded', 'false'); }));
+  host.querySelectorAll('[data-item]').forEach((b) => b.addEventListener('click', () => {
+    select(b.dataset.item, true);
+    // on phones the list folds away; keep focus on its button instead of losing it
+    if (closeList()) { /* focus moved to the list button */ }
+  }));
 
   // tap to pick
   let down = null;
@@ -3599,12 +3792,26 @@ async function create(host) {
     ring.visible = false; spot.intensity = 0; sel.visible = false; show.on = false; tPin.hidden = true;
     stopConfetti(); viewOffset(); K.needs = true;
   }
+  // camera for a tour stop: its own shot where it has one (a narrow-screen one where given), else
+  // a close-up framed for this screen
+  function tourFrame(i) {
+    const st = TOUR[i], it = items.find((q) => q.id === st.id), narrow = camera.aspect < 0.9 || (stage.clientHeight || 1) <= 500;
+    const cam = (narrow && st.camNarrow) || st.cam;
+    return cam ? (cam === st.camNarrow ? { pos: new THREE.Vector3(...cam[0]), tgt: new THREE.Vector3(...cam[1]) } : pullback(new THREE.Vector3(...cam[0]), new THREE.Vector3(...cam[1]))) : frameItem(it, 0.9);
+  }
+  // Turning the device (or resizing the window past portrait / landscape) re-frames what is on
+  // screen: the current tour stop, or the camera view that was picked.
+  K.refit = () => {
+    if (!K.ready) return;
+    if (tour.on && tour.phase !== 'end' && tour.i >= 0) { const fr = tourFrame(tour.i); tour.base = fr; flyTo(fr.pos, fr.tgt, true); tour.t = 0; }
+    else if (K.view && !tour.on) K.setView(K.view, false);
+  };
   function tourGo(i, flyPrev = true) {
     if (flyPrev) flyPin();
     if (i >= TOUR.length) { tourEnd(); return; }
     const st = TOUR[i], it = items.find((q) => q.id === st.id);
     Object.assign(tour, { i, it, phase: 'fly', t: 0, counted: false });
-    const fr = st.cam ? pullback(new THREE.Vector3(...st.cam[0]), new THREE.Vector3(...st.cam[1])) : frameItem(it, 0.9); tour.base = fr;
+    const fr = tourFrame(i); tour.base = fr;
     flyTo(fr.pos, fr.tgt, reduce); if (K.tween) K.tween.dur = Math.max(FLY, K.tween.dur);
     const s = it.box.getSize(new THREE.Vector3());
     sel.scale.set(s.x + 0.06, s.y + 0.06, s.z + 0.06); sel.position.copy(it.center); sel.visible = true;
@@ -3612,7 +3819,6 @@ async function create(host) {
     spot.position.set(it.center.x + it.face.x * 1.3, Math.min(H_ACT - 0.15, it.box.max.y + 1.5), it.center.z + it.face.z * 1.3); spot.target.position.copy(it.center); spot.intensity = 0;
     show.pivot.clear(); show.pivot.add(showModel(it)); show.on = true;
     tCard.classList.remove('in');
-    tCard.querySelector('.kt-zone').textContent = ZONES[it.zone] + ' · ' + String(i + 1).padStart(2, '0') + ' of ' + TOUR.length;
     tCard.querySelector('h3').textContent = st.title;
     tCard.querySelector('.kt-range').textContent = st.range ? `Typical range ${money(st.range[0])} to ${money(st.range[1])}` : 'Based on one dealer listing';
     tCard.querySelector('.kt-basis').textContent = st.basis;
@@ -3640,10 +3846,25 @@ async function create(host) {
   function pinShow() {
     tPin.textContent = '+' + money(0); tPin.hidden = false; tPin.className = 'kt-pin'; void tPin.offsetWidth; tPin.classList.add('pop');
   }
+  // The "+$" pin points at the item, but stays in the open band between the readouts at the top
+  // (step, running total) and the price card, and inside the stage at the sides.
   function placePin() {
     if (tPin.hidden || tPin.classList.contains('kt-fly') || !tour.it) return;
     v.copy(tour.it.anchorV).project(camera);
-    tPin.style.left = ((v.x * 0.5 + 0.5) * stage.clientWidth) + 'px'; tPin.style.top = ((-v.y * 0.5 + 0.5) * stage.clientHeight) + 'px';
+    const W = stage.clientWidth, H = stage.clientHeight, sr = stage.getBoundingClientRect();
+    let x = (v.x * 0.5 + 0.5) * W, y = (-v.y * 0.5 + 0.5) * H;
+    const pw = tPin.offsetWidth || 90, ph = (tPin.offsetHeight || 32) + 6;
+    x = THREE.MathUtils.clamp(x, pw / 2 + 8, W - pw / 2 - 8);
+    const topR = tourEl.querySelector('.kt-top').getBoundingClientRect(), totR = tTotal.getBoundingClientRect();
+    // clear of the total box only where the pin would sit under it; clear of the step pill likewise
+    const under = (r) => x + pw / 2 > r.left - sr.left - 6 && x - pw / 2 < r.right - sr.left + 6;
+    let minY = ph + 8;
+    if (under(totR)) minY = Math.max(minY, totR.bottom - sr.top + ph + 8);
+    if (under(topR)) minY = Math.max(minY, topR.bottom - sr.top + ph + 8);
+    const cardTop = tCard.classList.contains('in') ? tCard.getBoundingClientRect().top - sr.top - 8 : H - 8;
+    const maxY = Math.max(minY, Math.min(H - 8, cardTop));
+    y = THREE.MathUtils.clamp(y, minY, maxY);
+    tPin.style.left = x + 'px'; tPin.style.top = y + 'px';
   }
   function flyPin() {
     if (tPin.hidden || !tour.counted) { tPin.hidden = true; return; }
@@ -3743,14 +3964,27 @@ async function create(host) {
   tEnd.querySelector('[data-kt="replay"]').addEventListener('click', () => tourStart());
   tEnd.querySelector('[data-kt="explore"]').addEventListener('click', () => { tourStop(); K.setView('overview'); });
   tEnd.querySelector('[data-kt="book"]').addEventListener('click', () => {
-    tourStop(); close();
-    const c = document.getElementById('contact'); if (c) setTimeout(() => c.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }), 60);
+    tourStop();
+    // focus lands on the contact section (not back on the button that opened the viewer)
+    const c = document.getElementById('contact');
+    if (c && !c.hasAttribute('tabindex')) c.setAttribute('tabindex', '-1');
+    close(c || undefined);
+    if (c) setTimeout(() => c.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }), 60);
   });
   renderer.domElement.addEventListener('pointerdown', () => { if (tour.on && tour.phase !== 'end' && !tour.paused) { tour.paused = true; setPlay(); } });
   K.tourStart = () => { if (!K.ready) { K.pendingTour = true; return; } tourStart(); };
   K.tourStop = tourStop;
   if (/[?&]debug/.test(location.search)) window.__k3dJump = tourJump;
   K.tour = tour;
+  K.closeList = closeList;
+  // during the tour: arrow keys step, Space (or K) pauses
+  host.addEventListener('keydown', (e) => {
+    if (!tour.on || e.target.closest('input,textarea,select')) return;
+    const btn = (k) => host.querySelector(`[data-kt="${k}"]`);
+    if (e.key === 'ArrowRight') { e.preventDefault(); btn('next').click(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); btn('prev').click(); }
+    else if ((e.key === ' ' || e.key === 'k') && !e.target.closest('button')) { e.preventDefault(); btn('play').click(); }
+  });
 
   // Adaptive resolution. On a device that can't keep up while the camera is moving (below
   // ~24 fps), moving frames are drawn at a lower pixel ratio; the moment the camera comes to rest
