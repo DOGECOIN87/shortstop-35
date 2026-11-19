@@ -52,9 +52,23 @@ the building was built to (about 93 x 50 ft, storefront on the south):
   front doors; coffee, fountain and frozen-drink bar on the back wall; grab-and-go
   case, hot food island and bakery island; four gondola runs; self-checkouts;
   window seating;
-- east wall: 13 glass cooler doors with the vault behind, utility room at the
-  back corner, and the walk-in beer cave at the front corner (owner: at this
-  location the beer cave is on the front side).
+- east wall: 13 glass cooler doors with the vault behind and a utility room
+  at the back corner;
+- the walk-in beer cave runs along the front wall to the right of the doors,
+  entered by a glass door on its face, with three more glass cooler doors
+  beside it (owner: it sits against the same wall as the front doors). The
+  storefront glass runs from the kitchen corner to the beer cave, with the
+  window seating just right of the doors.
+
+Owner-confirmed (standing at the front doors, looking in): kitchen and its
+order counter on the left wall; checkout left of the doors; cooler doors on
+the right wall; beer cave against the front wall; restrooms back left,
+behind the kitchen.
+
+The site matches the public records for the building: one-story masonry store
+of about 4,600 sq ft (measured from aerial imagery at about 91 x 48 ft), its
+storefront facing the main fuel canopy (about 4,320 sq ft, 12 fueling
+positions), with a smaller second canopy off the far end (not modelled).
 
 Built in code to standard equipment sizes, in metres. Rendering:
 
@@ -147,8 +161,8 @@ between the camera and the room are cut away automatically. Menu screens and
 signs show generic "your menu / your brand here" designs, no chain branding.
 `kitchen-3d-poster.jpg` is a render of the overview used on the page.
 
-Still estimated: every position and size except the kitchen line order (from
-the owner's photo) and the beer cave's side (from the owner). The plan
+Still estimated: exact positions and sizes inside (the arrangement above is
+owner-confirmed; the kitchen line order is from the owner's photo). The plan
 constants (`BLD`, `px()`/`pz()` in plan feet, `KF`, `BOH`, `VAULT_X`) are at
 the top of `kitchen3d.js`; positions are in `buildKitchen()`.
 
@@ -214,7 +228,24 @@ all to be checked against the real kitchen:
   and seating along the storefront. Trade press describes the same format
   with a restaurant counter, hot food case, grab-and-go area, self-checkout
   and in-store seating.
-- Location: the owner gives it as Loop 1604 & Judson, San Antonio. No public
-  TDLR record was found for a store at that intersection; the nearest record
-  is new construction at 13340 Judson Rd (2017), not confirmed to be this
-  store.
+- Location: the store at Loop 1604 & Judson is 17510 Judson Rd, San Antonio,
+  TX 78247 (Bexar CAD property 1360519, geographic ID 17789-001-0150, Cooper
+  Subd. block 1 lot 15, 2.06 acres, zoned I-1), on the south side of the Loop
+  1604 frontage road just east of Judson Rd (about 29.6012 N, 98.3860 W).
+  - Bexar Appraisal District: one convenience store of 4,600 sq ft, masonry,
+    built 2021, with a 300 sq ft canopy and a 1,000 sq ft service-station
+    canopy; a second 4,320 sq ft service-station canopy; five underground
+    fuel tanks; 63,380 sq ft of concrete paving
+    (https://bexar.trueautomation.com/clientdb/Property.aspx?cid=110&prop_id=1360519).
+  - TDLR TABS2020011238, "7-Eleven in San Antonio (41142)": new construction
+    of a one-story convenience store with taqueria and fuel canopy, 4,755 sq
+    ft, May to November 2020, designed by The Dimension Group (Dallas)
+    (https://www.tdlr.texas.gov/TABS/Search/Print/TABS2020011238). The filing
+    gives the address as 17480 Judson Rd and mixes in the architect's Dallas
+    address; the county tax account for store 41142 is 17510 Judson Rd.
+  - Aerial imagery (Esri World Imagery) shows the building about 91 x 48 ft,
+    long side about 30 degrees off east-west, storefront facing northwest to
+    the main canopy, the second small canopy off the store's east end.
+  - Not found in public sources: the interior floor plan. The arrangement in
+    the model is the format's standard plan, adjusted to what the owner
+    confirmed.

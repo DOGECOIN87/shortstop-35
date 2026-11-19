@@ -44,6 +44,9 @@ const BOH = { x0: X0, x1: px(19) - IW / 2, z0: pz(20.5) + IW / 2, z1: Z1 };
 const WALKIN = { x0: X0, x1: X0 + 2.83, z0: BOH.z0, z1: BOH.z0 + 3.08, h: 2.4, t: 0.1 };
 WALKIN.split = WALKIN.z0 + 1.5;
 const VAULT_X = px(72.6);
+// Walk-in beer cave along the front wall, right of the doors (owner: it sits against the same
+// wall as the front doors); its door faces into the store.
+const CAVE = { x0: px(58), x1: X1, z0: pz(37), z1: Z1, door: [px(61), px(64)], reach: px(66.5) };
 // Light fixtures (shared by the geometry and the lights): pendant strip rows over the sales
 // floor, 2 x 4 lay-in troffers in the back of house, restrooms and hallway.
 const PENDANT_ROWS = [9, 17, 25, 33, 41].map((f) => {
@@ -81,7 +84,7 @@ const ITEMS = {
   checkout: { zone: 'store', name: 'Store checkout', lines: ['Registers, with a tobacco and lottery back bar', 'Beside the restaurant counter, near the front doors'], size: '12 ft counter' },
   bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee brewers, fountain and frozen drinks along the back wall'], size: 'About 32 ft long' },
   hotfood: { zone: 'store', name: 'Hot food island', lines: ['Self-serve hot case, roller grill and condiments'], size: 'Island' },
-  coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front corner'], size: '16 doors' },
+  coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave along the front wall, right of the doors, with three more glass doors on its face'], size: '16 doors' },
   seating: { zone: 'store', name: 'Window seating', lines: ['Counter seating with stools along the front windows'], size: '5 seats' },
   restrooms: { zone: 'store', name: 'Restrooms', lines: ["Men's and women's restrooms off the side hallway"], size: '2 rooms' },
   entrance: { zone: 'store', name: 'Front entrance', lines: ['Double glass doors facing the fuel islands'], size: '6 ft' },
@@ -667,19 +670,21 @@ function siteExterior(M, g) {
   }
   for (let x = door0 + 0.2; x < door1; x += 0.6) B(g, M.paintWhite, 0.32, 0.004, 5.3, x, yL, curb + 2.75);
   B(g, M.paintWhite, 50, 0.004, 0.1, (px(19.5) + px(72.5)) / 2, yL, curb + 5.45);
-  // fuel canopy over three islands
-  const cz = curb + 17.5, CW = 25, CD = 10, cb = 4.9;
+  // fuel canopy: about 108 x 40 ft (4,320 sq ft on the county record), three islands of two
+  // dispensers each, 12 fueling positions
+  const cz = curb + 18.5, CW = 33, CD = 12.2, cb = 4.9;
   B(g, M.cladding, CW, 0.06, CD, 0, cb, cz);
   B(g, M.canopyTop, CW - 0.2, 0.05, CD - 0.2, 0, cb + 0.72, cz);
   for (const [w, d, x, z] of [[CW + 0.12, 0.12, 0, cz - CD / 2], [CW + 0.12, 0.12, 0, cz + CD / 2], [0.12, CD, -CW / 2, cz], [0.12, CD, CW / 2, cz]]) {
     B(g, M.fascia, w, 0.56, d, x, cb, z); B(g, M.paintWhite, w, 0.2, d, x, cb + 0.56, z);
   }
-  for (let i = 0; i < 8; i++) for (let j = 0; j < 3; j++) plane(g, M.troffer, 0.6, 0.6, -CW / 2 + (i + 0.5) * CW / 8, cb - 0.005, cz - CD / 2 + (j + 0.5) * CD / 3, Math.PI / 2);
-  for (const ix of [-7.5, 0, 7.5]) {
-    B(g, M.concrete, 1.3, 0.18, 6.4, ix, yL, cz);
-    for (const s of [-1, 1]) { B(g, M.yellow, 1.3, 0.181, 0.3, ix, yL, cz + s * 3.05); C(g, M.yellow, 0.09, 0.09, 1.0, ix, yL + 0.18, cz + s * 2.85, 14); }
-    for (const s of [-1, 1]) B(g, M.cladding, 0.5, cb - yL - 0.18, 0.5, ix, yL + 0.18, cz + s * 2.0);
-    const d = new THREE.Group(); d.position.set(ix, yL + 0.18, cz); g.add(d);
+  for (let i = 0; i < 10; i++) for (let j = 0; j < 4; j++) plane(g, M.troffer, 0.6, 0.6, -CW / 2 + (i + 0.5) * CW / 10, cb - 0.005, cz - CD / 2 + (j + 0.5) * CD / 4, Math.PI / 2);
+  for (const ix of [-10, 0, 10]) {
+    B(g, M.concrete, 1.3, 0.18, 8.6, ix, yL, cz);
+    for (const s of [-1, 1]) { B(g, M.yellow, 1.3, 0.181, 0.3, ix, yL, cz + s * 4.15); C(g, M.yellow, 0.09, 0.09, 1.0, ix, yL + 0.18, cz + s * 3.95, 14); }
+    B(g, M.cladding, 0.55, cb - yL - 0.18, 0.55, ix, yL + 0.18, cz);
+    for (const dz of [-2.3, 2.3]) {
+    const d = new THREE.Group(); d.position.set(ix, yL + 0.18, cz + dz); g.add(d);
     B(d, M.paintGrey, 0.55, 0.12, 1.25, 0, 0, 0);
     B(d, M.hdpe, 0.52, 1.45, 1.22, 0, 0.12, 0);
     B(d, M.fascia, 0.56, 0.3, 1.26, 0, 1.57, 0);
@@ -692,6 +697,7 @@ function siteExterior(M, g) {
         B(d, M.black, 0.06, 0.22, 0.07, fx + sx * 0.03, 0.72, 0.05 + k * 0.14);
         tube(d, M.rubber, [[fx + sx * 0.04, 0.95, 0.05 + k * 0.14], [fx + sx * 0.32, 0.55, 0.12 + k * 0.1], [fx + sx * 0.16, 0.05, 0.3], [fx + sx * 0.02, 1.4, 0.45]], 0.014, 16);
       }
+    }
     }
   }
   // a couple of parked cars, nose-in to the walk
@@ -2179,16 +2185,16 @@ function buildKitchen(M, X) {
   // south: solid at the back-room and utility ends, glazed storefront between, two entries
   {
     const g = groups.S, stub = groups.stubS;
-    for (const [a, b] of [[X0 - T, px(19)], [VAULT_X, X1 + T]]) worldBox(g, M.frp, a, b, 0, H, Z1, Z1 + T, 0.6).castShadow = false;
+    for (const [a, b] of [[X0 - T, px(19)], [CAVE.x0, X1 + T]]) worldBox(g, M.frp, a, b, 0, H, Z1, Z1 + T, 0.6).castShadow = false;
     const doors = [{ a: px(37.5), b: px(43.5) }];
-    storefront(M, g, px(19), VAULT_X, doors);
+    storefront(M, g, px(19), CAVE.x0, doors);
     worldBox(stub, M.frp, X0 - T, X1 + T, 0, 0.18, Z1, Z1 + T).castShadow = false;
     worldBox(stub, M.cut, X0 - T, X1 + T, 0.18, 0.186, Z1, Z1 + T).castShadow = false;
-    addOcc(X0 - T, px(19), Z1, Z1 + T, H, 'S'); addOcc(VAULT_X, X1 + T, Z1, Z1 + T, H, 'S');
+    addOcc(X0 - T, px(19), Z1, Z1 + T, H, 'S'); addOcc(CAVE.x0, X1 + T, Z1, Z1 + T, H, 'S');
     const ent = new THREE.Group(); main.add(ent);
     reg('entrance', ent, { face: [0, 0, -1], anchor: [px(40.5), 2.65, Z1 - 0.25], box: new THREE.Box3(V(px(37.5), 0, Z1 - 0.1), V(px(43.5), 2.3, Z1 + T)), cut: 'S' });
     B(main, M.rubber, 1.8, 0.01, 1.2, px(40.5), 0, Z1 - 0.65).castShadow = false;
-    for (let x = px(20); x < VAULT_X - 0.3; x += 1.8) {
+    for (let x = px(20); x < CAVE.x0 - 0.3; x += 1.8) {
       if (doors.some((d) => x > d.a - 0.3 && x < d.b + 0.3)) continue;
       C(main, M.yellow, 0.085, 0.085, 0.9, x, 0, Z1 + T + 0.55, 16);
     }
@@ -2228,11 +2234,14 @@ function buildKitchen(M, X) {
   worldBox(main, M.mullion, kStore, kStore + 0.06, 0, 2.85, kSouth - 0.03, kSouth + 0.03).castShadow = false;
   iwall('x', pz(44), px(9.8), BOH.x1, [{ a: px(14), b: px(17), y0: 0, y1: 2.13 }]);
   iwall('z', px(9.8), pz(44), Z1);
-  // east side: cooler vault behind the main run of doors, utility room behind it, beer cave in the front corner
-  iwall('x', pz(35), VAULT_X, X1, [], 2.75, M.walkin, null);
-  iwall('z', px(80), Z0, pz(35), [{ a: pz(30), b: pz(33), y0: 0, y1: 2.13 }], H_DECK);
-  worldBox(main, M.blackPaint, VAULT_X - 0.02, VAULT_X + 0.12, 2.36, 2.75, Z0, Z1).castShadow = false;
-  addOcc(VAULT_X, px(80), Z0, pz(35), 2.75); addOcc(VAULT_X, X1, pz(35), Z1, 2.75);
+  // east side: cooler vault behind the main run of doors, utility room behind it; the beer cave
+  // is a walk-in box along the front wall, entered through a glass door on its north face
+  iwall('x', CAVE.z0, CAVE.x0, X1, [{ a: CAVE.door[0], b: CAVE.door[1], y0: 0, y1: 2.13 }, { a: CAVE.reach, b: CAVE.reach + 3 * 0.76, y0: 0, y1: 2.36 }], 2.75, M.walkin, null);
+  iwall('z', CAVE.x0, CAVE.z0, Z1, [], 2.75, M.walkin, null);
+  iwall('z', px(80), Z0, CAVE.z0, [{ a: pz(30), b: pz(33), y0: 0, y1: 2.13 }], H_DECK);
+  worldBox(main, M.blackPaint, VAULT_X - 0.02, VAULT_X + 0.12, 2.36, 2.75, Z0, CAVE.z0).castShadow = false;
+  worldBox(main, M.walkin, VAULT_X - 0.02, VAULT_X + 0.1, 0, 2.36, pz(1.5) + COOLER_RUN.len + 0.04, CAVE.z0 - IW / 2, 0.6).castShadow = false;
+  addOcc(VAULT_X, px(80), Z0, CAVE.z0, 2.75); addOcc(CAVE.x0, X1, CAVE.z0, Z1, 2.75);
   // sign band and patterned soffit over the kitchen opening (store side)
   worldBox(main, M.pattern, kStore, kStore + 0.12, 3.05, H_DECK, Z0, kSouth + IW / 2, 0.3).castShadow = false;
   worldBox(main, M.fascia, kStore, kStore + 0.5, 2.85, 3.1, KZC - KF.x1 - 0.06, kSouth + IW / 2);
@@ -2405,41 +2414,44 @@ function buildKitchen(M, X) {
   }
   for (const kx2 of [px(52), px(55)]) { const k = kiosk(M); put(main, k, kx2, pz(39.5)); shadowsFor.push([k, 0.03]); }
   {
-    const tx = px(62), tz = pz(39.5);
+    const tx = px(47), tz = pz(38.5);
     B(main, M.woodPanel, 1.8, 0.86, 0.8, tx, 0, tz); B(main, M.quartz, 1.84, 0.04, 0.84, tx, 0.86, tz);
     fillRun(P, main, r, 'x', tx - 0.85, tx + 0.85, 0.9, tz, 0.6, 0.25, SNACKS);
   }
-  const se = seatingCounter(M, 3.6, 5); put(main, se, px(66), Z1 - 0.05, Math.PI); reg('seating', se, { face: [0, 0, -1] });
+  const se = seatingCounter(M, 3.0, 5); put(main, se, px(51.3), Z1 - 0.05, Math.PI); reg('seating', se, { face: [0, 0, -1] });
   const co = checkoutCounter(M, P, r, 3.6); put(main, co, -5.85, 4.2, Math.PI / 2); reg('checkout', co, { face: [1, 0, 0] }); shadowsFor.push([co, 0.03]);
   const bbk = backBar(M, 3.8); put(main, bbk, px(19) + IW / 2, 4.2, Math.PI / 2); shadowsFor.push([bbk, 0.02]);
   B(main, M.paintGrey, 0.6, 1.55, 0.5, px(34.5), 0, Z1 - 0.4);
   screen(main, screenTexture(96, 64, (c) => { c.fillStyle = '#0e1a1c'; c.fillRect(0, 0, 96, 64); c.fillStyle = '#3bb3a0'; c.font = 'bold 18px Arial'; c.fillText('ATM', 30, 38); }), 0.3, 0.2, px(34.5), 1.2, Z1 - 0.651, Math.PI);
-  trashCan(M, px(36.5), Z1 - 0.55, M.greyPlastic, main); trashCan(M, px(58.5), Z1 - 0.6, M.greyPlastic, main);
-  basketStack(M, main, px(44.7), Z1 - 0.55, 0.2);
+  trashCan(M, px(44.9), Z1 - 0.55, M.greyPlastic, main);
+  basketStack(M, main, px(36.3), Z1 - 0.55, -0.15);
 
   // cold vault: main run of doors along the east wall
   const nMain = COOLER_RUN.n, runA = pz(1.5);
   const cv2 = coolerRun(M, P, r, nMain); put(main, cv2, VAULT_X, runA + nMain * 0.76 / 2, -Math.PI / 2);
   reg('coldvault', cv2, { face: [-1, 0, 0], anchor: [VAULT_X - 0.25, 2.62, runA + nMain * 0.76 / 2] });
-  // beer cave in the front corner: glass entry door, then its own reach-in doors
-  const entryA = pz(36.5), entryB = entryA + 0.92;
-  worldBox(main, M.coolerFrame, VAULT_X - 0.04, VAULT_X + 0.08, 0, 2.36, entryA - 0.06, entryA);
-  worldBox(main, M.coolerFrame, VAULT_X - 0.04, VAULT_X + 0.08, 0, 2.36, entryB, entryB + 0.06);
-  worldBox(main, M.coolerFrame, VAULT_X - 0.04, VAULT_X + 0.08, 2.12, 2.36, entryA, entryB);
-  worldBox(main, M.glass, VAULT_X, VAULT_X + 0.02, 0.05, 2.1, entryA + 0.03, entryB - 0.03).castShadow = false;
-  B(main, M.chrome, 0.03, 0.6, 0.03, VAULT_X - 0.03, 0.8, entryA + 0.12);
-  screen(main, signTexture(['BEER CAVE'], { w: 512, h: 128, bg: '#16302f', fg: '#eebe54', size: 70 }), 1.2, 0.3, VAULT_X - 0.05, 2.56, entryB + 0.6, -Math.PI / 2);
-  const cv1 = coolerRun(M, P, r, 3); put(main, cv1, VAULT_X, entryB + 0.12 + 1.5 * 0.76, -Math.PI / 2);
+  // beer cave on the front wall: glass entry door and three reach-in doors on its north face
+  {
+    const [a, b] = CAVE.door, zf = CAVE.z0 - IW / 2;
+    worldBox(main, M.coolerFrame, a, a + 0.06, 0, 2.2, zf - 0.08, zf + 0.04);
+    worldBox(main, M.coolerFrame, b - 0.06, b, 0, 2.2, zf - 0.08, zf + 0.04);
+    worldBox(main, M.coolerFrame, a, b, 2.12, 2.2, zf - 0.08, zf + 0.04);
+    worldBox(main, M.glass, a + 0.06, b - 0.06, 0.05, 2.1, zf - 0.02, zf).castShadow = false;
+    B(main, M.chrome, 0.03, 0.6, 0.03, b - 0.16, 0.8, zf - 0.05);
+    screen(main, signTexture(['BEER CAVE'], { w: 512, h: 128, bg: '#16302f', fg: '#eebe54', size: 70 }), 1.5, 0.34, CAVE.reach + 1.14, 2.555, zf - 0.065, Math.PI);
+    const cv1 = coolerRun(M, P, r, 3); put(main, cv1, CAVE.reach + 1.5 * 0.76, CAVE.z0 - IW / 2, Math.PI);
+  }
   // behind the doors: cases in the vault, pallets in the beer cave
   for (let zc = pz(2.5); zc < pz(33); zc += 0.6) for (let k = 0; k < 3; k++) P.add('case', main, VAULT_X + 1.3 + (k % 2) * 0.5, k * 0.3, zc, 0.42, 0.28, 0.5, Math.floor(r() * 16));
-  for (let xi = 0; xi < 5; xi++) for (let zi = 0; zi < 3; zi++) {
-    const bx = VAULT_X + 1.4 + xi * 1.05, bz = pz(37.5) + zi * 1.25;
+  for (let xi = 0; xi < 9; xi++) for (let zi = 0; zi < 2; zi++) {
+    const bx = CAVE.x0 + 0.75 + xi * 1.12, bz = CAVE.z0 + 1.45 + zi * 1.3;
+    if (bx > CAVE.door[0] - 0.4 && bx < CAVE.door[1] + 0.5) continue;
     B(main, M.wood, 1.0, 0.13, 1.2, bx, 0, bz);
     const c = Math.floor(r() * 16);
     for (let h2 = 0; h2 < 4; h2++) for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) P.add('case', main, bx - 0.24 + i * 0.48, 0.13 + h2 * 0.26, bz - 0.4 + j * 0.4, 0.46, 0.25, 0.38, c, (j % 2) * Math.PI);
   }
-  worldBox(groups.roof, M.walkin, VAULT_X, px(80), 2.75, 2.85, Z0, pz(35));
-  worldBox(groups.roof, M.walkin, VAULT_X, X1, 2.75, 2.85, pz(35), Z1);
+  worldBox(groups.roof, M.walkin, VAULT_X, px(80), 2.75, 2.85, Z0, CAVE.z0);
+  worldBox(groups.roof, M.walkin, CAVE.x0, X1, 2.75, 2.85, CAVE.z0, Z1);
   // utility room at the back corner
   C(main, M.hdpe, 0.3, 0.3, 1.6, X1 - 0.5, 0, pz(4), 24);
   for (const zz of [pz(10), pz(16)]) { const u = shelving(M, 1.22, 0.46, 0, [0.15, 0.6, 1.05, 1.5, 1.85], stockShelf(M, r, 1.22, 0.46, ['cups', 'napkins', 'foil', 'produce'])); put(main, u, X1 - 0.3, zz, -Math.PI / 2); }
@@ -2781,7 +2793,7 @@ async function create(host) {
         <div class="k3d-receipt" hidden><h3>Priced new, piece by piece</h3><ol>${TOUR.map((q) => `<li><span>${q.title}</span><b>—</b></li>`).join('')}</ol><div class="tot"><span>Total</span><b>$0</b></div><p class="k3d-note">Typical new prices from dealer listings and installer cost guides. Estimates only.</p></div>
         <button type="button" class="k3d-listbtn" aria-expanded="false">Equipment list</button>
         <div class="k3d-list">${Object.entries(ZONES).map(([z, zn]) => `<h4>${zn}</h4><ol>${order.filter((id) => ITEMS[id].zone === z).map((id) => `<li><button type="button" data-item="${id}"><b>${order.indexOf(id) + 1}</b>${ITEMS[id].name}</button></li>`).join('')}</ol>`).join('')}</div>
-        <p class="k3d-note">The store follows the standard layout of the modern convenience-store format this building uses (about 93 × 50 ft). The kitchen line follows the owner’s photo. Other equipment and sizes are typical; the real layout is confirmed at your walkthrough.</p>
+        <p class="k3d-note">Laid out the way the owner describes the store, at the building’s real size (about 93 × 50 ft). The kitchen line follows the owner’s photo. Equipment and sizes are typical; exact positions are confirmed at your walkthrough.</p>
       </aside>
     </div>`;
   host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true'); host.setAttribute('aria-labelledby', 'k3d-title');
@@ -2923,7 +2935,8 @@ async function create(host) {
   } else TROFFERS.forEach(([x, z], i) => pt(COOL, i < 5 ? 2.5 : 8, 7, x, H_ACT - 0.3, z));
   // the glow of the cooler doors spilling onto the floor in front of them
   rect(0xe6f1ff, 0.7, COOLER_RUN.len - 0.2, 1.8, VAULT_X - 0.12, 1.15, COOLER_RUN.z, 'west');
-  if (!mobile) pt(0xe6f1ff, 1.2, 4, VAULT_X - 0.4, 1.2, pz(36.5) + 0.92 + 0.12 + 1.5 * 0.76);
+  if (!mobile) pt(0xe6f1ff, 1.2, 4, CAVE.reach + 1.14, 1.2, CAVE.z0 - 0.5);
+  pt(0xeef4ff, 4, 8, (CAVE.x0 + CAVE.x1) / 2, 2.45, (CAVE.z0 + CAVE.z1) / 2);
   { const pl = new THREE.PointLight(0xf2f6ff, 2.2, 3.4, 1.5); pl.position.set((WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, (WALKIN.split + WALKIN.z1) / 2); scene.add(pl); }
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 80);
@@ -2973,7 +2986,7 @@ async function create(host) {
     { t: 'RESTROOMS', p: new THREE.Vector3(px(9.5), 0.05, pz(15)) },
     { t: 'SALES FLOOR', p: new THREE.Vector3(px(50), 0.05, pz(44)) },
     { t: 'COLD VAULT', p: new THREE.Vector3(px(76.5), 0.05, pz(9)) },
-    { t: 'BEER CAVE', p: new THREE.Vector3(px(83), 0.05, pz(45)) },
+    { t: 'BEER CAVE', p: new THREE.Vector3(px(76), 0.05, pz(44)) },
     { t: 'UTILITY', p: new THREE.Vector3(px(86.5), 0.05, pz(22)) }
   ].map((d) => { const el = document.createElement('span'); el.className = 'k3d-dim'; el.textContent = d.t; dims.appendChild(el); return { ...d, el }; });
 
