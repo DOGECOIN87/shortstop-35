@@ -114,9 +114,9 @@ const VIEWS = {
 // and installer cost guides (2025-26); estimates for comparison, not quotes, and not an
 // appraisal of the equipment in this kitchen. The README lists the sources.
 const TOUR = [
-  // camNarrow: portrait and short screens (phones) see the hood from above the aisle (the wide shot,
-  // backed off for a narrow screen, ended up under the hood looking up at its baffles)
-  { id: 'hood', cam: [[KW + 1.15, 1.5, KZC + 3.0], [KW + 0.55, 1.95, KZC - 1.2]], camNarrow: [[KW + 2.52, 2.6, KZC + 3.53], [KW + 0.67, 1.65, KZC - 0.37]], title: 'Exhaust hood system', price: 40000, range: [25000, 60000], basis: 'About 12 ft of hood with fans, duct and make-up air, installed. Installers quote roughly $950 to $2,800 a foot, plus $8,000 to $25,000 for make-up air.' },
+  // the hood is seen from above the aisle, so it reads as a canopy over the line (a low shot looked
+  // up at its baffles); camNarrow keeps phones on exactly this shot instead of backing it off
+  { id: 'hood', cam: [[KW + 2.52, 2.6, KZC + 3.53], [KW + 0.67, 1.65, KZC - 0.37]], camNarrow: [[KW + 2.52, 2.6, KZC + 3.53], [KW + 0.67, 1.65, KZC - 0.37]], title: 'Exhaust hood system', price: 40000, range: [25000, 60000], basis: 'About 12 ft of hood with fans, duct and make-up air, installed. Installers quote roughly $950 to $2,800 a foot, plus $8,000 to $25,000 for make-up air.' },
   { id: 'suppression', cam: [[KW + 2.2, 1.42, KZC + 0.6], [KW + 0.3, 1.9, KZC - 3.0]], title: 'Fire suppression system', price: 6500, range: [4000, 10000], basis: 'Wet-chemical system over the cook line, installed.' },
   { id: 'griddle', title: '36 in flattop griddle', price: 3500, range: [2200, 5000], basis: 'Commercial 36 to 48 in griddles. The refrigerated base under it is not counted.' },
   { id: 'range', title: '24 in four-burner range top', price: 1800, range: [850, 2600], basis: 'Dealer listings for 24 in, four-burner gas hot plates.' },
@@ -2810,7 +2810,7 @@ const CSS = `
 .k3d-card p{font-size:14px;color:#cfdcdb;margin:0}
 .k3d-card ul{margin:6px 0 0;padding-left:18px;font-size:14px;color:#cfdcdb}
 .k3d-card .sz{margin-top:8px;font:700 11px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.4px;text-transform:uppercase;color:#eebe54}
-.k3d-list h4{font:700 11px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.8px;text-transform:uppercase;color:#a9c1c0;margin:10px 0 4px}
+.k3d-list h4{font-size:13px;font-weight:700;color:#cfdcdb;margin:14px 6px 4px}
 .k3d-list ol{list-style:none;margin:0;padding:0}
 .k3d-list button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;font:inherit;font-size:14px;color:#f5f3e6;background:transparent;border:0;border-radius:8px;padding:6px;cursor:pointer}
 .k3d-list button:hover,.k3d-list button[aria-current="true"]{background:rgba(255,255,255,.08)}
@@ -2847,7 +2847,7 @@ const CSS = `
 .kt-bar{height:4px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden}
 .kt-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#eebe54,#ffd98a);transition:width .7s ease}
 .kt-total{position:absolute;right:16px;top:14px;background:rgba(13,35,38,.84);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px 14px;min-width:210px;text-align:right;transition:transform .25s cubic-bezier(.2,.9,.3,1.6);box-shadow:0 12px 30px rgba(0,0,0,.3)}
-.kt-total small{display:block;font:700 10px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.6px;text-transform:uppercase;color:#a9c1c0}
+.kt-total small{display:block;font-size:12px;font-weight:600;color:#a9c1c0;margin-top:1px}
 .kt-total b{display:block;font-size:27px;line-height:1.15;color:#fff;font-weight:800}
 .kt-total.bump{transform:scale(1.08)}
 .kt-meter{height:6px;border-radius:6px;background:rgba(255,255,255,.12);margin-top:7px;overflow:hidden}
@@ -2909,7 +2909,7 @@ const CSS = `
   .kt-top{left:8px;top:8px;width:34%}
   .kt-lbl{display:none}
   .kt-total{right:8px;top:8px;min-width:0;padding:6px 10px}
-  .kt-total small{font-size:9px;letter-spacing:1px}
+  .kt-total small{font-size:11px}
   .kt-total b{font-size:19px}
   .kt-pin{font-size:13px;padding:4px 8px}
   .kt-endcard{padding:18px 14px 14px;margin:10px}
@@ -2946,7 +2946,7 @@ const CSS = `
   .kt-top{left:8px;top:8px;width:min(200px,34%)}
   .kt-lbl{display:none}
   .kt-total{right:8px;top:8px;min-width:0;padding:6px 10px}
-  .kt-total small{font-size:9px;letter-spacing:1px}
+  .kt-total small{font-size:11px}
   .kt-total b{font-size:19px}
   .kt-card{left:8px;right:60px;bottom:8px;width:auto;max-width:440px;gap:8px}
   .kt-tt{flex-basis:70px;height:70px}
@@ -3085,7 +3085,7 @@ async function create(host) {
       <div class="k3d-stage"><div class="k3d-spots" aria-hidden="true"></div><div class="k3d-dims" aria-hidden="true"></div><p class="k3d-status" role="status">Building the kitchen…</p>
         <div class="k3d-tour" hidden>
           <div class="kt-top"><span class="kt-step"><span class="kt-lbl">Value tour · </span><b>01</b> / ${TOUR.length}</span><div class="kt-bar"><i></i></div></div>
-          <div class="kt-total"><small>Kitchen value so far</small><b>$0</b><div class="kt-meter"><i></i></div></div>
+          <div class="kt-total"><b>$0</b><small>Kitchen value so far</small><div class="kt-meter"><i></i></div></div>
           <div class="kt-pin" hidden></div>
           <div class="kt-card">
             <div class="kt-tt" aria-hidden="true"></div>
