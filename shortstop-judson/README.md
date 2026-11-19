@@ -51,7 +51,7 @@ the building was built to (about 93 x 50 ft, storefront on the south):
 - checkout with a tobacco and lottery back bar between the kitchen and the
   front doors, self-checkouts beside it; the coffee, fountain and frozen-drink
   bar is a counter at the front of the store, just past the window tables as
-  you look right from the doors (owner), menu boards on posts above it;
+  you look right from the doors (owner), with no signs over it;
   shelving along the back wall; grab-and-go case, hot food island and bakery
   island; three gondola runs;
 - east wall: 13 glass cooler doors with the vault behind and a utility room

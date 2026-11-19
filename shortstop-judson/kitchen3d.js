@@ -88,7 +88,7 @@ const ITEMS = {
   dry: { zone: 'back', name: 'Dry storage', lines: ['Wire shelving for flour, canned goods and paper supplies'], size: '7 ft of shelving' },
   office: { zone: 'back', name: 'Office', lines: ['Small office with a desk and safe, off the back room'], size: 'About 9 × 6 ft' },
   checkout: { zone: 'store', name: 'Store checkout', lines: ['Registers, with a tobacco and lottery back bar', 'Beside the restaurant counter, near the front doors'], size: '12 ft counter' },
-  bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee machines and brewers, fountain, ice and frozen drinks on a counter at the front of the store', 'Just past the window tables, menu boards above'], size: 'About 21 ft long' },
+  bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee machines and brewers, fountain, ice and frozen drinks on a counter at the front of the store', 'Just past the window tables'], size: 'About 21 ft long' },
   hotfood: { zone: 'store', name: 'Hot food island', lines: ['Self-serve hot case, roller grill and condiments'], size: 'Island' },
   coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front-right corner, at the end of the aisle along the windows: its door sits between glass cooler doors'], size: '17 doors' },
   seating: { zone: 'store', name: 'Seating', lines: ['Window counter with stools between the skill-game machines', 'Four two-person tables with red metal chairs just inside'], size: '13 seats' },
@@ -1809,13 +1809,12 @@ function bevBar(M, P, r, L, { island = false, compact = false } = {}) {
   B(g, M.blackPaint, L - 0.02, 0.1, D - 0.1, 0, 0, D / 2 - 0.03);
   B(g, M.quartz, L + 0.02, 0.04, D + 0.03, 0, top - 0.04, D / 2);
   B(g, M.pattern, L, 0.7, 0.012, 0, top, 0.006);
-  B(g, M.blackPaint, L, 0.5, 0.06, 0, 2.15, 0.03);
-  if (island) {
-    B(g, M.woodPanel, L, top + 0.7, 0.02, 0, 0, -0.01);
-    for (const sx of [-1, 1]) B(g, M.blackPaint, 0.06, 2.15 - (top + 0.7), 0.06, sx * (L / 2 - 0.12), top + 0.7, 0.03);
+  if (island) B(g, M.woodPanel, L, top + 0.7, 0.02, 0, 0, -0.01);   // finished back; no signs over the island (owner)
+  else {
+    B(g, M.blackPaint, L, 0.5, 0.06, 0, 2.15, 0.03);
+    const menus = [['COFFEE', '#204649'], ['FOUNTAIN', '#c9351d'], ['FROZEN', '#1f5ea6'], ['HOT DRINKS', '#204649']];
+    menus.forEach(([t, bg], i) => screen(g, signTexture([t, '— your prices here —'], { w: 512, h: 192, bg, fg: '#f5f3e6', size: 56, print: false }), L / 4 - 0.1, 0.42, -L / 2 + (i + 0.5) * L / 4, 2.4, 0.062));
   }
-  const menus = [['COFFEE', '#204649'], ['FOUNTAIN', '#c9351d'], ['FROZEN', '#1f5ea6'], ['HOT DRINKS', '#204649']];
-  menus.forEach(([t, bg], i) => screen(g, signTexture([t, '— your prices here —'], { w: 512, h: 192, bg, fg: '#f5f3e6', size: 56, print: false }), L / 4 - 0.1, 0.42, -L / 2 + (i + 0.5) * L / 4, 2.4, 0.062));
   let x = -L / 2 + 0.3;
   const at = (w) => { const c = x + w / 2; x += w + gap; return c; };
   // cup and lid dispensers
@@ -2541,7 +2540,7 @@ function buildKitchen(M, X) {
   // owner: the coffee bar is at the front, just past the window tables as you look in from the
   // doors; the back wall carries shelving
   const ws2 = wallShelf(M, P, r, px(63) - px(31), [['SNACKS', '#c9351d'], ['CANDY', '#7a3d9e'], ['GROCERY', '#204649'], ['HOME & AUTO', '#1f5ea6']]); put(main, ws2, (px(31) + px(63)) / 2, Z0); shadowsFor.push([ws2, 0.02]);
-  const bb = bevBar(M, P, r, 6.5, { island: true, compact: true }); put(main, bb, 3.4, 2.2); reg('bevbar', bb, { anchor: [3.4, 2.9, 2.5] }); shadowsFor.push([bb, 0.03]);
+  const bb = bevBar(M, P, r, 6.5, { island: true, compact: true }); put(main, bb, 3.4, 2.2); reg('bevbar', bb, { anchor: [3.4, 2.1, 2.5] }); shadowsFor.push([bb, 0.03]);
   const oc = openCase(M, P, r); put(main, oc, px(42), pz(10.3)); shadowsFor.push([oc, 0.03]);
   const hi = hotIsland(M, P, r); put(main, hi, px(42), pz(21.9), Math.PI / 2); reg('hotfood', hi, { face: [1, 0, 0] }); shadowsFor.push([hi, 0.04]);
   const bk = bakeryIsland(M, P, r); put(main, bk, px(41.8), pz(35.7), Math.PI / 2); shadowsFor.push([bk, 0.04]);
