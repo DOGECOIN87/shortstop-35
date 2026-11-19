@@ -10,58 +10,78 @@ import * as THREE from 'three';
 import { OrbitControls } from './vendor/OrbitControls.js';
 import { mergeGeometries } from './vendor/BufferGeometryUtils.js';
 
-const IN = 0.0254;
-const ROOM = { w: 9.75, d: 6.1, h: 3.05 };            // back room: 32 x 20 ft, 10 ft ceiling
-const X0 = -ROOM.w / 2, X1 = ROOM.w / 2, Z0 = -ROOM.d / 2, Z1 = ROOM.d / 2;
-const WALL = 0.15;
-// Open kitchen on the store side of the back room's south wall (owner's photo):
-// the cook line under the hood against a stainless wall, a glass-front serving
-// counter facing the store, and three menu screens hung between them. A
-// doorway at the west end of that wall leads to the back room.
-const FK = { x0: X0, x1: 3.35, z0: Z1 + WALL, z1: Z1 + WALL + 3.2 };
-const STORE_D = 2.6;                                     // strip of store floor in front of the counter
-const DOORWAY = { a: -3.9, b: -2.99, h: 2.13 };
-const DOWNLIGHTS = [[-2.6, FK.z0 + 2.2], [0.0, FK.z0 + 2.25], [2.5, FK.z0 + 2.2], [-1.5, FK.z1 + 1.3], [1.5, FK.z1 + 1.3]];
-const WALKIN = { x0: 2.43, x1: X1, z0: -1.22, z1: Z1, h: 2.36, split: 1.0, t: 0.1, dh: 1.98 };
+const IN = 0.0254, FT = 0.3048;
+// The whole store, laid out like a current-generation ~4,650 sq ft convenience
+// store prototype (93 x 50 ft): back of house and restrooms at the west end; the
+// kitchen with its serving counter facing the sales floor; checkout beside it by
+// the front doors; coffee and fountain bar on the back wall; food islands and
+// gondolas in the middle; a cold vault of glass cooler doors along the east wall;
+// storefront and window seating on the south (front) side.
+const BLD = { w: 93 * FT, d: 50 * FT };
+const X0 = -BLD.w / 2, X1 = BLD.w / 2, Z0 = -BLD.d / 2, Z1 = BLD.d / 2;
+const px = (ft) => X0 + ft * FT, pz = (ft) => Z0 + ft * FT;   // plan feet from the west / north walls
+const EW = 0.2, IW = 0.12;                // exterior / interior wall thickness
+const H_DECK = 4.6, H_ACT = 3.05;         // open painted deck over the sales floor; lay-in ceilings elsewhere
+const ROOM = { h: H_ACT };
+// Kitchen, in a local frame along its west wall: x runs south -> north along the
+// line (the owner's photo, left to right from the store), z runs from the wall
+// out to the store-side face of the serving counter.
+const KF = { x0: -3.95, x1: 3.35, z0: 0, z1: 3.2 };
+const KW = px(19) + IW / 2;               // world x of the kitchen's west wall face
+const KZC = pz(6.5) + IW / 2 + KF.x1;     // world z of kitchen-local x = 0
+const kxz = (lx, lz) => [KW + lz, KZC - lx];
+const DOORWAY = { a: -3.9, b: -2.99, h: 2.13 };   // kitchen frame, in the west wall
 const HOOD = { x0: -1.62, x1: 2.04, depth: 1.37, bottom: 1.98, top: 2.59 };
-const LINE_BACK = FK.z0 + 0.1;                           // equipment backs, clear of the gas manifold
+const LINE_BACK = 0.1;
+const BOH = { x0: X0, x1: px(19) - IW / 2, z0: pz(20.5) + IW / 2, z1: Z1 };
+const WALKIN = { x0: X0, x1: X0 + 2.83, z0: BOH.z0, z1: BOH.z0 + 3.08, h: 2.4, t: 0.1 };
+WALKIN.split = WALKIN.z0 + 1.5;
+const VAULT_X = px(72.6);
 
-const ZONES = { front: 'Open kitchen', prep: 'Back room · prep', wash: 'Back room · wash-up', storage: 'Back room · storage', doors: 'Doors' };
+const ZONES = { kitchen: 'Kitchen', counter: 'Restaurant counter', back: 'Back room', store: 'The store', doors: 'Doors' };
 const ITEMS = {
-  hood: { zone: 'front', name: 'Exhaust hood', lines: ['CaptiveAire stainless wall-canopy hood over the line', 'Grease baffle filters, vapor-proof lights and a control panel'], size: 'About 12 ft long' },
-  suppression: { zone: 'front', name: 'Fire suppression', lines: ['Wet-chemical system with a nozzle over each appliance', 'Agent cabinet and pull station on the side wall'], size: 'Covers the full hood' },
-  griddle: { zone: 'front', name: '36 in flattop', lines: ['Thick steel griddle plate in the middle of the line', 'Refrigerated chef base below keeps cold product at hand'], size: '36 in wide' },
-  range: { zone: 'front', name: 'Range burners', lines: ['Open burners for stock pots and sauté pans, beside the flattop'], size: '24 in wide' },
-  fryers: { zone: 'front', name: 'Fryers (2)', lines: ['Two open fryers with baskets on hangers', 'At the right end of the line'], size: '15½ in wide each' },
-  dump: { zone: 'front', name: 'Fry holding station', lines: ['Holding well with a perforated pan under a heat lamp'], size: '18 in wide' },
-  hotcab: { zone: 'front', name: 'Hot holding cabinet', lines: ['Heated cabinet with a glass door and digital display', 'Just past the end of the hood'], size: '26 in wide' },
-  counter: { zone: 'front', name: 'Serving counter', lines: ['Heated display wells under two-tier glass, facing the store', 'Customers see the food and order right at the counter'], size: 'Runs the width of the kitchen' },
-  menu: { zone: 'front', name: 'Digital menu boards', lines: ['Three screens hung from the ceiling over the counter'], size: '3 screens' },
-  handsink1: { zone: 'front', name: 'Hand sink by the line', lines: ['Wall-hung hand sink with soap and towel dispensers'], size: '17 in wide' },
-  ovens: { zone: 'prep', name: 'Rapid-cook ovens (2)', lines: ['High-speed ovens for pizza, sandwiches and wings in minutes', 'Ventless, on a stand in the back room'], size: 'About 27 in wide each' },
-  prep: { zone: 'prep', name: 'Refrigerated prep table', lines: ['Cold rail with 16 ingredient pans and a hinged lid', 'Full-length cutting board, three refrigerated doors below'], size: '72 in long' },
-  dough: { zone: 'prep', name: 'Dough and tortilla station', lines: ['Stainless worktable with a heated tortilla press and a 20 qt mixer', 'Ingredient bins and a pan shelf underneath'], size: '72 in long' },
-  rack: { zone: 'prep', name: 'Sheet pan rack', lines: ['Holds 20 full sheet pans for dough and prepped food', 'On casters'], size: '20 × 26 in' },
-  handsink2: { zone: 'wash', name: 'Hand sink in the back room', lines: ['Second hand sink by the prep area'], size: '17 in wide' },
-  sink3: { zone: 'wash', name: '3-compartment sink', lines: ['Wash, rinse and sanitize tubs with drainboards both sides', 'Pre-rinse sprayer and a wall shelf for clean pans'], size: '90 in long' },
-  mop: { zone: 'wash', name: 'Mop sink', lines: ['Floor basin with hose faucet, bucket hook and mop rack'], size: '24 × 24 in' },
-  reachin: { zone: 'storage', name: 'Reach-in freezer', lines: ['Two-door freezer in the back room'], size: '54 in wide' },
-  ice: { zone: 'storage', name: 'Ice machine', lines: ['Ice maker on a storage bin, with a water filter'], size: '30 in wide' },
-  cooler: { zone: 'storage', name: 'Walk-in cooler', lines: ['Shelving on two walls, strip curtain and digital thermometer', 'Room for cases, produce and prepped food'], size: 'About 7 × 7 ft inside' },
-  freezer: { zone: 'storage', name: 'Walk-in freezer', lines: ['Shelving on two walls, insulated floor and a heated door frame'], size: 'About 7 × 6 ft inside' },
-  dry: { zone: 'storage', name: 'Dry storage', lines: ['Wire shelving for flour, canned goods and paper supplies'], size: '7 ft of shelving' },
-  doorway: { zone: 'doors', name: 'Doorway to the back room', lines: ['Leads from the open kitchen to prep, wash-up and the walk-ins'], size: '36 in' },
-  backdoor: { zone: 'doors', name: 'Back door', lines: ['Steel exit door for deliveries, with a panic bar'], size: '36 in' }
+  hood: { zone: 'kitchen', name: 'Exhaust hood', lines: ['CaptiveAire stainless wall-canopy hood over the line', 'Grease baffle filters, vapor-proof lights and a control panel'], size: 'About 12 ft long' },
+  suppression: { zone: 'kitchen', name: 'Fire suppression', lines: ['Wet-chemical system with a nozzle over each appliance', 'Agent cabinet and K-class extinguisher at the end of the line'], size: 'Covers the full hood' },
+  griddle: { zone: 'kitchen', name: '36 in flattop', lines: ['Thick steel griddle plate in the middle of the line', 'Refrigerated chef base below keeps cold product at hand'], size: '36 in wide' },
+  range: { zone: 'kitchen', name: 'Range burners', lines: ['Open burners for stock pots and sauté pans, beside the flattop'], size: '24 in wide' },
+  fryers: { zone: 'kitchen', name: 'Fryers (2)', lines: ['Two open fryers with baskets on hangers'], size: '15½ in wide each' },
+  dump: { zone: 'kitchen', name: 'Fry holding station', lines: ['Holding well with a perforated pan under a heat lamp'], size: '18 in wide' },
+  hotcab: { zone: 'kitchen', name: 'Hot holding cabinet', lines: ['Heated cabinet with a glass door and digital display', 'Just past the end of the hood'], size: '26 in wide' },
+  handsink1: { zone: 'kitchen', name: 'Hand sink by the line', lines: ['Wall-hung hand sink with soap and towel dispensers'], size: '17 in wide' },
+  counter: { zone: 'counter', name: 'Serving counter', lines: ['Heated display wells under two-tier glass, facing the sales floor', 'Wood-look front, register at the pick-up end'], size: 'About 21 ft long' },
+  menu: { zone: 'counter', name: 'Digital menu boards', lines: ['Three screens hung over the line, facing the store'], size: '3 screens' },
+  signs: { zone: 'counter', name: 'Order point and sign band', lines: ['ORDER HERE and PICK-UP HERE signs', 'A sign band over the counter for your brand'], size: 'Full width of the kitchen' },
+  prep: { zone: 'back', name: 'Refrigerated prep table', lines: ['Cold rail with 16 ingredient pans and a hinged lid', 'Full-length cutting board, three refrigerated doors below'], size: '72 in long' },
+  dough: { zone: 'back', name: 'Dough and tortilla station', lines: ['Stainless worktable with a heated tortilla press and a 20 qt mixer'], size: '72 in long' },
+  ovens: { zone: 'back', name: 'Rapid-cook ovens (2)', lines: ['High-speed ovens for pizza, sandwiches and wings in minutes', 'Ventless, on a stand'], size: 'About 27 in wide each' },
+  sink3: { zone: 'back', name: '3-compartment sink', lines: ['Wash, rinse and sanitize tubs with drainboards both sides', 'Pre-rinse sprayer and a wall shelf for clean pans'], size: '90 in long' },
+  mop: { zone: 'back', name: 'Mop sink', lines: ['Floor basin with hose faucet, bucket hook and mop rack'], size: '24 × 24 in' },
+  handsink2: { zone: 'back', name: 'Hand sink in the back room', lines: ['By the doorway from the kitchen'], size: '17 in wide' },
+  reachin: { zone: 'back', name: 'Reach-in freezer', lines: ['Two-door freezer in the back room'], size: '54 in wide' },
+  ice: { zone: 'back', name: 'Ice machine', lines: ['Ice maker on a storage bin, with a water filter'], size: '30 in wide' },
+  cooler: { zone: 'back', name: 'Walk-in cooler', lines: ['Shelving on both side walls, strip curtain and thermometer', 'The freezer is entered through the cooler'], size: 'About 9 × 5 ft' },
+  freezer: { zone: 'back', name: 'Walk-in freezer', lines: ['Behind the cooler, with shelving on the walls'], size: 'About 9 × 5 ft' },
+  dry: { zone: 'back', name: 'Dry storage', lines: ['Wire shelving for flour, canned goods and paper supplies'], size: '7 ft of shelving' },
+  office: { zone: 'back', name: 'Office', lines: ['Small office with a desk and safe, off the back room'], size: 'About 9 × 6 ft' },
+  checkout: { zone: 'store', name: 'Store checkout', lines: ['Registers, with a tobacco and lottery back bar', 'Beside the restaurant counter, near the front doors'], size: '12 ft counter' },
+  bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee brewers, fountain and frozen drinks along the back wall'], size: 'About 32 ft long' },
+  hotfood: { zone: 'store', name: 'Hot food island', lines: ['Self-serve hot case, roller grill and condiments'], size: 'Island' },
+  coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front corner'], size: '16 doors' },
+  seating: { zone: 'store', name: 'Window seating', lines: ['Counter seating with stools along the front windows'], size: '5 seats' },
+  restrooms: { zone: 'store', name: 'Restrooms', lines: ["Men's and women's restrooms off the side hallway"], size: '2 rooms' },
+  entrance: { zone: 'store', name: 'Front entrance', lines: ['Double glass doors facing the fuel islands'], size: '6 ft' },
+  doorway: { zone: 'doors', name: 'Doorway to the back room', lines: ['From the kitchen straight into prep, wash-up and the walk-ins'], size: '36 in' },
+  backdoor: { zone: 'doors', name: 'Rear exit', lines: ['Steel exit door off the restroom hallway, for deliveries'], size: '36 in' }
 };
 
 const VIEWS = {
-  overview: { label: 'Overview', pos: [8.6, 10.2, 14.0], target: [-0.5, 0.2, 1.4] },
-  plan: { label: 'Floor plan', pos: [-0.05, 20.5, 2.3], target: [-0.05, 0, 1.75] },
-  front: { label: 'From the store', pos: [0.2, 1.72, FK.z1 + 1.9], target: [0.1, 1.55, FK.z0 + 0.4] },
-  line: { label: 'Behind the counter', pos: [3.0, 1.85, FK.z0 + 1.75], target: [-1.6, 1.0, FK.z0 + 0.4] },
-  prep: { label: 'Prep', pos: [0.05, 1.95, -1.85], target: [-1.9, 0.85, -0.65] },
-  wash: { label: 'Wash-up', pos: [1.3, 1.8, -0.1], target: [1.3, 1.05, -2.9] },
-  walkin: { label: 'Walk-ins', pos: [-1.25, 1.95, 1.05], target: [2.45, 1.05, 0.85] }
+  overview: { label: 'Overview', pos: [15.5, 20.5, 23.5], target: [-0.8, 0, 0.6] },
+  plan: { label: 'Floor plan', pos: [0, 33.5, 0.9], target: [0, 0, 0.4] },
+  front: { label: 'At the counter', pos: [px(44), 1.75, pz(31)], target: [KW + 1.5, 1.95, KZC - 0.5] },
+  line: { label: 'In the kitchen', pos: [KW + 2.1, 1.85, KZC - 3.0], target: [KW + 0.5, 1.0, KZC + 1.4] },
+  back: { label: 'Back room', pos: [px(17.8), 2.65, pz(43.2)], target: [px(6), 0.8, pz(29)] },
+  store: { label: 'Store floor', pos: [px(41), 1.75, pz(47.5)], target: [px(56), 1.3, pz(16)] },
+  coolers: { label: 'Cold vault', pos: [px(70.2), 1.75, pz(4.5)], target: [VAULT_X - 0.2, 1.15, pz(40)] }
 };
 
 /* ------------------------------------------------------------------ utils */
@@ -260,6 +280,50 @@ function makeTextures(aniso) {
     }
     X.vct = T(c, true);
   }
+  // Sales floor: 12 x 24 in porcelain plank, half offset; one texture = 48 x 24 in.
+  {
+    const c = canvas(512, 256), g = c.getContext('2d'), r = rng(51);
+    g.fillStyle = '#b4ada1'; g.fillRect(0, 0, 512, 256);
+    const plank = (x, y, l) => {
+      g.fillStyle = `hsl(36,7%,${l}%)`; g.fillRect(x + 1.5, y + 1.5, 253, 125);
+      const rr = rng(Math.round(l * 100));
+      for (let k = 0; k < 40; k++) { g.fillStyle = `rgba(${rr() < 0.5 ? '90,84,74' : '255,255,250'},${0.04 + rr() * 0.07})`; g.fillRect(x + rr() * 230, y + 4 + rr() * 118, 20 + rr() * 80, 1 + rr() * 2); }
+    };
+    plank(0, 0, 72 + r() * 7); plank(256, 0, 72 + r() * 7);
+    plank(128, 128, 72 + r() * 7); const l = 72 + r() * 7; plank(384, 128, l); plank(-128, 128, l);
+    X.plank = T(c, true);
+  }
+  // Soffit: patterned cement-look tile.
+  {
+    const c = canvas(256, 256), g = c.getContext('2d');
+    g.fillStyle = '#dcdcd7'; g.fillRect(0, 0, 256, 256);
+    g.strokeStyle = '#6a6c6b'; g.lineWidth = 3;
+    const motif = (cx, cy) => { for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4; g.beginPath(); g.ellipse(cx + Math.cos(a) * 26, cy + Math.sin(a) * 26, 18, 7, a, 0, 6.3); g.stroke(); } g.beginPath(); g.arc(cx, cy, 10, 0, 6.3); g.stroke(); };
+    motif(128, 128); for (const [x, y] of [[0, 0], [256, 0], [0, 256], [256, 256]]) motif(x, y);
+    g.lineWidth = 2; for (const [x, y] of [[128, 0], [0, 128], [256, 128], [128, 256]]) { g.beginPath(); g.arc(x, y, 30, 0, 6.3); g.stroke(); }
+    g.strokeStyle = 'rgba(70,70,70,.45)'; g.strokeRect(1, 1, 254, 254);
+    X.pattern = T(c, true);
+  }
+  // Open ceiling: black corrugated deck.
+  { const c = canvas(64, 64), g = c.getContext('2d'); g.fillStyle = '#25282b'; g.fillRect(0, 0, 64, 64); g.fillStyle = '#33373b'; g.fillRect(0, 0, 64, 12); g.fillStyle = '#1a1c1e'; g.fillRect(0, 32, 64, 6); X.deck = T(c, true); }
+  // Dark wood-look panels (counter fronts).
+  {
+    const c = canvas(512, 256), g = c.getContext('2d'), r = rng(61);
+    for (let i = 0; i < 8; i++) {
+      g.fillStyle = `hsl(20,32%,${18 + r() * 9}%)`; g.fillRect(0, i * 32, 512, 32);
+      for (let k = 0; k < 30; k++) { g.fillStyle = `rgba(${r() < 0.5 ? '20,10,5' : '120,80,50'},${0.15 + r() * 0.2})`; g.fillRect(r() * 512, i * 32 + 2 + r() * 28, 40 + r() * 160, 1); }
+      g.fillStyle = 'rgba(0,0,0,.45)'; g.fillRect(0, i * 32, 512, 1.5);
+    }
+    X.wood = T(c, true);
+  }
+  // Tobacco cabinet facings.
+  {
+    const c = canvas(512, 256), g = c.getContext('2d'), r = rng(71);
+    g.fillStyle = '#121416'; g.fillRect(0, 0, 512, 256);
+    const cols = ['#c8102e', '#f2f2f2', '#1f5ea6', '#d9a531', '#2f8a4a', '#222', '#e86c1a', '#7a3d9e', '#b8b8b8'];
+    for (let row = 0; row < 6; row++) { for (let i = 0; i < 26; i++) { g.fillStyle = cols[Math.floor(r() * cols.length)]; g.fillRect(6 + i * 19.4, 8 + row * 41, 15, 28); } g.fillStyle = '#e9e4d6'; g.fillRect(4, 38 + row * 41, 504, 4); }
+    X.tobacco = T(c, true);
+  }
   return X;
 }
 
@@ -342,6 +406,30 @@ function makeMaterials(X) {
   M.vct = std({ map: X.vct, roughness: 0.32 });
   M.drywall = std({ color: 0xf2f1ec, roughness: 0.95, normalMap: X.stuccoN, normalScale: new THREE.Vector2(0.12, 0.12) });
   M.smoke = std({ color: 0x3b3654, roughness: 0.2, metalness: 0.1, transparent: true, opacity: 0.82 });
+  M.plank = std({ map: X.plank, roughness: 0.38 });
+  M.pattern = std({ map: X.pattern, roughness: 0.6 });
+  M.deck = std({ map: X.deck, roughness: 0.85 });
+  M.woodPanel = std({ map: X.wood, roughness: 0.55 });
+  M.fascia = std({ color: 0xc9351d, roughness: 0.45 });
+  M.frosted = std({ color: 0xe6eff0, roughness: 0.3, transparent: true, opacity: 0.5, depthWrite: false });
+  M.mullion = std({ color: 0x2a2c2e, metalness: 0.7, roughness: 0.4 });
+  M.storeGlass = new THREE.MeshPhysicalMaterial({ color: 0xc4dade, roughness: 0.05, transparent: true, opacity: 0.2, envMapIntensity: 1.6, depthWrite: false });
+  M.coolerFrame = std({ color: 0x141618, metalness: 0.5, roughness: 0.35 });
+  M.coolerGlow = std({ color: 0xffffff, emissive: 0xf2f8ff, emissiveIntensity: 1.8 });
+  M.coolerBack = std({ color: 0xe8edf0, emissive: 0xdde8ee, emissiveIntensity: 0.4, roughness: 0.6 });
+  M.ceramic = std({ color: 0xf7f7f4, roughness: 0.12, metalness: 0.05 });
+  M.partition = std({ color: 0x8f989e, roughness: 0.4, metalness: 0.35 });
+  M.mirror = std({ color: 0xeef3f5, metalness: 1, roughness: 0.03 });
+  M.gondola = std({ color: 0xe6e7e4, roughness: 0.5, metalness: 0.3 });
+  M.gondolaBack = std({ color: 0xcdd0cc, roughness: 0.6, metalness: 0.2 });
+  M.quartz = std({ color: 0xefeeea, roughness: 0.22 });
+  M.blackPaint = std({ color: 0x1f2123, roughness: 0.7 });
+  M.concrete = std({ color: 0xbdb9b0, roughness: 0.92 });
+  M.duct = std({ color: 0x8f9497, metalness: 0.85, roughness: 0.35 });
+  M.tobacco = std({ map: X.tobacco, roughness: 0.45 });
+  M.desk = std({ color: 0x8a6a4a, roughness: 0.5 });
+  M.inst = std({ color: 0xffffff, roughness: 0.5 });
+  M.instBottle = std({ color: 0xffffff, roughness: 0.16, metalness: 0.08 });
   const food = (c, r = 0.65) => std({ color: c, roughness: r });
   M.food = {
     tomato: food(0xc23a28), lettuce: food(0x63a23c), cheese: food(0xe6b433), onion: food(0xede5d3),
@@ -595,16 +683,16 @@ function suppression(M, hd, nozzles) {
   }
   barX(hd, M.steelDark, L - 0.3, 0.003, 0, y + 0.07, 0.62);
   // agent cabinet, K-class extinguisher and pull station on the open kitchen's east wall
-  const g = new THREE.Group(), xw = FK.x1;
-  B(g, M.steel, 0.14, 0.62, 0.32, xw - 0.07, 1.95, FK.z0 + 0.45);
-  B(g, M.red, 0.006, 0.07, 0.2, xw - 0.143, 2.45, FK.z0 + 0.45);
-  tube(g, M.chrome, [[xw - 0.07, 2.57, FK.z0 + 0.45], [xw - 0.07, 2.7, FK.z0 + 0.45], [xw - 0.3, 2.7, FK.z0 + 0.9], [HOOD.x1, 2.6, FK.z0 + 0.9]], 0.01, 16);
-  B(g, M.red, 0.05, 0.14, 0.1, xw - 0.025, 1.12, FK.z0 + 1.75);
-  B(g, M.chrome, 0.012, 0.03, 0.05, xw - 0.056, 1.15, FK.z0 + 1.75);
-  screen(g, signTexture(['PULL', 'IN CASE OF FIRE'], { w: 256, h: 128, bg: '#c4261c', fg: '#fff', size: 46 }), 0.16, 0.08, xw - 0.004, 1.37, FK.z0 + 1.75, -Math.PI / 2);
-  C(g, M.chrome, 0.065, 0.065, 0.42, xw - 0.09, 0.95, FK.z0 + 1.25, 20);
-  C(g, M.black, 0.02, 0.03, 0.08, xw - 0.09, 1.37, FK.z0 + 1.25, 10);
-  screen(g, signTexture(['K', 'CLASS'], { w: 128, h: 128, bg: '#fff', fg: '#c4261c', size: 60 }), 0.07, 0.07, xw - 0.157, 1.13, FK.z0 + 1.25, -Math.PI / 2);
+  const g = new THREE.Group(), xw = KF.x1;
+  B(g, M.steel, 0.14, 0.62, 0.32, xw - 0.07, 1.95, KF.z0 + 0.45);
+  B(g, M.red, 0.006, 0.07, 0.2, xw - 0.143, 2.45, KF.z0 + 0.45);
+  tube(g, M.chrome, [[xw - 0.07, 2.57, KF.z0 + 0.45], [xw - 0.07, 2.7, KF.z0 + 0.45], [xw - 0.3, 2.7, KF.z0 + 0.9], [HOOD.x1, 2.6, KF.z0 + 0.9]], 0.01, 16);
+  B(g, M.red, 0.05, 0.14, 0.1, xw - 0.025, 1.12, KF.z0 + 1.75);
+  B(g, M.chrome, 0.012, 0.03, 0.05, xw - 0.056, 1.15, KF.z0 + 1.75);
+  screen(g, signTexture(['PULL', 'IN CASE OF FIRE'], { w: 256, h: 128, bg: '#c4261c', fg: '#fff', size: 46 }), 0.16, 0.08, xw - 0.004, 1.37, KF.z0 + 1.75, -Math.PI / 2);
+  C(g, M.chrome, 0.065, 0.065, 0.42, xw - 0.09, 0.95, KF.z0 + 1.25, 20);
+  C(g, M.black, 0.02, 0.03, 0.08, xw - 0.09, 1.37, KF.z0 + 1.25, 10);
+  screen(g, signTexture(['K', 'CLASS'], { w: 128, h: 128, bg: '#fff', fg: '#c4261c', size: 60 }), 0.07, 0.07, xw - 0.157, 1.13, KF.z0 + 1.25, -Math.PI / 2);
   return g;
 }
 
@@ -700,14 +788,14 @@ function menuBoards(M) {
 function servingCounter(M) {
   // local frame: runs along x (world x), store side +z, origin on the floor at the middle of the depth
   const g = new THREE.Group(), D = 0.85, H = 0.9;
-  const sections = [{ a: -3.75, b: -2.6, hot: false }, { a: -2.6, b: -0.8, hot: true }, { a: -0.8, b: 1.0, hot: true }, { a: 1.0, b: 2.8, hot: true }, { a: 2.8, b: FK.x1, hot: false }];
+  const sections = [{ a: -3.0, b: -2.6, hot: false }, { a: -2.6, b: -0.8, hot: true }, { a: -0.8, b: 1.0, hot: true }, { a: 1.0, b: 2.8, hot: true }, { a: 2.8, b: KF.x1, hot: false }];
   const foods = [['beans', 'rice', 'meat', 'peppers'], ['chorizo', 'potato', 'pico', 'guac'], ['tomato', 'cheese', 'bacon', 'salsa']];
   let k = 0;
   for (const s of sections) {
     const w = s.b - s.a, cx = (s.a + s.b) / 2;
     B(g, M.black, w, 0.1, D - 0.06, cx, 0, 0);
     B(g, M.steel, w, H - 0.14, D, cx, 0.1, 0);
-    B(g, M.steelV, w - 0.01, 0.6, 0.01, cx, 0.16, D / 2 + 0.002);
+    B(g, M.woodPanel, w - 0.01, 0.74, 0.012, cx, 0.12, D / 2 + 0.003);
     B(g, M.steel, w, 0.04, D + 0.02, cx, H - 0.04, 0);
     if (!s.hot) continue;
     for (let i = 0; i < 2; i++) {
@@ -726,15 +814,19 @@ function servingCounter(M) {
     B(g, M.glass, w - 0.04, 0.36, 0.01, cx, H, D / 2 - 0.04).castShadow = false;
     B(g, M.glass, w - 0.02, 0.012, 0.52, cx, H + 0.42, 0.02).castShadow = false;
     B(g, M.glass, w - 0.02, 0.012, 0.26, cx, H + 0.2, D / 2 + 0.09).castShadow = false;
-    for (const px of [s.a + 0.03, s.b - 0.03]) for (const pz of [-0.22, D / 2 - 0.03]) {
-      C(g, M.chrome, 0.014, 0.014, 0.44, px, H, pz, 12);
-      addMesh(g, new THREE.SphereGeometry(0.022, 12, 8), M.chrome, px, H + 0.45, pz);
+    for (const qx of [s.a + 0.03, s.b - 0.03]) for (const qz of [-0.22, D / 2 - 0.03]) {
+      C(g, M.chrome, 0.014, 0.014, 0.44, qx, H, qz, 12);
+      addMesh(g, new THREE.SphereGeometry(0.022, 12, 8), M.chrome, qx, H + 0.45, qz);
     }
   }
   // napkin dispenser on the west end (owner's photo)
-  B(g, M.black, 0.24, 0.03, 0.2, -3.2, H, 0.05);
-  B(g, M.smoke, 0.2, 0.36, 0.16, -3.2, H + 0.03, 0.05);
-  B(g, M.hdpe, 0.12, 0.05, 0.004, -3.2, H + 0.06, 0.132);
+  B(g, M.black, 0.24, 0.03, 0.2, -2.8, H, 0.05);
+  B(g, M.smoke, 0.2, 0.36, 0.16, -2.8, H + 0.03, 0.05);
+  B(g, M.hdpe, 0.12, 0.05, 0.004, -2.8, H + 0.06, 0.132);
+  // register at the pick-up end
+  B(g, M.blackGloss, 0.05, 0.28, 0.05, 3.08, H, -0.15);
+  const scr = B(g, M.blackGloss, 0.36, 0.26, 0.03, 3.08, H + 0.28, -0.15); scr.rotation.x = 0.25;
+  B(g, M.blackGloss, 0.12, 0.1, 0.16, 3.08, H, 0.2);
   return g;
 }
 
@@ -957,9 +1049,6 @@ function mopSink(M) {
   casters(g, M, 0.4, 0.32, 0.04); g.children.slice(-8).forEach((m) => { m.position.x += bx; m.position.z += bz; });
   B(g, M.yellow, 0.18, 0.22, 0.26, bx - 0.08, 0.46, bz);
   C(g, M.yellow, 0.012, 0.012, 0.6, bx - 0.14, 0.66, bz, 8);
-  const sign = new THREE.Group(); sign.position.set(-S / 2 - 0.12, 0, 0.05); sign.rotation.set(-0.12, 0.25, 0); g.add(sign);
-  B(sign, M.yellow, 0.3, 0.62, 0.035, 0, 0, 0.06);
-  screen(sign, signTexture(['CAUTION', 'WET FLOOR'], { w: 256, h: 256, bg: '#f0c018', fg: '#111', size: 48 }), 0.22, 0.22, 0, 0.42, 0.079);
   return g;
 }
 
@@ -1048,80 +1137,6 @@ function stockShelf(M, r, W, D, kinds) {
   };
 }
 
-function walkIn(M, r, roof, cutE, cutS, stubE, stubS) {
-  const { x0, x1, z0, z1, h, split, t, dh } = WALKIN;
-  const shell = new THREE.Group(), cooler = new THREE.Group(), freezer = new THREE.Group();
-  const P = (g, a, b, c, d, e, f) => worldBox(g, M.walkin, a, b, c, d, e, f, 0.6);
-  const doors = [{ a: -0.75, b: 0.11, open: true, g: cooler }, { a: 1.62, b: 2.48, open: false, g: freezer }];
-  // west face with two openings
-  P(shell, x0, x0 + t, 0, h, z0, doors[0].a);
-  P(shell, x0, x0 + t, 0, h, doors[0].b, doors[1].a);
-  P(shell, x0, x0 + t, 0, h, doors[1].b, z1);
-  for (const d of doors) P(shell, x0, x0 + t, dh, h, d.a, d.b);
-  P(shell, x0, x1, 0, h, z0, z0 + t);
-  P(cutE, x1 - t, x1, 0, h, z0, z1); P(stubE, x1 - t, x1, 0, 0.18, z0, z1).castShadow = false;
-  P(cutS, x0, x1, 0, h, z1 - t, z1); P(stubS, x0, x1, 0, 0.18, z1 - t, z1).castShadow = false;
-  worldBox(stubE, M.cut, x1 - t, x1, 0.18, 0.186, z0, z1); worldBox(stubS, M.cut, x0, x1, 0.18, 0.186, z1 - t, z1);
-  P(shell, x0 + t, x1 - t, 0, h, split - t / 2, split + t / 2);
-  // panel seams and corner trim on the outside faces
-  for (let z = z0 + 1.17; z < z1 - 0.2; z += 1.17) if (!doors.some((d) => z > d.a - 0.05 && z < d.b + 0.05)) worldBox(shell, M.walkinTrim, x0 - 0.003, x0, 0.12, h, z - 0.004, z + 0.004);
-  for (let x = x0 + 1.17; x < x1 - 0.2; x += 1.17) worldBox(shell, M.walkinTrim, x - 0.004, x + 0.004, 0.12, h, z0 - 0.003, z0);
-  worldBox(shell, M.walkinTrim, x0 - 0.04, x0 + 0.005, 0, h, z0 - 0.04, z0 + 0.005);
-  worldBox(shell, M.cove, x0 - 0.012, x0, 0, 0.12, z0, z1 - 0.01);
-  worldBox(shell, M.cove, x0, x1 - 0.01, 0, 0.12, z0 - 0.012, z0);
-  // roof (cut away from above) with condensing units and line sets
-  P(roof, x0, x1, h, h + t, z0, z1);
-  for (const [cx, cz] of [[3.45, -0.35], [3.75, 2.0]]) {
-    B(roof, M.paintBlue, 0.95, 0.5, 0.48, cx, h + t, cz);
-    addMesh(roof, new THREE.CylinderGeometry(0.17, 0.17, 0.02, 24), M.black, cx - 0.48, h + t + 0.25, cz, 0, 0, Math.PI / 2);
-    addMesh(roof, new THREE.TorusGeometry(0.17, 0.008, 6, 24), M.chrome, cx - 0.49, h + t + 0.25, cz, 0, Math.PI / 2, 0);
-    tube(roof, M.copper, [[cx + 0.3, h + t + 0.2, cz + 0.24], [cx + 0.3, h + t + 0.05, cz + 0.4], [cx + 0.3, h + t + 0.02, cz + 0.6]], 0.01, 8);
-  }
-  // doors
-  for (const d of doors) {
-    const w = d.b - d.a, g = d.g;
-    worldBox(g, M.walkinTrim, x0 - 0.02, x0, 0, dh + 0.05, d.a - 0.05, d.a);
-    worldBox(g, M.walkinTrim, x0 - 0.02, x0, 0, dh + 0.05, d.b, d.b + 0.05);
-    worldBox(g, M.walkinTrim, x0 - 0.02, x0, dh, dh + 0.05, d.a - 0.05, d.b + 0.05);
-    const pivot = new THREE.Group(); pivot.position.set(x0 - 0.01, 0, d.a); pivot.rotation.y = d.open ? -1.25 : 0; g.add(pivot);
-    B(pivot, M.walkin, 0.1, dh - 0.02, w, 0.04, 0.01, w / 2);
-    B(pivot, M.tread, 0.004, 0.32, w - 0.04, -0.012, 0.02, w / 2);
-    B(pivot, M.chrome, 0.05, 0.05, 0.12, -0.035, 1.02, w - 0.12);
-    B(pivot, M.chrome, 0.03, 0.03, 0.18, -0.03, 1.0, w - 0.2);
-    for (const y of [0.3, dh - 0.35]) B(pivot, M.chrome, 0.03, 0.14, 0.05, -0.025, y, 0.02);
-    // label and digital thermometer above the door
-    screen(g, signTexture([d.open ? 'COOLER' : 'FREEZER'], { w: 512, h: 128, bg: '#204649', fg: '#f5f3e6', size: 70 }), 0.5, 0.125, x0 - 0.004, dh + 0.2, (d.a + d.b) / 2 - 0.15, -Math.PI / 2);
-    B(g, M.blackGloss, 0.03, 0.08, 0.16, x0 - 0.015, dh + 0.16, (d.a + d.b) / 2 + 0.3);
-    screen(g, screenTexture(128, 64, (c) => { c.fillStyle = '#030607'; c.fillRect(0, 0, 128, 64); c.fillStyle = '#ff3a1c'; c.font = 'bold 34px monospace'; c.textAlign = 'center'; c.fillText(d.open ? '36°F' : '-4°F', 64, 44); }), 0.13, 0.06, x0 - 0.031, dh + 0.2, (d.a + d.b) / 2 + 0.3, -Math.PI / 2);
-    B(g, M.hdpe, 0.02, 0.1, 0.06, x0 - 0.01, 1.2, d.b + 0.12);
-    B(g, M.pilotRed, 0.006, 0.012, 0.012, x0 - 0.021, 1.27, d.b + 0.12);
-  }
-  // strip curtain in the open cooler door
-  for (let i = 0; i < 5; i++) { const m = B(cooler, M.curtain, 0.003, dh - 0.06, 0.2, x0 + t + 0.02 + (i % 2) * 0.004, 0.02, doors[0].a + 0.09 + i * 0.17); m.castShadow = false; }
-  B(cooler, M.alum, 0.03, 0.03, doors[0].b - doors[0].a, x0 + t + 0.02, dh - 0.04, (doors[0].a + doors[0].b) / 2);
-  // freezer: insulated floor and ramp, heater frame
-  worldBox(freezer, M.tread, x0 + t, x1 - t, 0, 0.1, split + t / 2, z1 - t);
-  const ramp = B(freezer, M.tread, 0.42, 0.02, doors[1].b - doors[1].a, x0 - 0.2, 0.03, (doors[1].a + doors[1].b) / 2); ramp.rotation.z = 0.24;
-  // evaporators and vapor-proof lights inside
-  for (const [g, zc] of [[cooler, (z0 + split) / 2], [freezer, (split + z1) / 2]]) {
-    B(g, M.hdpe, 0.32, 0.3, 0.95, x1 - t - 0.17, 2.0, zc);
-    for (const s of [-1, 1]) {
-      addMesh(g, new THREE.CylinderGeometry(0.11, 0.11, 0.01, 20), M.black, x1 - t - 0.335, 2.15, zc + s * 0.22, 0, 0, Math.PI / 2);
-      addMesh(g, new THREE.TorusGeometry(0.11, 0.006, 6, 20), M.chrome, x1 - t - 0.34, 2.15, zc + s * 0.22, 0, Math.PI / 2, 0);
-    }
-    C(roof, M.lamp, 0.06, 0.06, 0.1, (x0 + x1) / 2, h - 0.12, zc, 16);
-  }
-  // shelving: cooler on the north and east walls, freezer on the south and east walls
-  const cK = ['produce', 'cheese', 'eggs', 'meat', 'container', 'crate', 'tortilla'];
-  const fK = ['fries', 'chicken', 'meat', 'tortilla', 'fries'];
-  const lv = [0.18, 0.62, 1.06, 1.5, 1.86];
-  const s1 = shelving(M, 1.83, 0.46, 1.9, lv, stockShelf(M, r, 1.83, 0.46, cK)); s1.position.set((x0 + t + x1 - t) / 2 - 0.05, 0, z0 + t + 0.25); cooler.add(s1);
-  const s2 = shelving(M, 1.22, 0.46, 1.9, lv, stockShelf(M, r, 1.22, 0.46, cK)); s2.position.set(x1 - t - 0.25, 0, 0.02); s2.rotation.y = Math.PI / 2; cooler.add(s2);
-  const s3 = shelving(M, 1.83, 0.46, 1.9, lv.map((y) => y + 0.1), stockShelf(M, r, 1.83, 0.46, fK)); s3.position.set((x0 + t + x1 - t) / 2 - 0.05, 0, z1 - t - 0.25); freezer.add(s3);
-  const s4 = shelving(M, 0.91, 0.46, 1.9, lv.map((y) => y + 0.1), stockShelf(M, r, 0.91, 0.46, fK)); s4.position.set(x1 - t - 0.25, 0, 1.75); s4.rotation.y = Math.PI / 2; freezer.add(s4);
-  return { shell, cooler, freezer };
-}
-
 function dryStorage(M, r) {
   const g = new THREE.Group();
   const kinds = ['cans', 'beans', 'foil', 'cups', 'napkins', 'container', 'cans', 'tortilla'];
@@ -1147,38 +1162,468 @@ function trashCan(M, x, z, mat, p) {
 
 /* ------------------------------------------------------------ the kitchen */
 
+/* ------------------------------------------------------------ store fixtures */
+
+// Products on shelves are drawn as instances (one draw call for thousands).
+class Instancer {
+  constructor() { this.boxes = []; this.cyls = []; }
+  box(parent, x, y, z, w, h, d, color, ry = 0) { this.boxes.push({ parent, x, y: y + h / 2, z, sx: w, sy: h, sz: d, color, ry }); }
+  cyl(parent, x, y, z, r, h, color) { this.cyls.push({ parent, x, y: y + h / 2, z, sx: r * 2, sy: h, sz: r * 2, color, ry: 0 }); }
+  build(M) {
+    const out = [], o = new THREE.Object3D(), col = new THREE.Color();
+    const make = (list, geo, mat) => {
+      if (!list.length) return;
+      const m = new THREE.InstancedMesh(geo, mat, list.length);
+      list.forEach((e, i) => {
+        o.position.set(e.x, e.y, e.z); o.rotation.set(0, e.ry, 0); o.scale.set(e.sx, e.sy, e.sz); o.updateMatrix();
+        o.matrix.premultiply(e.parent.matrixWorld);
+        m.setMatrixAt(i, o.matrix); m.setColorAt(i, col.set(e.color));
+      });
+      m.castShadow = false; m.receiveShadow = true; m.frustumCulled = false;
+      out.push(m);
+    };
+    make(this.boxes, new THREE.BoxGeometry(1, 1, 1), M.inst);
+    make(this.cyls, new THREE.CylinderGeometry(0.5, 0.5, 1, 10), M.instBottle);
+    return out;
+  }
+}
+const SNACKS = [0xd8352a, 0xf2b31b, 0xe86c1a, 0x1f63b5, 0x3c9b3c, 0x7a3d9e, 0xf1e6c8, 0x2b2b2b, 0xe8466e, 0x18a3b8, 0xc9c9c4, 0x8a5a2b];
+const DRINKS = [0x7a1810, 0xd8352a, 0x1f63b5, 0x5cc2ea, 0x3c9b3c, 0xf2b31b, 0xe86c1a, 0x161616, 0xc4c8cc, 0x7a3d9e, 0xf4f4f0, 0x9bd04a];
+const CASES = [0xc9a26a, 0xb5332a, 0x1f4f8f, 0xe8e2d0, 0x2f6b3a, 0x1a1a1a, 0xd7b24a];
+
+// A run of product facings along x (axis 'x') or z (axis 'z'), standing on y.
+function fillRun(P, parent, r, axis, a0, a1, y, fixed, depth, hMax, palette) {
+  let a = a0;
+  while (a < a1 - 0.07) {
+    const w = 0.06 + r() * 0.08, h = Math.min(hMax, 0.1 + r() * 0.22), c = palette[Math.floor(r() * palette.length)], n = 1 + Math.floor(r() * 3);
+    for (let k = 0; k < n && a + w < a1; k++) {
+      if (axis === 'x') P.box(parent, a + w / 2, y, fixed, w - 0.006, h, depth, c); else P.box(parent, fixed, y, a + w / 2, depth, h, w - 0.006, c);
+      a += w;
+    }
+  }
+}
+
+function gondola(M, P, r, L) {
+  const g = new THREE.Group(), D = 0.9, H = 1.37;
+  B(g, M.blackPaint, L, 0.1, D - 0.04, 0, 0, 0);
+  B(g, M.gondolaBack, L, H - 0.1, 0.04, 0, 0.1, 0);
+  for (const x of [-L / 2 + 0.025, L / 2 - 0.025]) B(g, M.gondola, 0.05, H, 0.07, x, 0, 0);
+  const levels = [0.1, 0.45, 0.78, 1.1];
+  for (const s of [-1, 1]) levels.forEach((y, i) => {
+    B(g, M.gondola, L - 0.06, 0.022, D / 2 - 0.05, 0, y, s * (D / 4 + 0.01));
+    B(g, M.blackGloss, L - 0.06, 0.035, 0.012, 0, y - 0.01, s * (D / 2 - 0.025));
+    fillRun(P, g, r, 'x', -L / 2 + 0.05, L / 2 - 0.05, y + 0.022, s * (D / 4 + 0.02), D / 2 - 0.12, i === 3 ? 0.24 : 0.3, SNACKS);
+  });
+  for (const sx of [-1, 1]) {
+    const ex = sx * (L / 2 + 0.29);
+    B(g, M.blackPaint, 0.54, 0.1, D - 0.04, ex, 0, 0);
+    B(g, M.gondolaBack, 0.04, H - 0.1, D - 0.04, sx * (L / 2 + 0.03), 0.1, 0);
+    for (const y of [0.1, 0.52, 0.94]) {
+      B(g, M.gondola, 0.52, 0.022, D - 0.06, ex, y, 0);
+      fillRun(P, g, r, 'z', -D / 2 + 0.05, D / 2 - 0.05, y + 0.022, ex + sx * 0.02, 0.4, 0.3, SNACKS);
+    }
+    B(g, M.fascia, 0.5, 0.18, 0.02, ex, H + 0.1, 0).rotation.y = Math.PI / 2;
+  }
+  return g;
+}
+
+// Glass-door reach-in run: doors side by side along x, glass at z = 0 facing +z, shelves behind.
+function coolerRun(M, P, r, n) {
+  const g = new THREE.Group(), DW = 0.76, L = n * DW, top = 2.12;
+  B(g, M.coolerFrame, L + 0.06, 0.12, 0.1, 0, 0, -0.03);
+  B(g, M.coolerFrame, L + 0.06, 0.24, 0.12, 0, top, -0.04);
+  B(g, M.coolerGlow, L - 0.06, 0.012, 0.02, 0, top - 0.004, -0.06).castShadow = false;
+  for (let i = 0; i <= n; i++) B(g, M.coolerFrame, 0.05, top - 0.12, 0.1, -L / 2 + i * DW, 0.12, -0.03);
+  for (let i = 0; i < n; i++) {
+    const cx = -L / 2 + (i + 0.5) * DW, hs = i % 2 ? -1 : 1;
+    B(g, M.glass, DW - 0.05, top - 0.14, 0.012, cx, 0.13, 0.02).castShadow = false;
+    B(g, M.chrome, 0.022, 0.6, 0.03, cx + hs * (DW / 2 - 0.07), 0.8, 0.05);
+    B(g, M.coolerGlow, 0.012, top - 0.2, 0.012, -L / 2 + i * DW + 0.035, 0.15, -0.085).castShadow = false;
+    for (let k = 0; k < 5; k++) {
+      const y = 0.34 + k * 0.33;
+      B(g, M.coolerFrame, DW - 0.08, 0.014, 0.6, cx, y, -0.37);
+      let x = cx - DW / 2 + 0.08;
+      while (x < cx + DW / 2 - 0.08) {
+        const c = DRINKS[Math.floor(r() * DRINKS.length)], h = 0.18 + r() * 0.1, rad = 0.03 + r() * 0.008;
+        for (const z of [-0.12, -0.24, -0.36]) P.cyl(g, x, y + 0.014, z, rad, h, c);
+        x += rad * 2 + 0.012;
+      }
+    }
+    for (const z of [-0.2, -0.5]) P.box(g, cx, 0.13, z, DW - 0.12, 0.17, 0.26, CASES[Math.floor(r() * CASES.length)]);
+  }
+  B(g, M.coolerBack, L, top - 0.12, 0.02, 0, 0.12, -0.72).castShadow = false;
+  return g;
+}
+
+function bevBar(M, P, r, L) {
+  // back against the wall at z = 0, customers at +z
+  const g = new THREE.Group(), D = 0.76, top = 0.91;
+  B(g, M.woodPanel, L, top - 0.1, D - 0.04, 0, 0.1, D / 2);
+  B(g, M.blackPaint, L - 0.02, 0.1, D - 0.1, 0, 0, D / 2 - 0.03);
+  B(g, M.quartz, L + 0.02, 0.04, D + 0.03, 0, top - 0.04, D / 2);
+  B(g, M.pattern, L, 0.7, 0.012, 0, top, 0.006);
+  B(g, M.blackPaint, L, 0.5, 0.06, 0, 2.15, 0.03);
+  const menus = [['COFFEE', '#204649'], ['FOUNTAIN', '#c9351d'], ['FROZEN', '#1f5ea6'], ['HOT DRINKS', '#204649']];
+  menus.forEach(([t, bg], i) => screen(g, signTexture([t, '— your prices here —'], { w: 512, h: 192, bg, fg: '#f5f3e6', size: 56, print: false }), L / 4 - 0.1, 0.42, -L / 2 + (i + 0.5) * L / 4, 2.4, 0.062));
+  let x = -L / 2 + 0.3;
+  const at = (w) => { const c = x + w / 2; x += w + 0.12; return c; };
+  // cup and lid dispensers
+  let cx = at(0.7);
+  for (let i = 0; i < 4; i++) C(g, M.hdpe, 0.05, 0.045, 0.32, cx - 0.24 + i * 0.16, top, 0.32, 16);
+  B(g, M.steel, 0.7, 0.36, 0.2, cx, top, 0.12);
+  // bean-to-cup coffee machines
+  for (let k = 0; k < 2; k++) {
+    cx = at(0.42);
+    B(g, M.blackGloss, 0.4, 0.74, 0.55, cx, top, 0.3);
+    screen(g, screenTexture(96, 128, (c) => { c.fillStyle = '#0c1416'; c.fillRect(0, 0, 96, 128); ['#c9351d', '#eebe54', '#3bb3a0', '#f5f3e6'].forEach((col, i) => { c.fillStyle = col; rrect(c, 10, 12 + i * 28, 76, 20, 4); c.fill(); }); }), 0.16, 0.2, cx, top + 0.5, 0.576);
+    B(g, M.steelIn, 0.2, 0.02, 0.12, cx, top + 0.06, 0.52);
+  }
+  // airpot brewers
+  cx = at(1.0);
+  B(g, M.steel, 1.0, 0.62, 0.45, cx, top, 0.24);
+  for (let i = 0; i < 3; i++) { C(g, M.blackGloss, 0.075, 0.075, 0.36, cx - 0.32 + i * 0.32, top + 0.02, 0.5, 16); B(g, M.blackPaint, 0.1, 0.06, 0.06, cx - 0.32 + i * 0.32, top + 0.33, 0.58); }
+  // condiment caddy
+  cx = at(0.7);
+  B(g, M.steel, 0.7, 0.16, 0.4, cx, top, 0.4);
+  for (let i = 0; i < 5; i++) B(g, M.food[['cream', 'tortilla', 'cheese', 'cream', 'egg'][i]], 0.11, 0.02, 0.32, cx - 0.28 + i * 0.14, top + 0.15, 0.4);
+  // fountain dispenser with lit merchandiser
+  cx = at(1.3);
+  B(g, M.steel, 1.3, 0.18, 0.7, cx, top, 0.38);
+  B(g, M.blackGloss, 1.3, 0.62, 0.62, cx, top + 0.18, 0.33);
+  screen(g, screenTexture(512, 160, (c) => { c.fillStyle = '#0b0d0e'; c.fillRect(0, 0, 512, 160); for (let i = 0; i < 10; i++) { c.fillStyle = '#' + DRINKS[i].toString(16).padStart(6, '0'); rrect(c, 8 + i * 50, 18, 44, 124, 8); c.fill(); } }), 1.24, 0.38, cx, top + 0.53, 0.642);
+  for (let i = 0; i < 10; i++) { B(g, M.chrome, 0.04, 0.08, 0.05, cx - 0.56 + i * 0.125, top + 0.2, 0.66); }
+  B(g, M.louver, 1.2, 0.006, 0.4, cx, top + 0.18, 0.4);
+  // ice dispenser
+  cx = at(0.55);
+  B(g, M.steel, 0.55, 0.85, 0.6, cx, top, 0.32);
+  B(g, M.blackGloss, 0.3, 0.2, 0.01, cx, top + 0.5, 0.625);
+  // frozen drink machine: three clear barrels
+  cx = at(1.2);
+  B(g, M.steel, 1.2, 0.32, 0.62, cx, top, 0.33);
+  ['#c4261c', '#1f5ea6', '#7ac143'].forEach((col, i) => {
+    const bx = cx - 0.38 + i * 0.38;
+    addMesh(g, new THREE.CylinderGeometry(0.15, 0.15, 0.5, 20), M.clear, bx, top + 0.5, 0.33, Math.PI / 2, 0, 0);
+    addMesh(g, new THREE.CylinderGeometry(0.135, 0.135, 0.46, 20), new THREE.MeshStandardMaterial({ color: col, roughness: 0.35 }), bx, top + 0.49, 0.33, Math.PI / 2, 0, 0);
+    B(g, M.blackGloss, 0.1, 0.12, 0.08, bx, top + 0.33, 0.6);
+  });
+  // lids and straws
+  cx = at(0.6);
+  B(g, M.steel, 0.6, 0.3, 0.35, cx, top, 0.3);
+  for (let i = 0; i < 3; i++) C(g, M.hdpe, 0.045, 0.045, 0.2, cx - 0.18 + i * 0.18, top + 0.3, 0.3, 14);
+  return g;
+}
+
+function hotIsland(M, P, r) {
+  // long axis x (3.1 m), customers on both sides; +z side: hot case and roller grill, -z side: condiments
+  const g = new THREE.Group(), L = 3.1, D = 1.2, top = 0.91;
+  B(g, M.blackPaint, L - 0.04, 0.1, D - 0.08, 0, 0, 0);
+  B(g, M.woodPanel, L, top - 0.1, D, 0, 0.1, 0);
+  B(g, M.quartz, L + 0.04, 0.04, D + 0.04, 0, top - 0.04, 0);
+  // heated self-serve case
+  const hx = -0.75;
+  B(g, M.steel, 1.4, 0.08, 0.6, hx, top, 0.25);
+  B(g, M.glass, 1.4, 0.55, 0.01, hx, top + 0.08, 0.55).castShadow = false;
+  B(g, M.glass, 1.4, 0.01, 0.58, hx, top + 0.63, 0.25).castShadow = false;
+  for (const s of [-1, 1]) B(g, M.steel, 0.02, 0.55, 0.6, hx + s * 0.7, top + 0.08, 0.25);
+  B(g, M.lamp, 1.3, 0.01, 0.06, hx, top + 0.62, 0.25).castShadow = false;
+  for (let i = 0; i < 2; i++) {
+    const y = top + 0.1 + i * 0.26;
+    B(g, M.chrome, 1.36, 0.01, 0.5, hx, y, 0.25);
+    for (let k = 0; k < 6; k++) {
+      const px2 = hx - 0.55 + k * 0.22;
+      if (i === 0) { const t = addMesh(g, new THREE.CylinderGeometry(0.09, 0.09, 0.012, 3), M.food.cheese, px2, y + 0.02, 0.25, 0, r() * 6, 0); t.scale.set(1, 1, 1.4); }
+      else for (let j = 0; j < 3; j++) addMesh(g, new THREE.SphereGeometry(0.03, 8, 6), M.food.chorizo, px2 + (j - 1) * 0.05, y + 0.03, 0.22 + (j % 2) * 0.06);
+    }
+  }
+  // roller grill
+  const rx = 0.55;
+  B(g, M.steel, 0.9, 0.12, 0.55, rx, top, 0.25);
+  for (let i = 0; i < 9; i++) {
+    addMesh(g, new THREE.CylinderGeometry(0.014, 0.014, 0.8, 10), M.chrome, rx, top + 0.135, 0.07 + i * 0.045, 0, 0, Math.PI / 2);
+    if (i % 2 === 0) addMesh(g, new THREE.CylinderGeometry(0.013, 0.013, 0.16, 10), M.food.meat, rx - 0.2 + (i % 4) * 0.12, top + 0.155, 0.07 + i * 0.045, 0, 0, Math.PI / 2);
+  }
+  B(g, M.glass, 0.9, 0.3, 0.01, rx, top + 0.12, 0.54).castShadow = false;
+  B(g, M.steel, 0.4, 0.28, 0.45, 1.25, top, 0.25);
+  // condiment side
+  B(g, M.steel, 1.6, 0.14, 0.4, 0.2, top, -0.3);
+  for (let i = 0; i < 6; i++) { C(g, M.blackGloss, 0.04, 0.04, 0.18, -0.4 + i * 0.22, top + 0.14, -0.3, 12); C(g, M.chrome, 0.01, 0.01, 0.08, -0.4 + i * 0.22, top + 0.32, -0.3, 8); }
+  B(g, M.smoke, 0.22, 0.32, 0.16, -1.2, top, -0.3);
+  return g;
+}
+
+function openCase(M, P, r) {
+  // open-air grab-and-go merchandiser, front at +z
+  const g = new THREE.Group(), W = 1.83, D = 0.85, H = 2.0;
+  B(g, M.blackPaint, W, H, 0.08, 0, 0, -D / 2 + 0.04);
+  for (const s of [-1, 1]) B(g, M.coolerFrame, 0.05, H, D, s * (W / 2 - 0.025), 0, 0);
+  B(g, M.coolerFrame, W, 0.18, D, 0, H - 0.18, 0);
+  B(g, M.coolerFrame, W, 0.45, D, 0, 0, 0);
+  B(g, M.coolerGlow, W - 0.12, 0.01, 0.03, 0, H - 0.19, D / 2 - 0.06).castShadow = false;
+  for (let k = 0; k < 4; k++) {
+    const y = 0.45 + k * 0.33;
+    B(g, M.coolerFrame, W - 0.1, 0.015, D - 0.18, 0, y, -0.04);
+    B(g, M.coolerGlow, W - 0.12, 0.008, 0.02, 0, y + 0.3, -0.38).castShadow = false;
+    for (let i = 0; i < 9; i++) {
+      const x = -W / 2 + 0.14 + i * 0.19, c = [0xe9e4d6, 0x9bd04a, 0xf2b31b, 0xd8352a, 0xf4f4f0][Math.floor(r() * 5)];
+      for (const z of [0.12, -0.08, -0.28]) P.box(g, x, y + 0.015, z, 0.15, k === 3 ? 0.18 : 0.1, 0.14, c);
+    }
+  }
+  return g;
+}
+
+function bakeryIsland(M, P, r) {
+  const g = new THREE.Group(), L = 1.7, D = 1.0, top = 0.91;
+  B(g, M.woodPanel, L, top - 0.1, D, 0, 0.1, 0);
+  B(g, M.blackPaint, L - 0.04, 0.1, D - 0.08, 0, 0, 0);
+  B(g, M.quartz, L + 0.04, 0.04, D + 0.04, 0, top - 0.04, 0);
+  for (const s of [-1, 1]) {
+    B(g, M.steel, L - 0.1, 0.04, 0.42, 0, top, s * 0.24);
+    B(g, M.glass, L - 0.1, 0.4, 0.01, 0, top + 0.04, s * 0.45).castShadow = false;
+    B(g, M.glass, L - 0.1, 0.01, 0.42, 0, top + 0.44, s * 0.24).castShadow = false;
+    for (let t = 0; t < 2; t++) {
+      const y = top + 0.06 + t * 0.2;
+      B(g, M.hdpe, L - 0.16, 0.01, 0.36, 0, y, s * 0.24);
+      for (let i = 0; i < 10; i++) {
+        const glaze = [0xf3e3c3, 0x6b3a22, 0xf28db2, 0xe8c27a][Math.floor(r() * 4)];
+        addMesh(g, new THREE.TorusGeometry(0.035, 0.018, 8, 16), new THREE.MeshStandardMaterial({ color: glaze, roughness: 0.5 }), -L / 2 + 0.16 + i * 0.15, y + 0.03, s * 0.24 + (i % 2 ? 0.07 : -0.07), Math.PI / 2, 0, 0);
+      }
+    }
+  }
+  return g;
+}
+
+function checkoutCounter(M, P, r, L) {
+  // along x; customers at +z, staff at -z
+  const g = new THREE.Group(), D = 0.8, top = 0.97;
+  B(g, M.blackPaint, L - 0.04, 0.1, D - 0.08, 0, 0, 0);
+  B(g, M.woodPanel, L, top - 0.1, D, 0, 0.1, 0);
+  B(g, M.quartz, L + 0.04, 0.04, D + 0.06, 0, top - 0.04, 0);
+  // impulse shelves on the customer face
+  for (let k = 0; k < 2; k++) {
+    const y = 0.3 + k * 0.28;
+    B(g, M.gondola, L - 0.4, 0.02, 0.16, 0, y, D / 2 + 0.08);
+    fillRun(P, g, r, 'x', -L / 2 + 0.25, L / 2 - 0.25, y + 0.02, D / 2 + 0.08, 0.12, 0.16, SNACKS);
+  }
+  for (const x of [-L / 4, L / 4]) {
+    B(g, M.blackGloss, 0.05, 0.3, 0.05, x, top, -0.15);
+    const scr = B(g, M.blackGloss, 0.38, 0.28, 0.03, x, top + 0.3, -0.15); scr.rotation.x = -0.25;
+    screen(g, screenTexture(160, 112, (c) => { c.fillStyle = '#0e1a1c'; c.fillRect(0, 0, 160, 112); c.fillStyle = '#204649'; c.fillRect(0, 0, 160, 22); c.fillStyle = '#f5f3e6'; for (let i = 0; i < 5; i++) c.fillRect(10, 32 + i * 14, 90, 6); c.fillStyle = '#eebe54'; c.fillRect(110, 32, 40, 60); }), 0.35, 0.24, x, top + 0.44, -0.13);
+    B(g, M.blackGloss, 0.12, 0.1, 0.16, x + 0.3, top, 0.2);
+    B(g, M.darkGlass, 0.3, 0.012, 0.3, x - 0.45, top, 0.0);
+  }
+  // lottery ticket dispenser
+  B(g, M.clear, 0.5, 0.3, 0.12, 0, top, 0.25);
+  for (let i = 0; i < 6; i++) B(g, new THREE.MeshStandardMaterial({ color: [0xd8352a, 0xf2b31b, 0x1f63b5, 0x3c9b3c, 0x7a3d9e, 0xe86c1a][i], roughness: 0.4 }), 0.07, 0.24, 0.08, -0.2 + i * 0.08, top + 0.02, 0.25);
+  return g;
+}
+
+function backBar(M, L) {
+  // back against the wall at z = 0, facing +z
+  const g = new THREE.Group(), D = 0.6;
+  B(g, M.woodPanel, L, 0.86, D, 0, 0.1, D / 2);
+  B(g, M.blackPaint, L - 0.02, 0.1, D - 0.06, 0, 0, D / 2 - 0.03);
+  B(g, M.quartz, L + 0.02, 0.04, D + 0.02, 0, 0.96, D / 2);
+  B(g, M.blackPaint, L, 1.15, 0.3, 0, 1.2, 0.15);
+  const tb = addMesh(g, scaleUV(new THREE.PlaneGeometry(L - 0.1, 1.05), (L - 0.1) / 1.8, 1), M.tobacco, 0, 1.75, 0.302); tb.castShadow = false;
+  for (let i = 0; i < 3; i++) {
+    B(g, M.blackGloss, L / 3 - 0.12, 0.52, 0.06, -L / 3 + i * L / 3, 2.42, 0.06);
+    screen(g, screenTexture(320, 180, (c) => { c.fillStyle = ['#204649', '#c9351d', '#1f5ea6'][i]; c.fillRect(0, 0, 320, 180); c.fillStyle = '#f5f3e6'; c.font = 'bold 30px Arial'; c.textAlign = 'center'; c.fillText(['DEALS', 'LOTTERY', 'ASK US'][i], 160, 100); }), L / 3 - 0.18, 0.46, -L / 3 + i * L / 3, 2.68, 0.092);
+  }
+  B(g, M.greyPlastic, 0.4, 0.34, 0.35, L / 2 - 0.4, 0.96, 0.3);
+  return g;
+}
+
+function kiosk(M) {
+  const g = new THREE.Group();
+  B(g, M.blackPaint, 0.5, 0.9, 0.45, 0, 0, 0);
+  const s = B(g, M.blackGloss, 0.42, 0.32, 0.04, 0, 1.0, -0.05); s.rotation.x = -0.35;
+  screen(g, screenTexture(128, 96, (c) => { c.fillStyle = '#0e1a1c'; c.fillRect(0, 0, 128, 96); c.fillStyle = '#eebe54'; c.font = 'bold 15px Arial'; c.fillText('SCAN ITEMS', 14, 30); c.fillStyle = '#3bb3a0'; rrect(c, 14, 54, 100, 26, 6); c.fill(); }), 0.38, 0.27, 0, 1.15, 0.0);
+  B(g, M.darkGlass, 0.4, 0.02, 0.35, 0, 0.9, 0.0);
+  B(g, M.steel, 0.4, 0.02, 0.35, 0.48, 0.8, 0.0);
+  C(g, M.chrome, 0.012, 0.012, 0.8, 0.48, 0, 0, 8);
+  return g;
+}
+
+function seatingCounter(M, L, n) {
+  // along x, against the windows at z = 0, people sit at +z
+  const g = new THREE.Group(), top = 1.05;
+  B(g, M.woodPanel, L, 0.05, 0.45, 0, top - 0.05, 0.25);
+  for (const x of [-L / 2 + 0.2, 0, L / 2 - 0.2]) B(g, M.blackPaint, 0.06, top - 0.05, 0.06, x, 0, 0.1);
+  for (let i = 0; i < n; i++) {
+    const x = -L / 2 + (i + 0.5) * L / n;
+    C(g, M.blackPaint, 0.22, 0.24, 0.03, x, 0, 0.72, 20);
+    C(g, M.chrome, 0.025, 0.025, 0.7, x, 0.03, 0.72, 10);
+    addMesh(g, new THREE.TorusGeometry(0.17, 0.012, 6, 20), M.chrome, x, 0.3, 0.72, Math.PI / 2, 0, 0);
+    C(g, M.blackPaint, 0.19, 0.19, 0.06, x, 0.73, 0.72, 20);
+  }
+  return g;
+}
+
+function toilet(M) {
+  // against a wall at z = 0, facing +z
+  const g = new THREE.Group();
+  B(g, M.ceramic, 0.42, 0.36, 0.18, 0, 0.42, 0.11);
+  const bowl = new THREE.LatheGeometry([new THREE.Vector2(0.1, 0), new THREE.Vector2(0.14, 0.12), new THREE.Vector2(0.2, 0.35), new THREE.Vector2(0.19, 0.4), new THREE.Vector2(0.001, 0.4)], 20);
+  const b = addMesh(g, bowl, M.ceramic, 0, 0, 0.42); b.scale.z = 1.3;
+  addMesh(g, new THREE.TorusGeometry(0.16, 0.025, 8, 20), M.ceramic, 0, 0.42, 0.42, Math.PI / 2, 0, 0).scale.y = 1.3;
+  barX(g, M.chrome, 0.9, 0.018, 0.0, 0.85, 0.06);
+  return g;
+}
+function urinal(M) {
+  const g = new THREE.Group();
+  B(g, M.ceramic, 0.38, 0.65, 0.3, 0, 0.45, 0.15);
+  B(g, M.steelIn, 0.28, 0.4, 0.02, 0, 0.55, 0.31);
+  C(g, M.chrome, 0.015, 0.015, 0.3, 0, 1.1, 0.04, 8);
+  return g;
+}
+function vanity(M) {
+  // wall-hung sink with mirror and dryer, wall at z = 0
+  const g = new THREE.Group();
+  B(g, M.ceramic, 0.55, 0.16, 0.45, 0, 0.72, 0.23);
+  B(g, M.steelIn, 0.4, 0.004, 0.3, 0, 0.88, 0.25);
+  B(g, M.chrome, 0.05, 0.14, 0.05, 0, 0.88, 0.06);
+  tube(g, M.chrome, [[0, 1.0, 0.06], [0, 1.02, 0.16], [0, 0.96, 0.2]], 0.012, 8);
+  B(g, M.mirror, 0.6, 0.9, 0.012, 0, 1.15, 0.006);
+  B(g, M.hdpe, 0.12, 0.2, 0.1, 0.42, 1.0, 0.05);
+  B(g, M.greyPlastic, 0.26, 0.32, 0.16, 0.52, 1.25, 0.08);
+  return g;
+}
+
+function officeSet(M) {
+  // desk against the wall at z = 0
+  const g = new THREE.Group();
+  B(g, M.desk, 1.5, 0.04, 0.7, 0, 0.72, 0.35);
+  for (const sx of [-1, 1]) B(g, M.steelDark, 0.04, 0.72, 0.6, sx * 0.7, 0, 0.35);
+  B(g, M.blackGloss, 0.55, 0.34, 0.03, 0.1, 0.9, 0.12);
+  B(g, M.blackGloss, 0.08, 0.14, 0.08, 0.1, 0.76, 0.12);
+  screen(g, screenTexture(128, 80, (c) => { c.fillStyle = '#16302f'; c.fillRect(0, 0, 128, 80); c.fillStyle = '#eebe54'; c.fillRect(10, 10, 60, 8); c.fillStyle = '#f5f3e6'; for (let i = 0; i < 4; i++) c.fillRect(10, 26 + i * 12, 100, 5); }), 0.5, 0.3, 0.1, 1.07, 0.137);
+  C(g, M.black, 0.25, 0.28, 0.05, 0.1, 0, 0.95, 16);
+  C(g, M.chrome, 0.025, 0.025, 0.4, 0.1, 0.05, 0.95, 8);
+  B(g, M.black, 0.48, 0.08, 0.46, 0.1, 0.45, 0.95);
+  B(g, M.black, 0.46, 0.5, 0.06, 0.1, 0.53, 1.18);
+  B(g, M.paintGrey, 0.5, 0.75, 0.55, -1.15, 0, 0.3);
+  B(g, M.iron, 0.55, 0.65, 0.55, 1.15, 0, 0.3);
+  C(g, M.chrome, 0.05, 0.05, 0.02, 1.15, 0.38, 0.58, 16).rotation.x = Math.PI / 2;
+  return g;
+}
+
+// Back-room walk-in: freezer behind (north), cooler in front (south), entered from the south face.
+function walkInBack(M, r, roof) {
+  const { x0, x1, z0, z1, h, t, split } = WALKIN;
+  const shell = new THREE.Group(), cooler = new THREE.Group(), freezer = new THREE.Group();
+  const P = (g, a, b, c, d, e, f) => worldBox(g, M.walkin, a, b, c, d, e, f, 0.6);
+  const door = { a: x0 + 0.9, b: x0 + 1.76 }, dh = 1.98;
+  P(shell, x0, x1, 0, h, z0, z0 + t);
+  P(shell, x1 - t, x1, 0, h, z0, z1);
+  P(shell, x0, x0 + t, 0, h, z0, z1);
+  P(shell, x0, door.a, 0, h, z1 - t, z1); P(shell, door.b, x1, 0, h, z1 - t, z1); P(shell, door.a, door.b, dh, h, z1 - t, z1);
+  P(shell, x0 + t, x0 + 0.95, 0, h, split - t / 2, split + t / 2); P(shell, x0 + 1.81, x1 - t, 0, h, split - t / 2, split + t / 2); P(shell, x0 + 0.95, x0 + 1.81, dh, h, split - t / 2, split + t / 2);
+  worldBox(shell, M.walkinTrim, x1, x1 + 0.04, 0, h, z1 - 0.04, z1 + 0.04);
+  worldBox(shell, M.cove, x1, x1 + 0.012, 0, 0.12, z0, z1);
+  for (const [a, b] of [[x0, door.a], [door.b, x1]]) worldBox(shell, M.cove, a, b, 0, 0.12, z1, z1 + 0.012);
+  // roof with condensing unit
+  P(roof, x0, x1, h, h + t, z0, z1);
+  B(roof, M.paintBlue, 0.9, 0.48, 0.5, (x0 + x1) / 2, h + t, z0 + 0.5);
+  addMesh(roof, new THREE.CylinderGeometry(0.16, 0.16, 0.02, 24), M.black, (x0 + x1) / 2, h + t + 0.24, z0 + 0.76, Math.PI / 2, 0, 0);
+  // open cooler door (swung out into the back room) and strip curtain
+  const pivot = new THREE.Group(); pivot.position.set(door.a, 0, z1); pivot.rotation.y = -1.25; cooler.add(pivot);
+  const w = door.b - door.a;
+  B(pivot, M.walkin, w, dh - 0.02, 0.1, w / 2, 0.01, -0.04);
+  B(pivot, M.tread, w - 0.04, 0.32, 0.004, w / 2, 0.02, 0.012);
+  B(pivot, M.chrome, 0.12, 0.05, 0.05, w - 0.12, 1.02, 0.035);
+  for (let i = 0; i < 5; i++) { const m = B(cooler, M.curtain, 0.2, dh - 0.06, 0.003, door.a + 0.09 + i * 0.17, 0.02, z1 - t - 0.02 - (i % 2) * 0.004); m.castShadow = false; }
+  screen(shell, signTexture(['COOLER'], { w: 512, h: 128, bg: '#204649', fg: '#f5f3e6', size: 70 }), 0.5, 0.125, (door.a + door.b) / 2 - 0.15, dh + 0.2, z1 + 0.004);
+  B(shell, M.blackGloss, 0.16, 0.08, 0.03, (door.a + door.b) / 2 + 0.35, dh + 0.16, z1 + 0.015);
+  screen(shell, screenTexture(128, 64, (c) => { c.fillStyle = '#030607'; c.fillRect(0, 0, 128, 64); c.fillStyle = '#ff3a1c'; c.font = 'bold 34px monospace'; c.textAlign = 'center'; c.fillText('36°F', 64, 44); }), 0.13, 0.06, (door.a + door.b) / 2 + 0.35, dh + 0.2, z1 + 0.031);
+  // closed freezer door in the divider
+  B(freezer, M.walkin, 0.84, dh - 0.02, 0.1, x0 + 1.38, 0.01, split);
+  B(freezer, M.chrome, 0.05, 0.05, 0.12, x0 + 1.7, 1.02, split + 0.08);
+  // shelving and evaporators
+  const lv = [0.18, 0.62, 1.06, 1.5, 1.86];
+  const cK = ['produce', 'cheese', 'eggs', 'meat', 'container', 'crate', 'tortilla'], fK = ['fries', 'chicken', 'meat', 'tortilla'];
+  const s1 = shelving(M, 1.22, 0.46, 0, lv, stockShelf(M, r, 1.22, 0.46, cK)); s1.position.set(x0 + t + 0.25, 0, (split + z1) / 2 - 0.05); s1.rotation.y = Math.PI / 2; cooler.add(s1);
+  const s2 = shelving(M, 1.22, 0.46, 0, lv, stockShelf(M, r, 1.22, 0.46, cK)); s2.position.set(x1 - t - 0.25, 0, (split + z1) / 2 - 0.05); s2.rotation.y = -Math.PI / 2; cooler.add(s2);
+  const s3 = shelving(M, 1.83, 0.46, 0, lv, stockShelf(M, r, 1.83, 0.46, fK)); s3.position.set((x0 + x1) / 2, 0, z0 + t + 0.25); freezer.add(s3);
+  for (const [g, zc] of [[cooler, (split + z1) / 2], [freezer, (z0 + split) / 2]]) {
+    B(g, M.hdpe, 0.3, 0.28, 0.8, x1 - t - 0.16, 2.0, zc);
+    C(roof, M.lamp, 0.05, 0.05, 0.08, (x0 + x1) / 2, h - 0.1, zc, 16);
+  }
+  return { shell, cooler, freezer };
+}
+
+function storefront(M, g, a, b, doors) {
+  // glazed storefront in the south wall between x = a and x = b; doors: [{ a, b }]
+  const z0 = Z1, z1 = Z1 + EW, zc = Z1 + EW / 2, top = 2.9;
+  const solid = (x0, x1, y0, y1) => { const m = worldBox(g, M.frp, x0, x1, y0, y1, z0, z1, 0.6); m.castShadow = false; };
+  solid(a, b, top, H_DECK);
+  const cuts = [...doors].sort((p, q) => p.a - q.a);
+  let s = a;
+  const pane = (x0, x1) => {
+    if (x1 - x0 < 0.05) return;
+    worldBox(g, M.mullion, x0, x1, 0, 0.25, z0, z1).castShadow = false;
+    const n = Math.max(1, Math.round((x1 - x0) / 1.5)), w = (x1 - x0) / n;
+    for (let i = 0; i < n; i++) {
+      const gx = x0 + i * w;
+      const gl = worldBox(g, M.storeGlass, gx + 0.03, gx + w - 0.03, 0.25, top - 0.05, zc - 0.006, zc + 0.006); gl.castShadow = false;
+    }
+    for (let i = 0; i <= n; i++) worldBox(g, M.mullion, x0 + i * w - 0.03, x0 + i * w + 0.03, 0.25, top, zc - 0.06, zc + 0.06).castShadow = false;
+    for (const y of [2.3, top - 0.05]) worldBox(g, M.mullion, x0, x1, y - 0.03, y + 0.03, zc - 0.06, zc + 0.06).castShadow = false;
+  };
+  for (const d of cuts) {
+    pane(s, d.a);
+    // door pair (or single) with transom
+    const n = d.b - d.a > 1.2 ? 2 : 1, w = (d.b - d.a) / n;
+    for (let i = 0; i < n; i++) {
+      const x0 = d.a + i * w;
+      worldBox(g, M.mullion, x0, x0 + w, 0, 2.2, zc - 0.03, zc + 0.03).castShadow = false;
+      const gl = worldBox(g, M.storeGlass, x0 + 0.08, x0 + w - 0.08, 0.2, 2.1, zc - 0.035, zc + 0.035); gl.castShadow = false;
+      barX(g, M.chrome, w - 0.2, 0.016, x0 + w / 2, 1.05, zc - 0.08);
+    }
+    worldBox(g, M.mullion, d.a, d.b, 2.2, 2.28, zc - 0.06, zc + 0.06).castShadow = false;
+    worldBox(g, M.storeGlass, d.a + 0.04, d.b - 0.04, 2.28, top - 0.05, zc - 0.006, zc + 0.006).castShadow = false;
+    worldBox(g, M.mullion, d.a - 0.04, d.a, 0, top, zc - 0.06, zc + 0.06).castShadow = false;
+    worldBox(g, M.mullion, d.b, d.b + 0.04, 0, top, zc - 0.06, zc + 0.06).castShadow = false;
+    s = d.b;
+  }
+  pane(s, b);
+}
+
 function buildKitchen(M, X) {
-  const r = rng(42);
+  const r = rng(42), P = new Instancer();
   const groups = {};
-  for (const k of ['main', 'N', 'S', 'E', 'W', 'FE', 'stubN', 'stubE', 'stubW', 'stubFE', 'ceiling', 'roof']) groups[k] = new THREE.Group();
-  const items = [];
+  for (const k of ['main', 'N', 'S', 'E', 'W', 'stubN', 'stubS', 'stubE', 'stubW', 'ceiling', 'deck', 'roof']) groups[k] = new THREE.Group();
+  const items = [], occ = [], shadowsFor = [];
   const reg = (id, obj, { face = [0, 0, 1], anchor, box, cut } = {}) => items.push({ id, ...ITEMS[id], obj, face: new THREE.Vector3(...face), anchor, box, cut });
   const put = (parent, obj, x, z, ry = 0, y = 0) => { obj.position.set(x, y, z); obj.rotation.y = ry; parent.add(obj); return obj; };
-  const shadowsFor = [];
-  const main = groups.main, H = ROOM.h, T = WALL;
+  const addOcc = (x0, x1, z0, z1, h, key = null) => occ.push({ x0, x1, z0, z1, h, key });
+  const main = groups.main;
+  const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
-  // floors: quarry tile in both kitchens, vinyl tile on the store side of the counter
+  /* ---------------- floors ---------------- */
   const floor = new THREE.Group();
-  const fl = (mat, x0, x1, z0, z1, rep) => {
-    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x1 - x0) / rep, (z1 - z0) / rep), mat);
-    m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, 0, (z0 + z1) / 2); m.receiveShadow = true; floor.add(m);
+  const fl = (mat, x0, x1, z0, z1, rx, rz, y = 0) => {
+    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x1 - x0) / rx, (z1 - z0) / rz), mat);
+    m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); m.receiveShadow = true; floor.add(m);
   };
-  fl(M.tile, X0, X1, Z0, Z1, 0.6096); fl(M.tile, FK.x0, FK.x1, Z1, FK.z1, 0.6096); fl(M.vct, FK.x0, FK.x1, FK.z1, FK.z1 + STORE_D, 1.2192);
+  fl(M.plank, X0, X1, Z0, Z1, 1.2192, 0.6096);
+  fl(M.tile, BOH.x0, BOH.x1, BOH.z0, BOH.z1, 0.6096, 0.6096, 0.002);
+  fl(M.tile, KW - 0.06, KW + KF.z1, KZC - KF.x1, KZC - KF.x0, 0.6096, 0.6096, 0.002);
+  fl(M.vct, X0, px(19), pz(5.5), pz(20.5), 1.2192, 1.2192, 0.002);
+  fl(M.concrete, VAULT_X + 0.05, X1, Z0, Z1, 2, 2, 0.002);
+  fl(M.concrete, X0 - EW, X1 + EW, Z1 + EW, Z1 + 2.6, 1.5, 1.5, 0.0);
 
-  // walls, with low section caps shown when a wall is cut away for the camera
+  /* ---------------- exterior walls ---------------- */
+  const H = H_DECK, T = EW;
   const walls = [
-    { k: 'N', axis: 'x', at: Z0, dir: -1, from: X0 - T, to: X1 + T, lo: X0, hi: X1, openings: [] },
-    { k: 'S', axis: 'x', at: Z1, dir: 1, from: X0 - T, to: X1 + T, lo: X0, hi: X1, openings: [{ a: DOORWAY.a, b: DOORWAY.b, y0: 0, y1: DOORWAY.h }], noStub: true },
+    { k: 'N', axis: 'x', at: Z0, dir: -1, from: X0 - T, to: X1 + T, lo: X0, hi: X1, openings: [{ a: px(22), b: px(25), y0: 0, y1: 2.13 }] },
     { k: 'W', axis: 'z', at: X0, dir: -1, from: Z0, to: Z1, lo: Z0, hi: Z1, openings: [] },
-    { k: 'W', axis: 'z', at: X0, dir: -1, from: Z1, to: FK.z1, lo: FK.z0, hi: FK.z1, openings: [] },
-    { k: 'E', axis: 'z', at: X1, dir: 1, from: Z0, to: Z1, lo: Z0, hi: Z1, openings: [{ a: -2.2, b: -1.29, y0: 0, y1: 2.13 }] },
-    { k: 'FE', axis: 'z', at: FK.x1, dir: 1, from: Z1, to: FK.z1, lo: FK.z0, hi: FK.z1, openings: [] }
+    { k: 'E', axis: 'z', at: X1, dir: 1, from: Z0, to: Z1, lo: Z0, hi: Z1, openings: [{ a: pz(20), b: pz(23), y0: 0, y1: 2.13 }] }
   ];
   for (const w of walls) {
-    const g = groups[w.k], stub = w.noStub ? null : groups['stub' + w.k];
+    const g = groups[w.k], stub = groups['stub' + w.k];
     const t0 = w.dir > 0 ? w.at : w.at - T, t1 = w.dir > 0 ? w.at + T : w.at;
     const piece = (a, b, y0, y1, target, mat = M.frp) => {
-      if (!target || b - a < 0.001) return null;
+      if (b - a < 0.001) return null;
       const m = w.axis === 'x' ? worldBox(target, mat, a, b, y0, y1, t0, t1, 0.6) : worldBox(target, mat, t0, t1, y0, y1, a, b, 0.6);
       m.castShadow = false; return m;
     };
@@ -1186,177 +1631,265 @@ function buildKitchen(M, X) {
     let s = w.from;
     for (const o of cuts) {
       piece(s, o.a, 0, H, g); piece(s, o.a, 0, 0.18, stub); piece(s, o.a, 0.18, 0.186, stub, M.cut);
-      if (o.y0 > 0) { piece(o.a, o.b, 0, o.y0, g); piece(o.a, o.b, 0, 0.18, stub); piece(o.a, o.b, 0.18, 0.186, stub, M.cut); }
       piece(o.a, o.b, o.y1, H, g); s = o.b;
     }
     piece(s, w.to, 0, H, g); piece(s, w.to, 0, 0.18, stub); piece(s, w.to, 0.18, 0.186, stub, M.cut);
-    // FRP seam strips and quarry cove base on the inside face
-    const i0 = w.dir > 0 ? w.at - 0.004 : w.at, i1 = w.dir > 0 ? w.at : w.at + 0.004;
     const c0 = w.dir > 0 ? w.at - 0.012 : w.at, c1 = w.dir > 0 ? w.at : w.at + 0.012;
-    const strip = (a, b, y0, y1, mat, q0, q1) => { const m = w.axis === 'x' ? worldBox(g, mat, a, b, y0, y1, q0, q1) : worldBox(g, mat, q0, q1, y0, y1, a, b); m.castShadow = false; };
-    for (let p = w.lo + 1.22; p < w.hi - 0.1; p += 1.22) if (!w.openings.some((o) => p > o.a - 0.03 && p < o.b + 0.03)) strip(p - 0.016, p + 0.016, 0.15, H, M.frpTrim, i0, i1);
     let cs = w.lo;
-    for (const o of cuts.filter((o) => o.y0 === 0)) { strip(cs, o.a, 0, 0.15, M.cove, c0, c1); cs = o.b; }
-    strip(cs, w.hi, 0, 0.15, M.cove, c0, c1);
+    const base = (a, b) => { const m = w.axis === 'x' ? worldBox(g, M.blackPaint, a, b, 0, 0.1, c0, c1) : worldBox(g, M.blackPaint, c0, c1, 0, 0.1, a, b); m.castShadow = false; };
+    for (const o of cuts) { base(cs, o.a); cs = o.b; }
+    base(cs, w.hi);
+    if (w.axis === 'x') addOcc(w.from, w.to, t0, t1, H, w.k); else addOcc(t0, t1, w.from, w.to, H, w.k);
   }
-
-  // full-height stainless on the open kitchen side of the shared wall, and the cased doorway
+  // south: solid at the back-room and utility ends, glazed storefront between, two entries
   {
-    const g = groups.S, z = FK.z0;
-    for (const [a, b] of [[FK.x0, DOORWAY.a], [DOORWAY.b, FK.x1]]) {
-      worldBox(g, M.steelV, a, b, 0, H, z, z + 0.004).castShadow = false;
-      for (let p = a + 1.22; p < b - 0.1; p += 1.22) worldBox(g, M.steelDark, p - 0.004, p + 0.004, 0, H, z + 0.004, z + 0.006).castShadow = false;
+    const g = groups.S, stub = groups.stubS;
+    for (const [a, b] of [[X0 - T, px(19)], [VAULT_X, X1 + T]]) worldBox(g, M.frp, a, b, 0, H, Z1, Z1 + T, 0.6).castShadow = false;
+    const doors = [{ a: px(37.5), b: px(43.5) }];
+    storefront(M, g, px(19), VAULT_X, doors);
+    worldBox(stub, M.frp, X0 - T, X1 + T, 0, 0.18, Z1, Z1 + T).castShadow = false;
+    worldBox(stub, M.cut, X0 - T, X1 + T, 0.18, 0.186, Z1, Z1 + T).castShadow = false;
+    addOcc(X0 - T, px(19), Z1, Z1 + T, H, 'S'); addOcc(VAULT_X, X1 + T, Z1, Z1 + T, H, 'S');
+    const ent = new THREE.Group(); main.add(ent);
+    reg('entrance', ent, { face: [0, 0, -1], anchor: [px(40.5), 2.65, Z1 - 0.25], box: new THREE.Box3(V(px(37.5), 0, Z1 - 0.1), V(px(43.5), 2.3, Z1 + T)), cut: 'S' });
+    B(main, M.rubber, 1.8, 0.01, 1.2, px(40.5), 0, Z1 - 0.65).castShadow = false;
+    for (let x = px(20); x < VAULT_X - 0.3; x += 1.8) {
+      if (doors.some((d) => x > d.a - 0.3 && x < d.b + 0.3)) continue;
+      C(main, M.yellow, 0.085, 0.085, 0.9, x, 0, Z1 + T + 0.55, 16);
     }
-    for (const [q0, q1] of [[Z1 - 0.012, Z1], [FK.z0, FK.z0 + 0.012]]) {
-      worldBox(g, M.steel, DOORWAY.a - 0.06, DOORWAY.a, 0, DOORWAY.h + 0.06, q0, q1);
-      worldBox(g, M.steel, DOORWAY.b, DOORWAY.b + 0.06, 0, DOORWAY.h + 0.06, q0, q1);
-      worldBox(g, M.steel, DOORWAY.a - 0.06, DOORWAY.b + 0.06, DOORWAY.h, DOORWAY.h + 0.06, q0, q1);
-    }
-    worldBox(g, M.steel, DOORWAY.a, DOORWAY.a + 0.012, 0, DOORWAY.h, Z1, FK.z0); worldBox(g, M.steel, DOORWAY.b - 0.012, DOORWAY.b, 0, DOORWAY.h, Z1, FK.z0);
-    worldBox(g, M.tread, DOORWAY.a, DOORWAY.b, 0, 0.006, Z1 - 0.05, FK.z0 + 0.05).castShadow = false;
-    reg('doorway', g, { face: [0, 0, 1], anchor: [(DOORWAY.a + DOORWAY.b) / 2, 2.35, FK.z0 + 0.15], box: new THREE.Box3(new THREE.Vector3(DOORWAY.a, 0, Z1 - 0.05), new THREE.Vector3(DOORWAY.b, DOORWAY.h, FK.z0 + 0.05)) });
   }
 
-  // ceilings: lay-in tile and LED troffers in the back room; smooth ceiling with
-  // recessed downlights and a square supply diffuser over the open kitchen (photo)
+  /* ---------------- interior walls ---------------- */
+  const iwall = (axis, at, from, to, openings = [], h = H_ACT, mat = M.frp, coveMat = M.cove) => {
+    const t0 = at - IW / 2, t1 = at + IW / 2;
+    const piece = (a, b, y0, y1) => {
+      if (b - a < 0.001 || y1 - y0 < 0.001) return;
+      const m = axis === 'x' ? worldBox(main, mat, a, b, y0, y1, t0, t1, 0.6) : worldBox(main, mat, t0, t1, y0, y1, a, b, 0.6);
+      m.castShadow = false;
+    };
+    const cuts = [...openings].sort((p, q) => p.a - q.a);
+    let s = from;
+    for (const o of cuts) { piece(s, o.a, 0, h); if (o.y0 > 0) piece(o.a, o.b, 0, o.y0); piece(o.a, o.b, o.y1, h); s = o.b; }
+    piece(s, to, 0, h);
+    s = from;
+    for (const o of cuts) { if (axis === 'x') addOcc(s, o.a, t0, t1, h); else addOcc(t0, t1, s, o.a, h); s = o.b; }
+    if (axis === 'x') addOcc(s, to, t0, t1, h); else addOcc(t0, t1, s, to, h);
+    if (coveMat) for (const [q0, q1] of [[t0 - 0.01, t0], [t1, t1 + 0.01]]) {
+      let c = from;
+      const cv = (a, b) => { if (b - a < 0.001) return; const m = axis === 'x' ? worldBox(main, coveMat, a, b, 0, 0.12, q0, q1) : worldBox(main, coveMat, q0, q1, 0, 0.12, a, b); m.castShadow = false; };
+      for (const o of cuts.filter((o) => o.y0 === 0)) { cv(c, o.a); c = o.b; }
+      cv(c, to);
+    }
+  };
+  const kSouth = KZC - KF.x0 + IW / 2, kStore = KW + KF.z1;
+  iwall('x', pz(5.5), X0, px(19), [{ a: px(5.5), b: px(8.5), y0: 0, y1: 2.13 }, { a: px(11), b: px(14), y0: 0, y1: 2.13 }]);
+  iwall('z', px(9.5), pz(5.5), pz(20.5));
+  iwall('x', pz(20.5), X0, px(19));
+  iwall('z', px(19), pz(5.5), Z1, [{ a: KZC - DOORWAY.b, b: KZC - DOORWAY.a, y0: 0, y1: DOORWAY.h }], H_DECK);
+  iwall('x', pz(6.5), px(19), kStore + 0.06);
+  iwall('x', kSouth, px(19), KW + 2.3, [], H_DECK);
+  worldBox(main, M.frp, KW + 2.3, kStore + 0.06, 2.85, H_DECK, kSouth - IW / 2, kSouth + IW / 2).castShadow = false;
+  worldBox(main, M.frosted, KW + 2.3, kStore + 0.04, 0, 2.85, kSouth - 0.012, kSouth + 0.012).castShadow = false;
+  worldBox(main, M.mullion, kStore, kStore + 0.06, 0, 2.85, kSouth - 0.03, kSouth + 0.03).castShadow = false;
+  iwall('x', pz(44), px(9.8), BOH.x1, [{ a: px(14), b: px(17), y0: 0, y1: 2.13 }]);
+  iwall('z', px(9.8), pz(44), Z1);
+  // east side: cooler vault behind the main run of doors, utility room behind it, beer cave in the front corner
+  iwall('x', pz(35), VAULT_X, X1, [], 2.75, M.walkin, null);
+  iwall('z', px(80), Z0, pz(35), [{ a: pz(30), b: pz(33), y0: 0, y1: 2.13 }], H_DECK);
+  worldBox(main, M.blackPaint, VAULT_X - 0.02, VAULT_X + 0.12, 2.36, 2.75, Z0, Z1).castShadow = false;
+  addOcc(VAULT_X, px(80), Z0, pz(35), 2.75); addOcc(VAULT_X, X1, pz(35), Z1, 2.75);
+  // sign band and patterned soffit over the kitchen opening (store side)
+  worldBox(main, M.pattern, kStore, kStore + 0.12, 3.05, H_DECK, Z0, kSouth + IW / 2, 0.3).castShadow = false;
+  worldBox(main, M.fascia, kStore, kStore + 0.5, 2.85, 3.1, KZC - KF.x1 - 0.06, kSouth + IW / 2);
+  for (let i = 0; i < 5; i++) addMesh(main, new THREE.CircleGeometry(0.05, 16), M.troffer, kStore + 0.25, 2.848, KZC - KF.x1 + 0.6 + i * 1.5, Math.PI / 2, 0, 0).castShadow = false;
+  addOcc(kStore, kStore + 0.5, KZC - KF.x1, kSouth, 0.25);
+
+  /* ---------------- ceilings, deck and lights ---------------- */
   {
     const g = groups.ceiling;
-    const c = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(ROOM.w, ROOM.d), ROOM.w / 1.2192, ROOM.d / 1.2192), M.ceiling);
-    c.rotation.x = Math.PI / 2; c.position.y = H; g.add(c);
-    for (const [x, z] of [[-3.3, -0.6], [-1.0, -0.6], [1.25, -0.6], [-3.3, -2.35], [-1.0, -2.35], [1.25, -2.35], [3.6, -2.15], [-3.3, 1.65], [-1.0, 1.65], [1.25, 1.65]]) {
-      B(g, M.steel, 1.22, 0.04, 0.61, x, H - 0.04, z).castShadow = false;
-      B(g, M.troffer, 1.16, 0.004, 0.55, x, H - 0.044, z).castShadow = false;
+    const act = (x0, x1, z0, z1) => { const c = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x1 - x0) / 1.2192, (z1 - z0) / 1.2192), M.ceiling); c.rotation.x = Math.PI / 2; c.position.set((x0 + x1) / 2, H_ACT, (z0 + z1) / 2); g.add(c); };
+    act(X0, kStore, Z0, pz(6.5)); act(X0, px(19), pz(6.5), pz(20.5)); act(BOH.x0, BOH.x1, BOH.z0, BOH.z1); act(KW, kStore, KZC - KF.x1, KZC - KF.x0);
+    for (const [x, z] of [[px(5), pz(36)], [px(13), pz(36)], [px(5), pz(46)], [px(14.5), pz(47)], [px(14), pz(28)], [px(4.7), pz(13)], [px(14.2), pz(13)], [px(9), pz(2.7)], [px(23), pz(3)]]) {
+      B(g, M.steel, 1.22, 0.04, 0.61, x, H_ACT - 0.04, z).castShadow = false;
+      B(g, M.troffer, 1.16, 0.004, 0.55, x, H_ACT - 0.044, z).castShadow = false;
     }
-    for (const [x, z] of [[-2.2, 0.5], [0.2, -1.6], [0.2, 2.2], [-3.9, 2.4], [-2.2, -2.4], [1.8, 0.4]]) {
-      C(g, M.chrome, 0.012, 0.012, 0.05, x, H - 0.05, z, 8); addMesh(g, new THREE.CylinderGeometry(0.03, 0.005, 0.01, 12), M.chrome, x, H - 0.055, z);
+    for (const lx of [-2.5, 0, 2.5]) {
+      const [x, z] = kxz(lx, 2.25);
+      addMesh(g, new THREE.TorusGeometry(0.085, 0.012, 8, 24), M.frpTrim, x, H_ACT - 0.01, z, Math.PI / 2, 0, 0).castShadow = false;
+      addMesh(g, new THREE.CircleGeometry(0.075, 24), M.troffer, x, H_ACT - 0.012, z, Math.PI / 2, 0, 0).castShadow = false;
     }
-    for (const [x, z] of [[-2.2, 1.1], [0.6, 0.4]]) {
-      B(g, M.frpTrim, 0.6, 0.02, 0.6, x, H - 0.02, z).castShadow = false;
-      B(g, M.louver, 0.5, 0.004, 0.5, x, H - 0.024, z).castShadow = false;
+    const d = groups.deck;
+    const deck = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(BLD.w, BLD.d), 1, BLD.d / 0.3), M.deck); deck.rotation.x = Math.PI / 2; deck.position.y = H_DECK; d.add(deck);
+    for (const z of [pz(9), pz(17), pz(25), pz(33), pz(41)]) for (let x = px(33); x < px(70); x += 3.3) {
+      B(d, M.blackPaint, 2.4, 0.06, 0.1, x, 3.52, z).castShadow = false;
+      B(d, M.troffer, 2.36, 0.006, 0.07, x, 3.514, z).castShadow = false;
+      for (const s of [-1, 1]) C(d, M.steelDark, 0.003, 0.003, H_DECK - 3.58, x + s * 1.0, 3.58, z, 4).castShadow = false;
     }
-    const fw = FK.x1 - FK.x0, fd = FK.z1 + STORE_D - FK.z0;
-    const fc = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(fw, fd), fw / 0.6, fd / 0.6), M.drywall);
-    fc.rotation.x = Math.PI / 2; fc.position.set((FK.x0 + FK.x1) / 2, H, FK.z0 + fd / 2); g.add(fc);
-    for (const [x, z] of DOWNLIGHTS) {
-      addMesh(g, new THREE.TorusGeometry(0.085, 0.012, 8, 24), M.frpTrim, x, H - 0.01, z, Math.PI / 2, 0, 0).castShadow = false;
-      addMesh(g, new THREE.CircleGeometry(0.075, 24), M.troffer, x, H - 0.012, z, Math.PI / 2, 0, 0).castShadow = false;
+    for (const z of [pz(14), pz(36)]) {
+      addMesh(d, new THREE.CylinderGeometry(0.3, 0.3, px(71) - px(31), 20), M.duct, (px(31) + px(71)) / 2, 4.05, z, 0, 0, Math.PI / 2).castShadow = false;
+      for (const x of [px(38), px(52), px(66)]) { C(d, M.duct, 0.12, 0.12, 0.3, x, 3.5, z, 16).castShadow = false; C(d, M.duct, 0.24, 0.24, 0.05, x, 3.48, z, 20).castShadow = false; }
     }
-    const dx = 1.5, dz = FK.z0 + 2.3;
-    for (let i = 0; i < 4; i++) {
-      const s = 0.6 - i * 0.12;
-      for (const [w, d, ox, oz] of [[s, 0.02, 0, s / 2], [s, 0.02, 0, -s / 2], [0.02, s, s / 2, 0], [0.02, s, -s / 2, 0]]) B(g, M.frpTrim, w, 0.02 + i * 0.012, d, dx + ox, H - 0.02 - i * 0.012, dz + oz).castShadow = false;
-    }
-    B(g, M.black, 0.22, 0.004, 0.22, dx, H - 0.066, dz).castShadow = false;
   }
 
-  /* ---------------- open kitchen ---------------- */
-  // cook line, west to east under the hood (owner's photo: flattop in the middle, burners with a stock pot, fryers on the right)
+  /* ---------------- kitchen (local frame along its west wall) ---------------- */
+  const KG = new THREE.Group(); KG.position.set(KW, 0, KZC); KG.rotation.y = Math.PI / 2; main.add(KG);
+  const Lw = (x, y, z) => [KW + z, y, KZC - x];
   let lx = HOOD.x0 + 0.05, x, z;
   const nozzles = [];
   const slot = (w, d) => { const cx = lx + w / 2; lx += w; return [cx, LINE_BACK + d / 2]; };
-  const ld = landing(M); [x, z] = slot(24 * IN, 30 * IN); put(main, ld, x, z); shadowsFor.push([ld, 0.04]);
-  const g36 = griddle36(M, r); [x, z] = slot(36 * IN, 32 * IN); put(main, g36, x, z); reg('griddle', g36); shadowsFor.push([g36, 0.04]); nozzles.push(x - 0.22, x + 0.22);
-  const rg = rangeTop(M); [x, z] = slot(24 * IN, 30 * IN); put(main, rg, x, z); reg('range', rg); shadowsFor.push([rg, 0.04]); nozzles.push(x);
+  const ld = landing(M); [x, z] = slot(24 * IN, 30 * IN); put(KG, ld, x, z); shadowsFor.push([ld, 0.04]);
+  const g36 = griddle36(M, r); [x, z] = slot(36 * IN, 32 * IN); put(KG, g36, x, z); reg('griddle', g36, { face: [1, 0, 0] }); shadowsFor.push([g36, 0.04]); nozzles.push(x - 0.22, x + 0.22);
+  const rg = rangeTop(M); [x, z] = slot(24 * IN, 30 * IN); put(KG, rg, x, z); reg('range', rg, { face: [1, 0, 0] }); shadowsFor.push([rg, 0.04]); nozzles.push(x);
   const fry = new THREE.Group();
   for (let i = 0; i < 2; i++) { const f = fryer(M); [x, z] = slot(15.5 * IN, 30.5 * IN); put(fry, f, x, z); nozzles.push(x); }
-  main.add(fry); reg('fryers', fry); shadowsFor.push([fry, 0.04]);
-  const dmp = dumpStation(M, r); [x, z] = slot(18 * IN, 30.5 * IN); put(main, dmp, x, z); reg('dump', dmp); shadowsFor.push([dmp, 0.04]); nozzles.push(x);
-
-  // gas manifold on the wall behind the line, with flex connectors
-  barX(main, M.iron, 3.1, 0.022, 0.15, 0.42, FK.z0 + 0.05);
+  KG.add(fry); reg('fryers', fry, { face: [1, 0, 0] }); shadowsFor.push([fry, 0.04]);
+  const dmp = dumpStation(M, r); [x, z] = slot(18 * IN, 30.5 * IN); put(KG, dmp, x, z); reg('dump', dmp, { face: [1, 0, 0] }); shadowsFor.push([dmp, 0.04]); nozzles.push(x);
+  barX(KG, M.iron, 3.1, 0.022, 0.15, 0.42, 0.05);
   for (const gx of [g36.position.x, rg.position.x, fry.children[0].position.x, fry.children[1].position.x]) {
-    C(main, M.iron, 0.016, 0.016, 0.12, gx, 0.42, FK.z0 + 0.05, 8);
-    B(main, M.yellow, 0.06, 0.012, 0.012, gx + 0.03, 0.5, FK.z0 + 0.05);
-    tube(main, M.gasHose, [[gx, 0.42, FK.z0 + 0.06], [gx + 0.03, 0.3, FK.z0 + 0.14], [gx + 0.06, 0.32, FK.z0 + 0.2]], 0.014, 12);
+    C(KG, M.iron, 0.016, 0.016, 0.12, gx, 0.42, 0.05, 8);
+    B(KG, M.yellow, 0.06, 0.012, 0.012, gx + 0.03, 0.5, 0.05);
+    tube(KG, M.gasHose, [[gx, 0.42, 0.06], [gx + 0.03, 0.3, 0.14], [gx + 0.06, 0.32, 0.2]], 0.014, 12);
+  }
+  // full-height stainless on the line wall
+  for (const [a, b] of [[KF.x0, DOORWAY.a], [DOORWAY.b, KF.x1]]) {
+    B(KG, M.steelV, b - a, H_ACT, 0.004, (a + b) / 2, 0, 0.002).castShadow = false;
+    for (let p = a + 1.22; p < b - 0.1; p += 1.22) B(KG, M.steelDark, 0.008, H_ACT, 0.002, p, 0, 0.005).castShadow = false;
+  }
+  const hd = hood(M); put(KG, hd, (HOOD.x0 + HOOD.x1) / 2, 0);
+  const sup = suppression(M, hd, nozzles); KG.add(sup);
+  reg('hood', hd, { face: [1, 0, 0], anchor: Lw((HOOD.x0 + HOOD.x1) / 2 - 0.9, HOOD.bottom + 0.35, HOOD.depth + 0.05), box: new THREE.Box3(V(KW, HOOD.bottom, KZC - HOOD.x1), V(KW + HOOD.depth, H_ACT, KZC - HOOD.x0)) });
+  reg('suppression', sup, { face: [0, 0, 1], anchor: Lw(KF.x1 - 0.2, 2.72, 0.45) });
+  const hc = hotCabinet(M, r); put(KG, hc, HOOD.x1 + 0.45, LINE_BACK + 31 * IN / 2 - 0.05); reg('hotcab', hc, { face: [1, 0, 0] }); shadowsFor.push([hc, 0.04]);
+  const ws = shelving(M, 1.22, 0.46, 0, [0.15, 0.6, 1.05, 1.5], stockShelf(M, r, 1.22, 0.46, ['napkins', 'foil', 'cups', 'tortilla', 'container']));
+  put(KG, ws, -2.3, 0.26); shadowsFor.push([ws, 0.03]);
+  addMesh(KG, new THREE.TorusGeometry(0.11, 0.01, 6, 24), M.black, -1.98, 1.22, 0.3, 0, 0.3, 0);
+  C(KG, M.black, 0.09, 0.09, 0.06, -1.98, 1.06, 0.28, 16);
+  const mb = menuBoards(M); put(KG, mb, 0.2, 1.48); reg('menu', mb, { face: [1, 0, 0], anchor: Lw(0.2, 2.03, 1.6) });
+  const sc = servingCounter(M); put(KG, sc, 0, KF.z1 - 0.425); reg('counter', sc, { face: [1, 0, 0], anchor: Lw(0.1, 1.55, KF.z1 - 0.3) }); shadowsFor.push([sc, 0.03]);
+  for (const mx of [-0.85, 0.67]) { const m = addMesh(KG, scaleUV(new THREE.PlaneGeometry(1.52, 0.91), 1.52 / 0.25, 0.91 / 0.25), M.mat, mx, 0.008, LINE_BACK + 1.3, -Math.PI / 2); m.castShadow = false; }
+  const hs1 = handSink(M); put(KG, hs1, KF.x0, 1.45, Math.PI / 2); reg('handsink1', hs1, { face: [0, 0, -1] });
+  trashCan(M, -3.4, 2.0, M.greyPlastic, KG);
+  // order point and pick-up signs hung from the sign band, and a band for the renter's brand
+  const sg = new THREE.Group(); KG.add(sg);
+  for (const [sx, t] of [[-2.4, 'ORDER HERE'], [2.85, 'PICK-UP HERE']]) {
+    B(sg, M.blackPaint, 1.0, 0.3, 0.04, sx, 2.42, 3.45);
+    screen(sg, signTexture([t], { w: 512, h: 160, bg: '#eebe54', fg: '#16302f', size: 70 }), 0.96, 0.27, sx, 2.57, 3.472);
+    for (const s of [-1, 1]) C(sg, M.chrome, 0.004, 0.004, 0.13, sx + s * 0.4, 2.72, 3.45, 4);
+  }
+  screen(sg, signTexture(['YOUR BRAND HERE'], { w: 1024, h: 160, bg: '#e9e7df', fg: '#204649', size: 96 }), 3.4, 0.53, -0.2, 3.85, KF.z1 + 0.125);
+  reg('signs', sg, { face: [1, 0, 0], anchor: Lw(-2.4, 3.0, 3.6), box: new THREE.Box3(V(kStore, 2.3, KZC - KF.x1), V(kStore + 0.5, 4.2, kSouth)) });
+  reg('doorway', main, { face: [1, 0, 0], anchor: [KW + 0.15, 2.35, KZC - (DOORWAY.a + DOORWAY.b) / 2], box: new THREE.Box3(V(px(19) - 0.1, 0, KZC - DOORWAY.b), V(px(19) + 0.1, DOORWAY.h, KZC - DOORWAY.a)) });
+  for (const [q0, q1] of [[px(19) - IW / 2 - 0.012, px(19) - IW / 2], [KW, KW + 0.012]]) {
+    worldBox(main, M.steel, q0, q1, 0, DOORWAY.h + 0.06, KZC - DOORWAY.b - 0.06, KZC - DOORWAY.b);
+    worldBox(main, M.steel, q0, q1, 0, DOORWAY.h + 0.06, KZC - DOORWAY.a, KZC - DOORWAY.a + 0.06);
+    worldBox(main, M.steel, q0, q1, DOORWAY.h, DOORWAY.h + 0.06, KZC - DOORWAY.b - 0.06, KZC - DOORWAY.a + 0.06);
   }
 
-  const hd = hood(M); put(main, hd, (HOOD.x0 + HOOD.x1) / 2, FK.z0);
-  const sup = suppression(M, hd, nozzles); groups.FE.add(sup);
-  reg('hood', hd, { anchor: [(HOOD.x0 + HOOD.x1) / 2 - 0.9, HOOD.bottom + 0.35, FK.z0 + HOOD.depth + 0.05], box: new THREE.Box3(new THREE.Vector3(HOOD.x0, HOOD.bottom, FK.z0), new THREE.Vector3(HOOD.x1, H, FK.z0 + HOOD.depth)) });
-  reg('suppression', sup, { face: [-1, 0, 0], anchor: [FK.x1 - 0.2, 2.72, FK.z0 + 0.45], cut: 'FE' });
-
-  const hc = hotCabinet(M, r); put(main, hc, HOOD.x1 + 0.45, LINE_BACK + 31 * IN / 2 - 0.05); reg('hotcab', hc); shadowsFor.push([hc, 0.04]);
-
-  // wire shelving with supplies left of the hood (photo), next to the doorway
-  const ws = shelving(M, 1.22, 0.46, 0, [0.15, 0.6, 1.05, 1.5], stockShelf(M, r, 1.22, 0.46, ['napkins', 'foil', 'cups', 'tortilla', 'container']));
-  put(main, ws, -2.3, FK.z0 + 0.26); shadowsFor.push([ws, 0.03]);
-  addMesh(main, new THREE.TorusGeometry(0.11, 0.01, 6, 24), M.black, -1.98, 1.22, FK.z0 + 0.3, 0, 0.3, 0);
-  C(main, M.black, 0.09, 0.09, 0.06, -1.98, 1.06, FK.z0 + 0.28, 16);
-
-  // menu screens hung in front of the hood, serving counter facing the store
-  const mb = menuBoards(M); put(main, mb, 0.2, FK.z0 + 1.48); reg('menu', mb, { anchor: [0.2, 2.03, FK.z0 + 1.6] });
-  const sc = servingCounter(M); put(main, sc, 0, FK.z1 - 0.425); reg('counter', sc, { anchor: [0.1, 1.55, FK.z1 - 0.3] }); shadowsFor.push([sc, 0.03]);
-
-  // anti-fatigue mats along the line
-  for (const mx of [-0.85, 0.67]) { const m = addMesh(main, scaleUV(new THREE.PlaneGeometry(1.52, 0.91), 1.52 / 0.25, 0.91 / 0.25), M.mat, mx, 0.008, LINE_BACK + 1.3, -Math.PI / 2); m.castShadow = false; }
-
-  const hs1 = handSink(M); put(groups.W, hs1, FK.x0, FK.z0 + 1.45, Math.PI / 2); reg('handsink1', hs1, { face: [1, 0, 0], cut: 'W' });
-  trashCan(M, -3.35, FK.z1 - 1.35, M.greyPlastic, main);
-  for (const [fx, fz] of [[-1.9, FK.z0 + 1.25]]) { B(main, M.steelDark, 0.2, 0.004, 0.2, fx, 0.001, fz).castShadow = false; B(main, M.louver, 0.16, 0.002, 0.16, fx, 0.005, fz).castShadow = false; }
-
   /* ---------------- back room ---------------- */
-  const ov = ovens(M); put(main, ov, -3.8, Z0 + 0.1 + 30 * IN / 2); reg('ovens', ov); shadowsFor.push([ov, 0.04]);
-  const wt = worktable(M, r); put(main, wt, -1.95, Z0 + 0.1 + 30 * IN / 2); shadowsFor.push([wt, 0.04]);
-
-  const pz = -1.07 + 34 * IN / 2;
-  const pt = prepTable(M, r); put(main, pt, -2.385, pz, Math.PI); reg('prep', pt, { face: [0, 0, -1] }); shadowsFor.push([pt, 0.04]);
-  const ds = doughStation(M, r); put(main, ds, -0.49, -1.07 + 30 * IN / 2 + 0.03, Math.PI); reg('dough', ds, { face: [0, 0, -1] }); shadowsFor.push([ds, 0.04]);
-  const sr = speedRack(M, r); put(main, sr, -2.75, 0.75, 0); reg('rack', sr, { face: [0, 0, 1] }); shadowsFor.push([sr, 0.03]);
-
-  const hs2 = handSink(M); put(groups.W, hs2, X0, -1.55, Math.PI / 2); reg('handsink2', hs2, { face: [1, 0, 0], cut: 'W' });
-  const ri = reachIn(M); put(main, ri, X0 + 31 * IN / 2 + 0.02, 0.065, Math.PI / 2); reg('reachin', ri, { face: [1, 0, 0] }); shadowsFor.push([ri, 0.04]);
-  const dry = dryStorage(M, r); put(main, dry, X0 + 0.33, 1.8, Math.PI / 2); reg('dry', dry, { face: [1, 0, 0] }); shadowsFor.push([dry, 0.03]);
-
-  const s3 = sink3(M); put(main, s3, 1.32, Z0 + 24 * IN / 2 + 0.01); reg('sink3', s3); shadowsFor.push([s3, 0.03]);
-  const ice = iceMachine(M); put(main, ice, 3.0, Z0 + 34 * IN / 2 + 0.06); reg('ice', ice); shadowsFor.push([ice, 0.04]);
-  const mop = mopSink(M); put(main, mop, 3.98, Z0); reg('mop', mop);
-  for (const [fx, fz, s] of [[1.32, Z0 + 0.35, 0.3], [3.0, Z0 + 0.1, 0.25], [-1.0, -1.15, 0.2], [0.4, 0.6, 0.2]]) {
+  const wi = walkInBack(M, r, groups.roof);
+  main.add(wi.shell, wi.cooler, wi.freezer);
+  reg('cooler', wi.cooler, { face: [0, 0, 1], anchor: [WALKIN.x0 + 1.33, 2.3, WALKIN.z1 + 0.12], box: new THREE.Box3(V(WALKIN.x0, 0, WALKIN.split), V(WALKIN.x1, WALKIN.h, WALKIN.z1)) });
+  reg('freezer', wi.freezer, { face: [0, 0, 1], anchor: [WALKIN.x0 + 1.9, WALKIN.h + 0.3, (WALKIN.z0 + WALKIN.split) / 2], box: new THREE.Box3(V(WALKIN.x0, 0, WALKIN.z0), V(WALKIN.x1, WALKIN.h, WALKIN.split)) });
+  addOcc(WALKIN.x0, WALKIN.x1, WALKIN.z0, WALKIN.z1, WALKIN.h);
+  const s3 = sink3(M); put(main, s3, WALKIN.x1 + 24 * IN / 2 + 0.01, (WALKIN.z0 + WALKIN.z1) / 2, Math.PI / 2); reg('sink3', s3, { face: [1, 0, 0] }); shadowsFor.push([s3, 0.03]);
+  const ice = iceMachine(M); put(main, ice, -10.27, BOH.z0 + 34 * IN / 2 + 0.06); reg('ice', ice); shadowsFor.push([ice, 0.04]);
+  const mop = mopSink(M); put(main, mop, -9.6, BOH.z0); reg('mop', mop);
+  const hs2 = handSink(M); put(main, hs2, BOH.x1, -0.3, -Math.PI / 2); reg('handsink2', hs2, { face: [-1, 0, 0] });
+  const ov = ovens(M); put(main, ov, BOH.x1 - 30 * IN / 2 - 0.02, 2.95, -Math.PI / 2); reg('ovens', ov, { face: [-1, 0, 0] }); shadowsFor.push([ov, 0.04]);
+  const wt = worktable(M, r); put(main, wt, BOH.x1 - 30 * IN / 2 - 0.02, 4.75, -Math.PI / 2); shadowsFor.push([wt, 0.04]);
+  const pt = prepTable(M, r); put(main, pt, -12.4, 3.3, Math.PI); reg('prep', pt, { face: [0, 0, -1] }); shadowsFor.push([pt, 0.04]);
+  const ds = doughStation(M, r); put(main, ds, -12.4, 4.18, 0); reg('dough', ds, { face: [0, 0, 1] }); shadowsFor.push([ds, 0.04]);
+  const sr = speedRack(M, r); put(main, sr, -10.6, 4.95, 0); shadowsFor.push([sr, 0.03]);
+  const dry = dryStorage(M, r); put(main, dry, X0 + 0.33, 6.1, Math.PI / 2); reg('dry', dry, { face: [1, 0, 0] }); shadowsFor.push([dry, 0.03]);
+  const ri = reachIn(M); put(main, ri, px(9.8) - IW / 2 - 31 * IN / 2 - 0.02, 6.6, -Math.PI / 2); reg('reachin', ri, { face: [-1, 0, 0] }); shadowsFor.push([ri, 0.04]);
+  const ofc = officeSet(M); put(main, ofc, px(14.5), Z1, Math.PI); reg('office', ofc, { face: [0, 0, -1] });
+  trashCan(M, -10.4, 2.4, M.greyPlastic, main);
+  for (const [fx, fz, s] of [[WALKIN.x1 + 0.35, (WALKIN.z0 + WALKIN.z1) / 2, 0.3], [-10.27, BOH.z0 + 0.1, 0.25], [-10.6, 1.6, 0.2]]) {
     B(main, M.steelDark, s, 0.004, s, fx, 0.001, fz).castShadow = false;
     B(main, M.louver, s - 0.04, 0.002, s - 0.04, fx, 0.005, fz).castShadow = false;
   }
-  const mat3 = addMesh(main, scaleUV(new THREE.PlaneGeometry(1.52, 0.91), 1.52 / 0.25, 0.91 / 0.25), M.mat, 1.0, 0.008, -2.05, -Math.PI / 2); mat3.castShadow = false;
+  addMesh(main, scaleUV(new THREE.PlaneGeometry(0.91, 1.52), 0.91 / 0.25, 1.52 / 0.25), M.mat, WALKIN.x1 + 0.95, 0.008, (WALKIN.z0 + WALKIN.z1) / 2, -Math.PI / 2).castShadow = false;
 
-  const wi = walkIn(M, r, groups.roof, groups.E, groups.S, groups.stubE, new THREE.Group());
-  main.add(wi.shell); main.add(wi.cooler); main.add(wi.freezer);
-  reg('cooler', wi.cooler, { face: [-1, 0, 0], anchor: [WALKIN.x0 - 0.1, 2.3, -0.32], box: new THREE.Box3(new THREE.Vector3(WALKIN.x0, 0, WALKIN.z0), new THREE.Vector3(WALKIN.x1, WALKIN.h, WALKIN.split)) });
-  reg('freezer', wi.freezer, { face: [-1, 0, 0], anchor: [WALKIN.x0 - 0.1, 2.3, 2.05], box: new THREE.Box3(new THREE.Vector3(WALKIN.x0, 0, WALKIN.split), new THREE.Vector3(WALKIN.x1, WALKIN.h, WALKIN.z1)) });
-
-  // back-room side of the shared wall: clock over the doorway, ABC extinguisher
+  /* ---------------- restrooms, hallway, rear exit ---------------- */
   {
-    const g = groups.S, zf = Z1, mx = (DOORWAY.a + DOORWAY.b) / 2;
-    C(g, M.black, 0.15, 0.15, 0.04, mx, 2.4, zf - 0.04, 32).rotation.x = Math.PI / 2;
-    screen(g, screenTexture(128, 128, (c) => { c.fillStyle = '#f5f3e6'; c.beginPath(); c.arc(64, 64, 62, 0, 7); c.fill(); c.strokeStyle = '#222'; c.lineWidth = 3; for (let i = 0; i < 12; i++) { const an = i * Math.PI / 6; c.beginPath(); c.moveTo(64 + Math.cos(an) * 50, 64 + Math.sin(an) * 50); c.lineTo(64 + Math.cos(an) * 58, 64 + Math.sin(an) * 58); c.stroke(); } c.lineWidth = 5; c.beginPath(); c.moveTo(64, 64); c.lineTo(64, 26); c.stroke(); c.beginPath(); c.moveTo(64, 64); c.lineTo(94, 76); c.stroke(); }), 0.26, 0.26, mx, 2.4, zf - 0.061, Math.PI);
-    const ex = DOORWAY.b + 0.4;
-    C(g, M.red, 0.07, 0.07, 0.45, ex, 1.0, zf - 0.09, 20);
-    C(g, M.black, 0.02, 0.03, 0.08, ex, 1.45, zf - 0.09, 10);
-    screen(g, signTexture(['FIRE', 'EXTINGUISHER'], { w: 256, h: 192, bg: '#c4261c', fg: '#fff', size: 44 }), 0.2, 0.15, ex, 1.72, zf - 0.003, Math.PI);
-  }
-  trashCan(M, -0.15, 0.55, M.greyPlastic, main); trashCan(M, 0.0, -1.8, M.greyPlastic, main); trashCan(M, 1.25, 2.55, M.bluePlastic, main);
-
-  // east wall: back door, exit sign, electrical panels
-  {
-    const g = groups.E, a = -2.2, b = -1.29, dh = 2.13, xf = X1;
-    worldBox(g, M.steelDark, xf - 0.01, xf + 0.15, 0, dh + 0.05, a - 0.05, a); worldBox(g, M.steelDark, xf - 0.01, xf + 0.15, 0, dh + 0.05, b, b + 0.05);
-    worldBox(g, M.steelDark, xf - 0.01, xf + 0.15, dh, dh + 0.05, a - 0.05, b + 0.05);
-    const door = new THREE.Group(); door.position.set(xf + 0.05, 0, (a + b) / 2); g.add(door);
-    B(door, M.doorGrey, 0.045, dh - 0.02, b - a - 0.01, 0, 0.01, 0);
-    barZ(door, M.chrome, b - a - 0.2, 0.018, -0.07, 1.0, 0.0);
-    for (const s of [-1, 1]) B(door, M.chrome, 0.06, 0.08, 0.05, -0.045, 0.97, s * (b - a - 0.16) / 2);
-    B(door, M.black, 0.04, 0.05, 0.35, -0.05, dh - 0.12, -0.15);
-    B(door, M.tread, 0.004, 0.3, b - a - 0.06, -0.025, 0.03, 0);
-    reg('backdoor', door, { face: [-1, 0, 0], anchor: [xf - 0.1, 2.3, (a + b) / 2], cut: 'E' });
-    B(g, M.hdpe, 0.08, 0.2, 0.36, xf - 0.04, dh + 0.12, (a + b) / 2);
-    screen(g, signTexture(['EXIT'], { w: 256, h: 128, bg: '#fdf8f2', fg: '#d01e14', size: 92, print: false }), 0.32, 0.16, xf - 0.081, dh + 0.22, (a + b) / 2, -Math.PI / 2);
-    for (const [pzz, ph] of [[-2.85, 0.9], [-2.5, 0.75]]) {
-      B(g, M.paintGrey, 0.1, ph, 0.32, xf - 0.05, 1.05, pzz);
-      B(g, M.steelDark, 0.006, ph - 0.04, 0.005, xf - 0.103, 1.07, pzz + 0.12);
-      C(g, M.paintGrey, 0.014, 0.014, ROOM.h - 1.05 - ph, xf - 0.06, 1.05 + ph, pzz - 0.08, 8);
-      C(g, M.paintGrey, 0.014, 0.014, ROOM.h - 1.05 - ph, xf - 0.06, 1.05 + ph, pzz + 0.08, 8);
+    const zt = pz(5.5) + IW / 2, zb = pz(20.5) - IW / 2;
+    put(main, vanity(M), X0, zt + 0.8, Math.PI / 2);
+    put(main, urinal(M), X0, zt + 1.9, Math.PI / 2);
+    put(main, toilet(M), X0 + 0.65, zb, Math.PI);
+    worldBox(main, M.partition, X0, X0 + 1.55, 0.3, 1.85, zb - 1.55, zb - 1.52);
+    worldBox(main, M.partition, X0 + 1.52, X0 + 1.55, 0.3, 1.85, zb - 1.52, zb);
+    put(main, vanity(M), px(19) - IW / 2, zt + 0.8, -Math.PI / 2);
+    for (const tx of [px(9.5) + IW / 2 + 0.75, px(9.5) + IW / 2 + 2.15]) put(main, toilet(M), tx, zb, Math.PI);
+    worldBox(main, M.partition, px(9.5) + IW / 2, px(19) - IW / 2, 0.3, 1.85, zb - 1.55, zb - 1.52);
+    worldBox(main, M.partition, px(9.5) + IW / 2 + 1.45, px(9.5) + IW / 2 + 1.48, 0.3, 1.85, zb - 1.52, zb);
+    for (const [a, b, t] of [[px(5.5), px(8.5), 'MEN'], [px(11), px(14), 'WOMEN']]) {
+      worldBox(main, M.desk, a, b, 0, 2.1, pz(5.5) - 0.02, pz(5.5) + 0.02);
+      B(main, M.chrome, 0.03, 0.03, 0.16, b - 0.12, 1.02, pz(5.5) - 0.04);
+      screen(main, signTexture([t], { w: 256, h: 128, bg: '#204649', fg: '#f5f3e6', size: 62 }), 0.3, 0.15, b + 0.3, 1.55, pz(5.5) - IW / 2 - 0.004, Math.PI);
     }
+    screen(main, signTexture(['RESTROOMS', '← THIS WAY'], { w: 512, h: 192, bg: '#204649', fg: '#f5f3e6', size: 60 }), 0.8, 0.3, kStore + 0.13, 2.75, pz(3.2), Math.PI / 2);
+    for (const s2 of [-1, 1]) C(main, M.chrome, 0.004, 0.004, 0.15, kStore + 0.13, 2.9, pz(3.2) + s2 * 0.3, 4);
+    const rr = new THREE.Group(); main.add(rr);
+    reg('restrooms', rr, { face: [0, 0, 1], anchor: [px(9.5), 2.45, pz(5.5) - 0.35], box: new THREE.Box3(V(X0, 0, pz(5.5)), V(px(19), H_ACT, pz(20.5))) });
+    // rear exit door in the north wall
+    const dg = new THREE.Group(); dg.position.set((px(22) + px(25)) / 2, 0, Z0 - EW / 2); groups.N.add(dg);
+    B(dg, M.doorGrey, px(25) - px(22) - 0.02, 2.11, 0.045, 0, 0.01, 0);
+    barX(dg, M.chrome, px(25) - px(22) - 0.2, 0.018, 0, 1.0, 0.07);
+    B(dg, M.hdpe, 0.36, 0.2, 0.08, 0, 2.25, 0.06);
+    screen(dg, signTexture(['EXIT'], { w: 256, h: 128, bg: '#fdf8f2', fg: '#d01e14', size: 92, print: false }), 0.32, 0.16, 0, 2.35, 0.101);
+    reg('backdoor', dg, { face: [0, 0, 1], anchor: [(px(22) + px(25)) / 2, 2.6, Z0 + 0.2], cut: 'N' });
   }
-  for (const [ox, oy, oz, ry] of [[-0.5, 1.15, Z0, 0], [2.0, 1.4, Z0, 0], [X0, 1.15, -1.0, Math.PI / 2]]) B(main, M.hdpe, 0.07, 0.12, 0.012, ox + (ry ? 0.006 : 0), oy, oz + (ry ? 0 : 0.006)).rotation.y = ry;
 
-  return { groups, floor, items, shadowsFor };
+  /* ---------------- sales floor ---------------- */
+  const bb = bevBar(M, P, r, px(63) - px(31)); put(main, bb, (px(31) + px(63)) / 2, Z0); reg('bevbar', bb, { anchor: [(px(31) + px(63)) / 2, 2.95, Z0 + 0.5] }); shadowsFor.push([bb, 0.03]);
+  const oc = openCase(M, P, r); put(main, oc, px(42), pz(10.3)); shadowsFor.push([oc, 0.03]);
+  const hi = hotIsland(M, P, r); put(main, hi, px(42), pz(21.9), Math.PI / 2); reg('hotfood', hi, { face: [1, 0, 0] }); shadowsFor.push([hi, 0.04]);
+  const bk = bakeryIsland(M, P, r); put(main, bk, px(41.8), pz(35.7), Math.PI / 2); shadowsFor.push([bk, 0.04]);
+  for (const [gz, L, gx] of [[pz(12.5), 2.4, px(56)], [pz(19), 4.57, px(58.5)], [pz(25.5), 4.57, px(58.5)], [pz(32), 4.57, px(58.5)]]) {
+    const gd = gondola(M, P, r, L); put(main, gd, gx, gz); shadowsFor.push([gd, 0.03]);
+  }
+  for (const kx2 of [px(52), px(55)]) { const k = kiosk(M); put(main, k, kx2, pz(39.5)); shadowsFor.push([k, 0.03]); }
+  {
+    const tx = px(62), tz = pz(39.5);
+    B(main, M.woodPanel, 1.8, 0.86, 0.8, tx, 0, tz); B(main, M.quartz, 1.84, 0.04, 0.84, tx, 0.86, tz);
+    fillRun(P, main, r, 'x', tx - 0.85, tx + 0.85, 0.9, tz, 0.6, 0.25, SNACKS);
+  }
+  const se = seatingCounter(M, 3.6, 5); put(main, se, px(66), Z1 - 0.05, Math.PI); reg('seating', se, { face: [0, 0, -1] });
+  const co = checkoutCounter(M, P, r, 3.6); put(main, co, -5.85, 4.2, Math.PI / 2); reg('checkout', co, { face: [1, 0, 0] }); shadowsFor.push([co, 0.03]);
+  const bbk = backBar(M, 3.8); put(main, bbk, px(19) + IW / 2, 4.2, Math.PI / 2); shadowsFor.push([bbk, 0.02]);
+  B(main, M.paintGrey, 0.6, 1.55, 0.5, px(34.5), 0, Z1 - 0.4);
+  screen(main, screenTexture(96, 64, (c) => { c.fillStyle = '#0e1a1c'; c.fillRect(0, 0, 96, 64); c.fillStyle = '#3bb3a0'; c.font = 'bold 18px Arial'; c.fillText('ATM', 30, 38); }), 0.3, 0.2, px(34.5), 1.2, Z1 - 0.651, Math.PI);
+  trashCan(M, px(36.5), Z1 - 0.55, M.greyPlastic, main); trashCan(M, px(58.5), Z1 - 0.6, M.greyPlastic, main);
+
+  // cold vault: main run of doors along the east wall
+  const nMain = 13, runA = pz(1.5);
+  const cv2 = coolerRun(M, P, r, nMain); put(main, cv2, VAULT_X, runA + nMain * 0.76 / 2, -Math.PI / 2);
+  reg('coldvault', cv2, { face: [-1, 0, 0], anchor: [VAULT_X - 0.25, 2.62, runA + nMain * 0.76 / 2] });
+  // beer cave in the front corner: glass entry door, then its own reach-in doors
+  const entryA = pz(36.5), entryB = entryA + 0.92;
+  worldBox(main, M.coolerFrame, VAULT_X - 0.04, VAULT_X + 0.08, 0, 2.36, entryA - 0.06, entryA);
+  worldBox(main, M.coolerFrame, VAULT_X - 0.04, VAULT_X + 0.08, 0, 2.36, entryB, entryB + 0.06);
+  worldBox(main, M.coolerFrame, VAULT_X - 0.04, VAULT_X + 0.08, 2.12, 2.36, entryA, entryB);
+  worldBox(main, M.glass, VAULT_X, VAULT_X + 0.02, 0.05, 2.1, entryA + 0.03, entryB - 0.03).castShadow = false;
+  B(main, M.chrome, 0.03, 0.6, 0.03, VAULT_X - 0.03, 0.8, entryA + 0.12);
+  screen(main, signTexture(['BEER CAVE'], { w: 512, h: 128, bg: '#16302f', fg: '#eebe54', size: 70 }), 1.2, 0.3, VAULT_X - 0.05, 2.56, entryB + 0.6, -Math.PI / 2);
+  const cv1 = coolerRun(M, P, r, 3); put(main, cv1, VAULT_X, entryB + 0.12 + 1.5 * 0.76, -Math.PI / 2);
+  // behind the doors: cases in the vault, pallets in the beer cave
+  for (let zc = pz(2.5); zc < pz(33); zc += 0.6) for (let k = 0; k < 3; k++) P.box(main, VAULT_X + 1.3 + (k % 2) * 0.5, k * 0.3, zc, 0.42, 0.28, 0.5, CASES[Math.floor(r() * CASES.length)]);
+  for (let xi = 0; xi < 5; xi++) for (let zi = 0; zi < 3; zi++) {
+    const bx = VAULT_X + 1.4 + xi * 1.05, bz = pz(37.5) + zi * 1.25;
+    B(main, M.wood, 1.0, 0.13, 1.2, bx, 0, bz);
+    const c = CASES[Math.floor(r() * CASES.length)];
+    for (let h2 = 0; h2 < 4; h2++) for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) P.box(main, bx - 0.24 + i * 0.48, 0.13 + h2 * 0.26, bz - 0.4 + j * 0.4, 0.46, 0.25, 0.38, c);
+  }
+  worldBox(groups.roof, M.walkin, VAULT_X, px(80), 2.75, 2.85, Z0, pz(35));
+  worldBox(groups.roof, M.walkin, VAULT_X, X1, 2.75, 2.85, pz(35), Z1);
+  // utility room at the back corner
+  C(main, M.hdpe, 0.3, 0.3, 1.6, X1 - 0.5, 0, pz(4), 24);
+  for (const zz of [pz(10), pz(16)]) { const u = shelving(M, 1.22, 0.46, 0, [0.15, 0.6, 1.05, 1.5, 1.85], stockShelf(M, r, 1.22, 0.46, ['cups', 'napkins', 'foil', 'produce'])); put(main, u, X1 - 0.3, zz, -Math.PI / 2); }
+  for (const zz of [pz(26), pz(28)]) B(main, M.paintGrey, 0.1, 0.9, 0.36, X1 - 0.05, 1.05, zz);
+
+  return { groups, floor, items, shadowsFor, occ, P };
 }
 
 /* ------------------------------------------------------------ baking */
@@ -1481,7 +2014,7 @@ async function create(host) {
   const order = Object.keys(ITEMS);
   host.innerHTML = `
     <div class="k3d-top">
-      <div class="k3d-title"><b id="k3d-title">The kitchen in 3D</b><span>Drag to look around · scroll or pinch to zoom</span></div>
+      <div class="k3d-title"><b id="k3d-title">The store and kitchen in 3D</b><span>Drag to look around · scroll or pinch to zoom</span></div>
       <div class="k3d-views" role="toolbar" aria-label="Camera views">${Object.entries(VIEWS).map(([k, v]) => `<button type="button" data-view="${k}" aria-pressed="false">${v.label}</button>`).join('')}</div>
       <button type="button" class="k3d-close" aria-label="Close the 3D kitchen">✕</button>
     </div>
@@ -1491,7 +2024,7 @@ async function create(host) {
         <div class="k3d-card" aria-live="polite"></div>
         <button type="button" class="k3d-listbtn" aria-expanded="false">Equipment list</button>
         <div class="k3d-list">${Object.entries(ZONES).map(([z, zn]) => `<h4>${zn}</h4><ol>${order.filter((id) => ITEMS[id].zone === z).map((id) => `<li><button type="button" data-item="${id}"><b>${order.indexOf(id) + 1}</b>${ITEMS[id].name}</button></li>`).join('')}</ol>`).join('')}</div>
-        <p class="k3d-note">The open kitchen is modelled from the owner’s photo. The back room is a typical layout drawn to standard equipment sizes. The real layout, equipment and sizes are confirmed at your walkthrough.</p>
+        <p class="k3d-note">The store follows the standard layout of the modern convenience-store format this building uses (about 93 × 50 ft). The kitchen line follows the owner’s photo. Other equipment and sizes are typical; the real layout is confirmed at your walkthrough.</p>
       </aside>
     </div>`;
   host.setAttribute('role', 'dialog'); host.setAttribute('aria-modal', 'true'); host.setAttribute('aria-labelledby', 'k3d-title');
@@ -1532,9 +2065,10 @@ async function create(host) {
   scene.add(built.floor);
 
   // boxes for picking, hotspots and focusing (before baking flattens the groups)
-  scene.add(groups.main, groups.N, groups.S, groups.E, groups.W, groups.FE, groups.ceiling, groups.roof);
+  for (const g of Object.values(groups)) scene.add(g);
   groups.roof.updateMatrixWorld(true);
   for (const g of Object.values(groups)) g.updateMatrixWorld(true);
+  for (const m of built.P.build(M)) scene.add(m);
   const pickScene = new THREE.Scene(), pickMat = new THREE.MeshBasicMaterial();
   items.forEach((it, i) => {
     it.n = Object.keys(ITEMS).indexOf(it.id) + 1;
@@ -1557,32 +2091,34 @@ async function create(host) {
   const baked = {};
   for (const [k, g] of Object.entries(groups)) { scene.remove(g); baked[k] = bake(g); scene.add(baked[k]); }
   // stubs start hidden
-  for (const k of ['N', 'E', 'W', 'FE']) baked['stub' + k].visible = false;
+  for (const k of ['N', 'S', 'E', 'W']) baked['stub' + k].visible = false;
 
   // lights
   scene.add(new THREE.HemisphereLight(0xfffaf0, 0x7a5444, 1.25));
   const sun = new THREE.DirectionalLight(0xfff8ef, 2.1);
-  sun.position.set(1.2, 11, 5.4); sun.target.position.set(-0.4, 0, 2.6);
+  sun.position.set(3, 18, 8); sun.target.position.set(0, 0, 0.3);
   sun.castShadow = true;
   const sm = mobile ? 1024 : 2048; sun.shadow.mapSize.set(sm, sm);
-  Object.assign(sun.shadow.camera, { left: -6.6, right: 6.6, top: 7.0, bottom: -7.0, near: 2, far: 20 });
+  Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 11, bottom: -11, near: 4, far: 34 });
   sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.015; sun.shadow.radius = mobile ? 2 : 4;
   scene.add(sun, sun.target);
   const hoodLights = mobile ? 1 : 3;
   for (let i = 0; i < hoodLights; i++) {
     const pl = new THREE.PointLight(0xffe4b8, 2.2, 3.2, 1.6);
-    pl.position.set(HOOD.x0 + (i + 0.5) * (HOOD.x1 - HOOD.x0) / hoodLights, HOOD.top - 0.15, FK.z0 + HOOD.depth - 0.35);
+    const [hx, hz] = kxz(HOOD.x0 + (i + 0.5) * (HOOD.x1 - HOOD.x0) / hoodLights, HOOD.depth - 0.35);
+    pl.position.set(hx, HOOD.top - 0.15, hz);
     scene.add(pl);
   }
-  for (const [x, z] of DOWNLIGHTS.slice(0, mobile ? 1 : 3)) { const pl = new THREE.PointLight(0xfff1dc, 3.2, 5.5, 1.5); pl.position.set(x, ROOM.h - 0.15, z); scene.add(pl); }
-  for (const zc of [(WALKIN.z0 + WALKIN.split) / 2, (WALKIN.split + WALKIN.z1) / 2]) {
-    const pl = new THREE.PointLight(0xf2f6ff, 3, 3.4, 1.5); pl.position.set((WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, zc); scene.add(pl);
-  }
+  const pt = (c, i, d, x, y, z) => { const pl = new THREE.PointLight(c, i, d, 1.5); pl.position.set(x, y, z); scene.add(pl); };
+  { const [x, z] = kxz(0, 2.25); pt(0xfff1dc, 3.2, 5.5, x, H_ACT - 0.15, z); }
+  pt(0xf6f7ff, 4, 7, px(9), H_ACT - 0.2, pz(36));
+  pt(0xf2f6ff, 2.5, 3.4, (WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, (WALKIN.split + WALKIN.z1) / 2);
+  if (!mobile) { pt(0xfff6ea, 9, 14, px(45), 3.3, pz(24)); pt(0xfff6ea, 9, 14, px(62), 3.3, pz(24)); pt(0xf6f7ff, 4, 7, px(9.5), H_ACT - 0.2, pz(13)); }
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 80);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true; controls.dampingFactor = 0.085; controls.screenSpacePanning = true;
-  controls.minDistance = 0.4; controls.maxDistance = 24; controls.maxPolarAngle = Math.PI * 0.86;
+  controls.minDistance = 0.4; controls.maxDistance = 48; controls.maxPolarAngle = Math.PI * 0.86;
   controls.rotateSpeed = 0.7; controls.zoomSpeed = 0.9;
 
   // selection outline
@@ -1597,17 +2133,22 @@ async function create(host) {
     spots.appendChild(b); it.el = b;
   });
   const dimLabels = [
-    { t: 'BACK ROOM ≈ 32 × 20 ft', p: new THREE.Vector3(0, 0.05, Z0 - 0.6) },
-    { t: 'OPEN KITCHEN ≈ 27 × 10 ft', p: new THREE.Vector3(FK.x0 - 2.2, 0.05, (FK.z0 + FK.z1) / 2) },
-    { t: 'STORE', p: new THREE.Vector3((FK.x0 + FK.x1) / 2, 0.05, FK.z1 + STORE_D * 0.6) },
-    { t: 'WALK-IN ≈ 8 × 14 ft', p: new THREE.Vector3(X1 + 1.9, 0.05, (WALKIN.z0 + WALKIN.z1) / 2) }
+    { t: 'STORE ≈ 93 × 50 ft', p: new THREE.Vector3(0, 0.05, Z0 - 1.0) },
+    { t: 'KITCHEN', p: new THREE.Vector3(KW + 1.6, 0.05, KZC + 1.1) },
+    { t: 'BACK ROOM', p: new THREE.Vector3(px(9.5), 0.05, pz(40)) },
+    { t: 'RESTROOMS', p: new THREE.Vector3(px(9.5), 0.05, pz(15)) },
+    { t: 'SALES FLOOR', p: new THREE.Vector3(px(50), 0.05, pz(44)) },
+    { t: 'COLD VAULT', p: new THREE.Vector3(px(76.5), 0.05, pz(9)) },
+    { t: 'BEER CAVE', p: new THREE.Vector3(px(83), 0.05, pz(45)) },
+    { t: 'UTILITY', p: new THREE.Vector3(px(86.5), 0.05, pz(22)) }
   ].map((d) => { const el = document.createElement('span'); el.className = 'k3d-dim'; el.textContent = d.t; dims.appendChild(el); return { ...d, el }; });
 
   const occluders = [];
-  const ob = (x0, x1, z0, z1, k, h = ROOM.h) => { const m = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, h, z1 - z0), pickMat); m.position.set((x0 + x1) / 2, h / 2, (z0 + z1) / 2); m.userData.wall = k; occluders.push(m); };
-  ob(X0 - WALL, X1 + WALL, Z0 - WALL, Z0, 'N'); ob(X0 - WALL, DOORWAY.a, Z1, FK.z0, null); ob(DOORWAY.b, X1 + WALL, Z1, FK.z0, null);
-  ob(X0 - WALL, X0, Z0, FK.z1, 'W'); ob(X1, X1 + WALL, Z0, Z1, 'E'); ob(FK.x1, FK.x1 + WALL, Z1, FK.z1, 'FE');
-  ob(WALKIN.x0, WALKIN.x0 + 0.1, WALKIN.z0, WALKIN.z1, null, WALKIN.h); ob(WALKIN.x0, WALKIN.x1, WALKIN.z0, WALKIN.z0 + 0.1, null, WALKIN.h); ob(WALKIN.x0, WALKIN.x1, WALKIN.split - 0.05, WALKIN.split + 0.05, null, WALKIN.h);
+  for (const o of built.occ) {
+    if (o.x1 - o.x0 < 0.001 || o.z1 - o.z0 < 0.001) continue;
+    const m = new THREE.Mesh(new THREE.BoxGeometry(o.x1 - o.x0, o.h, o.z1 - o.z0), pickMat);
+    m.position.set((o.x0 + o.x1) / 2, o.h / 2, (o.z0 + o.z1) / 2); m.userData.wall = o.key; occluders.push(m);
+  }
   occluders.forEach((o) => o.updateMatrixWorld(true));
   items.forEach((it) => it.pick.updateMatrixWorld(true));
 
@@ -1623,12 +2164,13 @@ async function create(host) {
   let shadowState = '';
   function applyCut() {
     const p = camera.position, vis = {
-      N: p.z > Z0 - 0.02, W: p.x > X0 - 0.02, E: p.x < X1 + 0.02, FE: p.x < FK.x1 + 0.02 || p.z < Z1, S: true
+      N: p.z > Z0 - 0.02, S: p.z < Z1 + 0.02, W: p.x > X0 - 0.02, E: p.x < X1 + 0.02
     };
-    for (const k of ['N', 'E', 'W', 'FE']) { baked[k].visible = vis[k]; baked['stub' + k].visible = !vis[k]; }
-    baked.ceiling.visible = p.y < ROOM.h - 0.02;
-    baked.roof.visible = p.y < WALKIN.h + 0.1;
-    const key = `${baked.roof.visible}${vis.N}${vis.E}${vis.W}${vis.FE}`;
+    for (const k of ['N', 'S', 'E', 'W']) { baked[k].visible = vis[k]; baked['stub' + k].visible = !vis[k]; }
+    baked.ceiling.visible = p.y < H_ACT - 0.02;
+    baked.deck.visible = p.y < H_DECK - 0.02;
+    baked.roof.visible = p.y < 2.8;
+    const key = `${baked.roof.visible}${vis.N}${vis.S}${vis.E}${vis.W}`;
     if (key !== shadowState) { shadowState = key; renderer.shadowMap.needsUpdate = true; }
     return vis;
   }
@@ -1650,21 +2192,16 @@ async function create(host) {
       if (!hide) it.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${(-v.y * 0.5 + 0.5) * h}px) translate(-50%,-50%)`;
     }
     for (const d of dimLabels) {
-      const show = camera.position.y > 14;
+      const show = K.view === 'plan' && camera.position.y > 20;
       d.el.style.display = show ? '' : 'none';
       if (show) { v.copy(d.p).project(camera); d.el.style.transform = `translate(${(v.x * 0.5 + 0.5) * w}px, ${(-v.y * 0.5 + 0.5) * h}px) translate(-50%,-50%)`; }
     }
   }
 
   // keep a close-up camera inside the space its target is in (open kitchen + store strip, or back room)
-  function keepInside(pos, ref) {
+  function keepInside(pos) {
     const cl = THREE.MathUtils.clamp;
-    if (ref.z > Z1) { pos.x = cl(pos.x, FK.x0 + 0.3, FK.x1 - 0.3); pos.z = cl(pos.z, FK.z0 + 0.3, FK.z1 + STORE_D - 0.2); }
-    else {
-      pos.x = cl(pos.x, X0 + 0.3, X1 - 0.3); pos.z = cl(pos.z, Z0 + 0.3, Z1 - 0.3);
-      if (pos.x > WALKIN.x0 - 0.2 && pos.z > WALKIN.z0 - 0.2) pos.x = WALKIN.x0 - 0.5;
-    }
-    pos.y = cl(pos.y, 0.9, ROOM.h - 0.2);
+    pos.x = cl(pos.x, X0 + 0.3, X1 - 0.3); pos.z = cl(pos.z, Z0 + 0.3, Z1 + 2.2); pos.y = cl(pos.y, 0.9, 2.9);
   }
   const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
   function flyTo(pos, target, instant) {
@@ -1674,12 +2211,12 @@ async function create(host) {
   K.setView = (name, instant) => {
     const vw = VIEWS[name]; K.view = name;
     host.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.view === name));
-    if (instant && name === 'overview') { camera.position.set(14, 14, 20); controls.target.set(...vw.target); controls.update(); }
+    if (instant && name === 'overview') { camera.position.set(22, 28, 34); controls.target.set(...vw.target); controls.update(); }
     // narrow screens: step back along the view so the same things fit
     const tgt = new THREE.Vector3(...vw.target), pos = new THREE.Vector3(...vw.pos);
     const k = THREE.MathUtils.clamp(1.35 / camera.aspect, 1, 2.0);
     if (k > 1) {
-      const inside = pos.y < ROOM.h && pos.x > X0 && pos.x < X1 && pos.z > Z0 && pos.z < FK.z1 + STORE_D;
+      const inside = pos.y < H_DECK && pos.x > X0 && pos.x < X1 && pos.z > Z0 && pos.z < Z1 + 2.5;
       pos.sub(tgt).multiplyScalar(k).add(tgt);
       if (inside) keepInside(pos, tgt);
     }
@@ -1698,11 +2235,11 @@ async function create(host) {
     if (fly) {
       const r = Math.max(s.x, s.y * 0.8, s.z);
       const dist = THREE.MathUtils.clamp(r * 1.15 + 1.0, 1.6, 5.2);
-      const tgt = it.center.clone(); if (it.id === 'cooler' || it.id === 'freezer') tgt.x = WALKIN.x0 + 0.4;
+      const tgt = it.center.clone(); if (it.id === 'cooler' || it.id === 'freezer') tgt.z = WALKIN.z1 - 0.4;
       const pos = tgt.clone().addScaledVector(it.face, dist); pos.y = tgt.y + Math.min(dist * 0.42, 1.0) + 0.3;
       keepInside(pos, tgt);
       flyTo(pos, tgt);
-      host.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false'));
+      host.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false')); K.view = null;
     }
     K.needs = true;
   }
