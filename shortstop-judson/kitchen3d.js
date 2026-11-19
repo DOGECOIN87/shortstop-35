@@ -3668,6 +3668,8 @@ async function create(host) {
     tBar.style.width = '100%'; ring.visible = false; sel.visible = false; spot.intensity = 0; show.on = false; tCard.classList.remove('in');
     rLines.forEach((li) => li.classList.remove('on'));
     K.setView('overview');
+    // until the owner's phone or email is on the page nothing can be booked (the page marks that)
+    tEnd.querySelector('[data-kt="book"]').textContent = document.documentElement.classList.contains('booking-off') ? 'Walkthrough details' : 'Book a walkthrough';
     tEnd.hidden = false;
     const big = tEnd.querySelector('.big'), t0 = performance.now(), dur = reduce ? 0 : 2200;
     const step = (now) => { const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 4); big.textContent = money(TOUR_TOTAL * e); if (k < 1 && tour.phase === 'end') requestAnimationFrame(step); };

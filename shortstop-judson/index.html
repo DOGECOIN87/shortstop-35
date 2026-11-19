@@ -56,18 +56,18 @@
   .brand-logo{width:46px;height:46px;flex:0 0 46px;border-radius:50%;box-shadow:0 0 0 2px rgba(245,243,230,.9)}
   .brand-sub{font-family:var(--mono);font-size:11px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--muted-dark);line-height:1.2}
   .brand-sub b{display:block;color:#fff;letter-spacing:2.4px}
-  .nav-links{display:flex;gap:24px;font-weight:600;font-size:15px}
-  .nav-links a{text-decoration:none;color:#dfe3e7}
+  .nav-links{display:flex;gap:8px;font-weight:600;font-size:15px}
+  .nav-links a{text-decoration:none;color:#dfe3e7;padding:10px 8px}
   .nav-links a:hover{color:#fff;text-decoration:underline;text-underline-offset:5px}
   @media(max-width:880px){.nav-links{display:none}}
 
-  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;max-width:100%;font:inherit;font-weight:800;border-radius:999px;padding:13px 22px;font-size:15px;line-height:1.2;transition:background .2s,border-color .2s,transform .2s;border:2px solid transparent;cursor:pointer;text-align:center;text-wrap:balance;text-decoration:none}
+  .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;max-width:100%;font:inherit;font-weight:800;border-radius:999px;padding:13px 22px;font-size:15px;line-height:1.2;transition:background .2s,border-color .2s,transform .2s;border:2px solid transparent;cursor:pointer;text-align:center;text-wrap:balance;text-decoration:none;min-height:44px}
   .btn:active{transform:translateY(1px)}
   .btn-red{background:var(--red);color:#fff}.btn-red:hover{background:var(--red-2)}
   .btn-ghost{border-color:rgba(255,255,255,.45);color:#fff;background:transparent}.btn-ghost:hover{background:rgba(255,255,255,.1);border-color:#fff}
   .btn-dark{background:var(--ink);color:#fff}.btn-dark:hover{background:var(--ink-3)}
   .btn-line{border-color:var(--ink);color:var(--ink);background:transparent}.btn-line:hover{background:var(--ink);color:#fff}
-  .btn-sm{padding:9px 16px;font-size:14px}
+  .btn-sm{padding:10px 16px;font-size:14px}
 
   /* Hero */
   .hero{background:radial-gradient(1000px 520px at 85% 0%,rgba(238,190,84,.15),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgba(204,221,209,.08),transparent 70%),linear-gradient(180deg,#1d4346 0%,var(--ink) 100%);color:#fff;overflow:hidden}
@@ -111,7 +111,7 @@
   @media(max-width:860px){.strip-grid{grid-template-columns:repeat(2,1fr)}.strip-item{padding:16px 14px}.strip-item:nth-child(3){border-left:0;padding-left:0}.strip-item:nth-child(n+3){border-top:1px solid rgba(255,255,255,.22)}}
 
   /* Sections */
-  section{padding:84px 0;scroll-margin-top:84px}
+  section{padding:84px 0}
   @media(max-width:600px){section{padding:60px 0}}
   .kicker{font-family:var(--mono);color:var(--red-2);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px;margin-bottom:10px}
   h2{font-size:clamp(28px,3.8vw,42px);font-weight:900;letter-spacing:-.8px;line-height:1.1;margin-bottom:14px;max-width:760px}
@@ -223,7 +223,7 @@
   .info-head b{display:block;font-size:18px}
   .info-head span{font-size:14px;color:var(--muted-dark)}
   .info-row .k{font-family:var(--mono);font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--muted-dark)}
-  .info-row a{color:var(--amber-soft);font-weight:700}
+  .info-row a{color:var(--amber-soft);font-weight:700;display:inline-block;padding:12px 0;margin:-12px 0}
   .info .actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
   form.inquiry{background:#fff;color:var(--ink);border-radius:var(--radius);padding:28px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
   @media(max-width:600px){form.inquiry{grid-template-columns:minmax(0,1fr);padding:20px}}
@@ -238,35 +238,51 @@
   .form-foot p{font-size:13px;color:var(--muted);max-width:360px}
   .form-msg{grid-column:1/-1;font-size:15px;border-radius:10px;padding:12px 14px;background:#fff6e5;border:1px solid #f3d395}
   .form-msg[hidden]{display:none}
-  .form-off{grid-column:1/-1;font-size:15px;border-radius:10px;padding:12px 14px;background:#eef3f0;border:1px solid #c9d8cf;color:var(--ink)}
-  .form-off .btn{display:flex;width:max-content;margin-top:10px}
-  form.inquiry.off .field{opacity:.55}
-  form.inquiry button[disabled]{opacity:.6;cursor:not-allowed}
+  /* Without an email for the owner the form can't send anything, so it is left out and the
+     contact card stands alone: call / text buttons when there is a phone, else a short
+     "inquiries open soon" note with the 3D model. Without JavaScript the card says why. */
+  .contact-grid.solo,.no-js .contact-grid{grid-template-columns:minmax(0,1fr)}
+  .contact-grid.solo .info,.no-js .info{max-width:640px}
+  .no-js form.inquiry{display:none}
+  .info-soon{margin-top:6px;padding:16px 0 2px;border-top:1px solid rgba(255,255,255,.08);font-size:15px;color:#d3e0dd}
+  .info-soon b{color:#fff}
+  .info-soon .btn{margin-top:14px}
+  .nojs-note{display:none}
+  .no-js .nojs-note{display:block}
 
-  footer{background:#0d2326;color:#a9c1c0;font-size:14px;padding:38px 0 46px}
+  footer{background:#0d2326;color:#a9c1c0;font-size:14px;padding:38px 0 calc(46px + var(--bar,0px) + env(safe-area-inset-bottom))}
   .foot-brand{display:flex;align-items:center;gap:12px}
   .foot-brand img{width:52px;height:52px;border-radius:50%}
   .foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px}
   .foot strong{color:#fff}
   .fine{font-size:12px;color:#8fa9a8;margin-top:18px;max-width:72ch}
-  .foot a{display:inline-block;padding:10px 0;color:#d3e0dd}
+  .foot a{display:inline-block;padding:12px 0;color:#d3e0dd}
 
   /* Mobile action bar */
   .mbar{display:none}
+  /* the footer makes room for the bar (--bar), so the last lines are never under it; anchors and
+     keyboard focus stop clear of the sticky header and the bar (scroll-padding) */
+  html{scroll-padding-top:84px}
   @media(max-width:700px){
-    .mbar{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(20,50,54,.97);border-top:1px solid rgba(255,255,255,.1)}
+    :root{--bar:68px}
+    html{scroll-padding-bottom:calc(var(--bar) + 16px + env(safe-area-inset-bottom))}
+    .mbar{display:flex;gap:10px;position:fixed;left:0;right:0;bottom:0;z-index:60;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(20,50,54,.97);border-top:1px solid rgba(255,255,255,.1);transition:transform .25s ease,visibility .25s}
     .mbar .btn{flex:1 1 auto}
-    body{padding-bottom:72px}
     .header-cta{display:none}
+    /* one booking button on screen at a time: the bar slides away while the hero's buttons show */
+    .cta-in-view .mbar{transform:translateY(110%);visibility:hidden}
   }
+  .header-cta{transition:opacity .2s,visibility .2s}
+  .cta-in-view .header-cta{opacity:0;visibility:hidden}
+  @media (prefers-reduced-motion:reduce){.mbar,.header-cta{transition:none!important}}
   /* short landscape phones: let the header scroll away and keep the action bar slim */
   @media(max-height:500px) and (orientation:landscape){
     header{position:static}
-    section{scroll-margin-top:12px}
+    html{scroll-padding-top:12px}
     .mbar{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
     .mbar .btn{padding:9px 16px}
-    body{padding-bottom:58px}
   }
+  @media(max-width:700px) and (max-height:500px) and (orientation:landscape){:root{--bar:58px}}
   /* side insets on phones with a notch in landscape */
   @supports (padding:max(0px)){.wrap{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
     @media(max-width:600px){.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}}}
@@ -279,7 +295,7 @@
     .hero,.why,.contact,.strip,footer,.uses,.tour,.steps{background:#fff!important;color:#000!important}
     .hero *,.why *,.contact *,.strip *,footer *{color:#000!important}
     /* dark cards and the drawing's frame print on white, with a hairline */
-    .scene,.why-card,.info,.form-off,.info-soon{background:#fff!important;border:1px solid #999!important;box-shadow:none!important}
+    .scene,.why-card,.info{background:#fff!important;border:1px solid #999!important;box-shadow:none!important}
     .legend b{background:#d0341b!important;color:#fff!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
     .sticker{box-shadow:none}
     .strip-item{border-color:#999!important}
@@ -311,11 +327,12 @@
       <a href="#rent">Ways to rent</a>
       <a href="#faq">FAQ</a>
     </nav>
-    <a class="btn btn-red btn-sm header-cta" href="#contact">Book a walkthrough</a>
+    <a class="btn btn-red btn-sm header-cta" href="#contact" data-book-on>Book a walkthrough</a>
+    <button type="button" class="btn btn-red btn-sm header-cta" data-open-3d data-book-off hidden>Explore in 3D</button>
   </div>
 </header>
 
-<main id="main">
+<main id="main" tabindex="-1">
   <div class="hero" id="top">
     <div class="wrap hero-inner">
       <div>
@@ -323,7 +340,7 @@
         <h1>A full commercial kitchen, <em>ready for your menu.</em></h1>
         <p class="lead">Rent the built-in kitchen inside our gas station: <strong>an open cook line under the hood, a glass serving counter facing the store, and a back room with prep, wash-up and walk-ins</strong>. It was built to run a full hot-food program for a busy store. The station is privately owned, and the kitchen is open to anyone with food to cook.</p>
         <div class="hero-cta">
-          <a class="btn btn-red" href="#contact">Book a walkthrough</a>
+          <a class="btn btn-red" href="#contact" data-book-label="Walkthrough details">Book a walkthrough</a>
           <button type="button" class="btn btn-ghost" data-open-3d>Explore in 3D</button>
         </div>
         <ul class="hero-facts">
@@ -699,10 +716,10 @@
 
   <section id="contact" class="contact">
     <div class="wrap">
-      <p class="kicker">Book a walkthrough</p>
+      <p class="kicker" data-book-label="Walkthroughs">Book a walkthrough</p>
       <h2>Come see the kitchen.</h2>
-      <p class="sub" id="contact-sub">Send a few details and the owner will get back to you to set up a time.</p>
-      <div class="contact-grid">
+      <p class="sub" id="contact-sub">Walkthroughs are set up directly with the owner.</p>
+      <div class="contact-grid" id="contact-grid">
         <div class="info">
           <div class="info-head"><picture><source srcset="logo-256.webp" type="image/webp"><img src="logo-256.png" width="64" height="64" alt="Short Stop logo" loading="lazy"></picture><div><b>Short Stop Judson</b><span>Full commercial kitchen for rent</span></div></div>
           <div class="info-row"><span class="k">Location</span><span data-address>Inside the Short Stop Judson gas station. Address shared when you book a walkthrough.</span></div>
@@ -714,10 +731,11 @@
             <a class="btn btn-ghost btn-sm" data-needs="phone" data-sms-link href="#" hidden>Send a text</a>
             <a class="btn btn-ghost btn-sm" data-needs="address" data-map-link href="#" target="_blank" rel="noopener" hidden>Open in maps</a>
           </div>
+          <div class="info-soon" id="info-soon" hidden><p><b>Online inquiries open soon.</b> Until the owner's phone and email are listed here, you can look around the whole kitchen in 3D.</p><button type="button" class="btn btn-red btn-sm" data-open-3d>Explore in 3D</button></div>
+          <p class="info-soon nojs-note">The owner's contact details need JavaScript to show. Turn it on and reload the page to see them.</p>
         </div>
 
         <form class="inquiry" id="inquiry" novalidate>
-          <p class="form-off" id="form-off" hidden>Online inquiries open soon. Until the owner's phone and email are listed here, you can look around the whole kitchen in 3D.<button type="button" class="btn btn-dark btn-sm" data-open-3d>Explore in 3D</button></p>
           <div class="field">
             <label for="f-name">Your name</label>
             <input id="f-name" name="name" autocomplete="name" required>
@@ -768,14 +786,15 @@
       <div class="foot-brand"><picture><source srcset="logo-256.webp" type="image/webp"><img src="logo-256.png" width="52" height="52" alt="Short Stop logo" loading="lazy"></picture><div><strong>Short Stop Judson</strong><br>Full commercial kitchen for rent</div></div>
       <div><a href="#top">Back to top ↑</a></div>
     </div>
-    <p class="fine">The kitchen illustration is a drawing, not a photo; equipment is confirmed at the walkthrough. © <span id="year">2026</span> Short Stop Judson.</p>
+    <p class="fine">The kitchen illustration is a drawing, not a photo; equipment is confirmed at the walkthrough. ©&nbsp;<span id="year">2026</span> Short Stop Judson.</p>
   </div>
 </footer>
 
 <div class="k3d" id="k3d" hidden></div>
 
 <nav class="mbar" aria-label="Quick actions">
-  <a class="btn btn-red" href="#contact">Book a walkthrough</a>
+  <a class="btn btn-red" href="#contact" data-book-on>Book a walkthrough</a>
+  <button type="button" class="btn btn-red" data-open-3d data-book-off hidden>Explore in 3D</button>
   <a class="btn btn-ghost" data-needs="phone" data-phone-link href="#" hidden>Call</a>
 </nav>
 
@@ -851,26 +870,54 @@ const LISTING = {
 
   const form = document.getElementById("inquiry");
   const msg = document.getElementById("form-msg");
-  // Say plainly what the form will do with the contact details that are filled in above.
-  const note = document.getElementById("form-note"), sub = document.getElementById("contact-sub");
-  if (!has.email && has.phone) {
-    note.textContent = "Leave a phone number or an email. Sending shows the owner's number so you can call or text to set up a time.";
-  } else if (!has.email && !has.phone) {
-    form.classList.add("off");
-    document.getElementById("form-off").hidden = false;
-    form.querySelectorAll("input,select,textarea,button:not([data-open-3d])").forEach((el) => { el.disabled = true; });
-    form.querySelector("button[type=submit]").textContent = "Inquiries open soon";
-    note.textContent = "The form switches on as soon as the owner's contact details are added.";
-    sub.textContent = "Walkthroughs are set up directly with the owner. Contact details are on their way.";
+  // Only offer what works with the details filled in above:
+  // - email: the inquiry form (it opens the visitor's email app addressed to the owner);
+  // - phone only: no form, the card's Call and Text buttons;
+  // - neither: no form, a note that inquiries open soon, and "Book a walkthrough" buttons
+  //   become "Explore in 3D" / "Walkthrough details", since nothing can be booked yet.
+  const sub = document.getElementById("contact-sub");
+  if (has.email) {
+    sub.textContent = "Send a few details and the owner will get back to you to set up a time.";
+  } else {
+    form.hidden = true;
+    document.getElementById("contact-grid").classList.add("solo");
+    if (has.phone) {
+      sub.textContent = "Call or text the owner to set up a time.";
+    } else {
+      sub.textContent = "Walkthroughs are set up directly with the owner. Contact details are on their way.";
+      document.getElementById("info-soon").hidden = false;
+      document.documentElement.classList.add("booking-off");
+      $$("[data-book-on]").forEach((el) => { el.hidden = true; });
+      $$("[data-book-off]").forEach((el) => { el.hidden = false; });
+      $$("[data-book-label]").forEach((el) => { el.textContent = el.dataset.bookLabel; });
+      // in the hero, exploring in 3D becomes the main button
+      const cta = document.querySelector(".hero-cta"), go3d = cta.querySelector("[data-open-3d]"), book = cta.querySelector("a");
+      go3d.classList.replace("btn-ghost", "btn-red"); book.classList.replace("btn-red", "btn-ghost"); cta.prepend(go3d);
+    }
   }
+
+  // Booking buttons: the phone action bar and the header button step aside while the hero's own
+  // buttons are on screen, so there is one obvious next step at a time.
+  const heroCta = document.querySelector(".hero-cta");
+  if (heroCta && "IntersectionObserver" in window) {
+    new IntersectionObserver(([e]) => { document.documentElement.classList.toggle("cta-in-view", e.isIntersecting); }).observe(heroCta);
+  }
+
   const say = (text) => { msg.textContent = text; msg.hidden = false; };
+  // a field with a problem is marked invalid and points at the message, so screen readers read both
+  const flag = (field, text) => {
+    say(text);
+    form.querySelectorAll("[aria-invalid]").forEach((el) => { el.removeAttribute("aria-invalid"); el.removeAttribute("aria-describedby"); });
+    field.setAttribute("aria-invalid", "true"); field.setAttribute("aria-describedby", "form-msg"); field.focus();
+  };
 
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const d = Object.fromEntries(new FormData(form).entries());
-    if (!d.name.trim()) { say("Please add your name."); form.name.focus(); return; }
-    if (!d.phone.trim() && !d.email.trim()) { say("Please leave a phone number or an email so the owner can reach you."); form.phone.focus(); return; }
-    if (d.email.trim() && !form.email.checkValidity()) { say("That email address doesn't look right."); form.email.focus(); return; }
+    if (!d.name.trim()) { flag(form.name, "Please add your name."); return; }
+    if (!d.phone.trim() && !d.email.trim()) { flag(form.phone, "Please leave a phone number or an email so the owner can reach you."); return; }
+    if (d.email.trim() && !form.email.checkValidity()) { flag(form.email, "That email address doesn't look right."); return; }
+    form.querySelectorAll("[aria-invalid]").forEach((el) => { el.removeAttribute("aria-invalid"); el.removeAttribute("aria-describedby"); });
 
     const body = [
       "Hi, I'd like to set up a walkthrough of the kitchen at Short Stop Judson.",
