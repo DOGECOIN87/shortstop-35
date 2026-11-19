@@ -57,8 +57,12 @@ the building was built to (about 93 x 50 ft, storefront on the south):
 - the walk-in beer cave fills the front-right corner, against the front wall.
   Its glass door faces the entrance near the windows, so from the front
   doors you look right along the window aisle straight to it; three more
-  glass cooler doors sit beside the door under the BEER CAVE sign. Window
-  seating runs along the glass between the doors and the beer cave.
+  glass cooler doors sit beside the door under the BEER CAVE sign.
+- along the front windows from the doors to the beer cave (owner): two
+  skill-game machines side by side near the doors, the window table with
+  stools, then two more machines near the beer cave, each with an office
+  chair. The screens are generic ("SKILL GAMES", prize panels, game tiles);
+  no game or maker names. No crypto ATM (owner).
 
 Owner-confirmed (standing at the front doors, looking in): kitchen and its
 order counter on the left wall; checkout left of the doors; cooler doors on

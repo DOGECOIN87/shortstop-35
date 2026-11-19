@@ -1987,6 +1987,83 @@ function kiosk(M) {
   return g;
 }
 
+// Upright skill-game cabinet: portrait touch screen in a black cabinet with LED edge
+// lighting, a console with ticket printer and bill acceptor, a button deck with a cup
+// holder, and an LED-trimmed base. Generic screen art (no game or maker names).
+// Front faces +z; origin on the floor at the centre of the footprint.
+const SKILL_SCREEN_CACHE = {};
+function skillScreen(accent, seed) {
+  const key = accent + seed;
+  if (SKILL_SCREEN_CACHE[key]) return SKILL_SCREEN_CACHE[key];
+  const t = screenTexture(300, 540, (c) => {
+    const r = rng(seed);
+    const bg = c.createLinearGradient(0, 0, 0, 540); bg.addColorStop(0, '#1a0f3a'); bg.addColorStop(0.5, '#2a1250'); bg.addColorStop(1, '#0d0a24'); c.fillStyle = bg; c.fillRect(0, 0, 300, 540);
+    for (let i = 0; i < 14; i++) { c.strokeStyle = `rgba(255,255,255,${0.04 + r() * 0.06})`; c.lineWidth = 2; c.beginPath(); c.moveTo(150, 120); c.lineTo(r() * 300, 540); c.stroke(); }
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillStyle = '#ffd34d'; c.font = '900 30px Arial Black, Arial'; c.fillText('SKILL GAMES', 150, 46);
+    c.fillStyle = accent; c.fillRect(40, 70, 220, 4);
+    [['GRAND', '#2a63d6', 70 + 130000 + Math.floor(r() * 200000)], ['MAJOR', '#8a2fd0', 9000 + Math.floor(r() * 9000)], ['MINOR', '#d0322a', 1100 + Math.floor(r() * 1200)]].forEach(([label, col, v], i) => {
+      const y = 100 + i * 76;
+      c.fillStyle = col; rrect(c, 30, y, 240, 62, 14); c.fill();
+      c.strokeStyle = '#ffd34d'; c.lineWidth = 3; rrect(c, 30, y, 240, 62, 14); c.stroke();
+      c.fillStyle = '#ffe7a3'; c.font = 'bold 12px Arial'; c.fillText(label + ' PRIZE', 150, y + 13);
+      c.fillStyle = '#ffffff'; c.font = '900 30px Arial Black, Arial'; c.fillText(String(v), 150, y + 40);
+    });
+    const tiles = ['#e94e77', '#3bb3a0', '#f2b31b', '#2f6bb5', '#9bd04a', '#e86c1a'];
+    for (let i = 0; i < 5; i++) {
+      const x = 14 + i * 56, y = 340;
+      const g2 = c.createLinearGradient(0, y, 0, y + 130); g2.addColorStop(0, tiles[(i + seed) % 6]); g2.addColorStop(1, '#14102c'); c.fillStyle = g2; rrect(c, x, y, 50, 130, 6); c.fill();
+      c.fillStyle = 'rgba(255,255,255,.75)'; c.beginPath(); c.arc(x + 25, y + 52, 15, 0, 6.3); c.fill();
+      c.fillStyle = '#16a34a'; rrect(c, x + 6, y + 108, 38, 15, 4); c.fill(); c.fillStyle = '#fff'; c.font = 'bold 10px Arial'; c.fillText('PLAY', x + 25, y + 116);
+    }
+    c.fillStyle = '#2a2a6a'; rrect(c, 20, 492, 110, 28, 6); c.fill(); c.fillStyle = '#fff'; c.font = 'bold 13px Arial'; c.fillText('COLLECT', 75, 507);
+    c.fillStyle = '#000'; rrect(c, 170, 492, 110, 28, 6); c.fill(); c.strokeStyle = '#888'; c.lineWidth = 1; rrect(c, 170, 492, 110, 28, 6); c.stroke(); c.fillStyle = '#fff'; c.fillText('0', 225, 507);
+  });
+  SKILL_SCREEN_CACHE[key] = t; return t;
+}
+function skillMachine(M, accentHex, seed) {
+  const g = new THREE.Group(), W = 0.7, D = 0.62, accent = '#' + accentHex.toString(16).padStart(6, '0');
+  const led = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: accentHex, emissiveIntensity: 2.6 });
+  // base pedestal and LED underglow
+  B(g, M.blackGloss, W - 0.08, 0.66, D - 0.14, 0, 0, -0.02);
+  B(g, led, W - 0.1, 0.02, 0.012, 0, 0.66, D / 2 - 0.085);
+  // console: ticket printer and bill acceptor, then a sloped button deck with a cup holder
+  B(g, M.blackGloss, W, 0.24, D, 0, 0.66, 0);
+  B(g, M.darkGlass, 0.16, 0.06, 0.004, -0.17, 0.8, D / 2 + 0.002);
+  B(g, M.hdpe, 0.1, 0.08, 0.004, 0.03, 0.78, D / 2 + 0.002);
+  B(g, M.blackPaint, 0.09, 0.025, 0.006, 0.2, 0.81, D / 2 + 0.003);
+  B(g, led, 0.06, 0.02, 0.006, 0.2, 0.76, D / 2 + 0.003);
+  const deck = new THREE.Group(); deck.position.set(0, 0.9, D / 2 - 0.08); deck.rotation.x = 0.28; g.add(deck);
+  B(deck, M.black, W + 0.04, 0.03, 0.26, 0, 0, 0.06);
+  B(deck, led, W + 0.04, 0.012, 0.012, 0, 0.012, 0.19);
+  for (const bx of [-0.2, 0.2]) { C(deck, M.chrome, 0.035, 0.035, 0.012, bx, 0.03, 0.05, 20); C(deck, M.red, 0.026, 0.026, 0.016, bx, 0.035, 0.05, 20); }
+  C(deck, M.steelDark, 0.045, 0.04, 0.02, 0, 0.022, 0.05, 20);
+  // screen tower with LED surround
+  B(g, M.blackGloss, W - 0.04, 1.12, 0.14, 0, 0.92, -D / 2 + 0.1);
+  screen(g, skillScreen(accent, seed), 0.56, 1.0, 0, 0.92 + 0.56, -D / 2 + 0.172);
+  for (const [w, h, x, y] of [[0.62, 0.016, 0, 0.94], [0.62, 0.016, 0, 2.02], [0.016, 1.08, -0.31, 0.94], [0.016, 1.08, 0.31, 0.94]]) B(g, led, w, h, 0.012, x, y, -D / 2 + 0.174);
+  // small labels under the screen (18+, take ticket)
+  screen(g, signTexture(['18+'], { w: 128, h: 128, bg: '#ffffff', fg: '#c4261c', size: 64 }), 0.06, 0.06, 0.14, 0.87, D / 2 + 0.004);
+  screen(g, signTexture(['TAKE', 'TICKET'], { w: 128, h: 128, bg: '#1a1a1a', fg: '#ffffff', size: 34, print: false }), 0.07, 0.07, -0.17, 0.87, D / 2 + 0.004);
+  return g;
+}
+// Black mesh office chair on a five-star base.
+function officeChair(M, p, x, z, ry) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; p.add(g);
+  for (let i = 0; i < 5; i++) {
+    const a = i * Math.PI * 2 / 5;
+    addMesh(g, new THREE.BoxGeometry(0.3, 0.03, 0.04), M.black, Math.cos(a) * 0.15, 0.07, Math.sin(a) * 0.15, 0, -a, 0);
+    addMesh(g, new THREE.SphereGeometry(0.028, 10, 8), M.black, Math.cos(a) * 0.29, 0.028, Math.sin(a) * 0.29);
+  }
+  C(g, M.chrome, 0.022, 0.022, 0.36, 0, 0.07, 0, 12);
+  B(g, M.black, 0.48, 0.07, 0.46, 0, 0.43, 0);
+  const back = new THREE.Group(); back.position.set(0, 0.5, -0.22); back.rotation.x = -0.12; g.add(back);
+  B(back, M.blackPaint, 0.04, 0.5, 0.03, 0, 0, 0);
+  B(back, M.black, 0.44, 0.46, 0.04, 0, 0.1, -0.01);
+  for (const sx of [-1, 1]) { B(g, M.blackPaint, 0.04, 0.2, 0.04, sx * 0.25, 0.47, 0); B(g, M.black, 0.06, 0.03, 0.26, sx * 0.25, 0.67, 0.02); }
+  return g;
+}
+
 function seatingCounter(M, L, n) {
   // along x, against the windows at z = 0, people sit at +z
   const g = new THREE.Group(), top = 1.05;
@@ -2421,12 +2498,22 @@ function buildKitchen(M, X) {
     B(main, M.woodPanel, 1.8, 0.86, 0.8, tx, 0, tz); B(main, M.quartz, 1.84, 0.04, 0.84, tx, 0.86, tz);
     fillRun(P, main, r, 'x', tx - 0.85, tx + 0.85, 0.9, tz, 0.6, 0.25, SNACKS);
   }
-  const se = seatingCounter(M, 3.0, 5); put(main, se, px(51.3), Z1 - 0.05, Math.PI); reg('seating', se, { face: [0, 0, -1] });
+  // along the front windows, door to beer cave: two skill-game machines, the window table,
+  // two more machines near the beer cave (each with a chair)
+  {
+    const xd = px(43.5), z = Z1 - 0.42;
+    const sx = [xd + 1.23, xd + 2.03, xd + 6.47, xd + 7.27], acc = [0x2f7bff, 0x22e07a, 0xb04dff, 0xff3a2a];
+    sx.forEach((x, i) => {
+      const m = skillMachine(M, acc[i], 31 + i * 7); put(main, m, x, z, Math.PI); shadowsFor.push([m, 0.03]);
+      officeChair(M, main, x + (i % 2 ? 0.05 : -0.06), Z1 - 1.32, Math.PI + (i % 2 ? 0.25 : -0.18));
+    });
+  }
+  const se = seatingCounter(M, 3.0, 5); put(main, se, px(43.5) + 4.25, Z1 - 0.05, Math.PI); reg('seating', se, { face: [0, 0, -1] });
   const co = checkoutCounter(M, P, r, 3.6); put(main, co, -5.85, 4.2, Math.PI / 2); reg('checkout', co, { face: [1, 0, 0] }); shadowsFor.push([co, 0.03]);
   const bbk = backBar(M, 3.8); put(main, bbk, px(19) + IW / 2, 4.2, Math.PI / 2); shadowsFor.push([bbk, 0.02]);
   B(main, M.paintGrey, 0.6, 1.55, 0.5, px(34.5), 0, Z1 - 0.4);
   screen(main, screenTexture(96, 64, (c) => { c.fillStyle = '#0e1a1c'; c.fillRect(0, 0, 96, 64); c.fillStyle = '#3bb3a0'; c.font = 'bold 18px Arial'; c.fillText('ATM', 30, 38); }), 0.3, 0.2, px(34.5), 1.2, Z1 - 0.651, Math.PI);
-  trashCan(M, px(44.9), Z1 - 0.55, M.greyPlastic, main);
+  trashCan(M, px(43.5) + 0.36, Z1 - 0.52, M.greyPlastic, main);
   basketStack(M, main, px(36.3), Z1 - 0.55, -0.15);
 
   // cold vault: main run of doors along the east wall
