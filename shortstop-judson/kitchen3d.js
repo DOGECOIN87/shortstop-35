@@ -2057,7 +2057,7 @@ function cafeTable(M, p, x, z) {
   B(g, M.blackPaint, 0.42, 0.025, 0.42, 0, 0, 0);
   C(g, M.blackPaint, 0.035, 0.035, 0.72, 0, 0.025, 0, 12);
   B(g, M.blackPaint, 0.36, 0.03, 0.36, 0, 0.705, 0);
-  B(g, M.woodPanel, 0.5, 0.03, 0.6, 0, 0.735, 0);
+  B(g, M.woodPanel, 0.6, 0.03, 0.5, 0, 0.735, 0);
   return g;
 }
 // Red powder-coated steel cafe chair (four splayed legs, ribbed back), facing +z.
@@ -2537,8 +2537,8 @@ function buildKitchen(M, X) {
   for (let k = 0; k < 4; k++) {
     const tx = 0.6 + k * 1.4, tz = 4.6;
     cafeTable(M, se, tx, tz);
-    redChair(M, se, tx - 0.43, tz, Math.PI / 2 + (k % 2 ? 0.06 : -0.05));
-    redChair(M, se, tx + 0.43, tz, -Math.PI / 2 + (k % 2 ? -0.08 : 0.04));
+    redChair(M, se, tx, tz - 0.42, k % 2 ? 0.06 : -0.05);
+    redChair(M, se, tx, tz + 0.42, Math.PI + (k % 2 ? -0.08 : 0.04));
   }
   reg('seating', se, { face: [0, 0, -1] }); shadowsFor.push([se, 0.02]);
   const co = checkoutCounter(M, P, r, 3.6); put(main, co, -5.85, 4.2, Math.PI / 2); reg('checkout', co, { face: [1, 0, 0] }); shadowsFor.push([co, 0.03]);
