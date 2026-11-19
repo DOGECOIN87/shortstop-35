@@ -91,7 +91,7 @@ const ITEMS = {
   bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee brewers, fountain and frozen drinks along the back wall'], size: 'About 32 ft long' },
   hotfood: { zone: 'store', name: 'Hot food island', lines: ['Self-serve hot case, roller grill and condiments'], size: 'Island' },
   coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front-right corner, at the end of the aisle along the windows: its door sits between glass cooler doors'], size: '17 doors' },
-  seating: { zone: 'store', name: 'Window seating', lines: ['Four two-person tables along the front windows, red metal chairs', 'Between the skill-game machines'], size: '8 seats' },
+  seating: { zone: 'store', name: 'Seating', lines: ['Window counter with stools between the skill-game machines', 'Four two-person tables with red metal chairs just inside'], size: '13 seats' },
   restrooms: { zone: 'store', name: 'Restrooms', lines: ["Men's and women's restrooms off the side hallway"], size: '2 rooms' },
   entrance: { zone: 'store', name: 'Front entrance', lines: ['Double glass doors facing the fuel islands'], size: '6 ft' },
   doorway: { zone: 'doors', name: 'Doorway to the back room', lines: ['From the kitchen straight into prep, wash-up and the walk-ins'], size: '36 in' },
@@ -2026,26 +2026,26 @@ function skillScreen(accent, seed) {
   SKILL_SCREEN_CACHE[key] = t; return t;
 }
 function skillMachine(M, accentHex, seed) {
-  const g = new THREE.Group(), W = 0.7, D = 0.62, accent = '#' + accentHex.toString(16).padStart(6, '0');
+  const g = new THREE.Group(), W = 0.7, D = 0.46, accent = '#' + accentHex.toString(16).padStart(6, '0');
   const led = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: accentHex, emissiveIntensity: 2.6 });
   // base pedestal and LED underglow
-  B(g, M.blackGloss, W - 0.08, 0.66, D - 0.14, 0, 0, -0.02);
-  B(g, led, W - 0.1, 0.02, 0.012, 0, 0.66, D / 2 - 0.085);
+  B(g, M.blackGloss, W - 0.08, 0.66, D - 0.08, 0, 0, -0.02);
+  B(g, led, W - 0.1, 0.02, 0.012, 0, 0.66, D / 2 - 0.055);
   // console: ticket printer and bill acceptor, then a sloped button deck with a cup holder
   B(g, M.blackGloss, W, 0.24, D, 0, 0.66, 0);
   B(g, M.darkGlass, 0.16, 0.06, 0.004, -0.17, 0.8, D / 2 + 0.002);
   B(g, M.hdpe, 0.1, 0.08, 0.004, 0.03, 0.78, D / 2 + 0.002);
   B(g, M.blackPaint, 0.09, 0.025, 0.006, 0.2, 0.81, D / 2 + 0.003);
   B(g, led, 0.06, 0.02, 0.006, 0.2, 0.76, D / 2 + 0.003);
-  const deck = new THREE.Group(); deck.position.set(0, 0.9, D / 2 - 0.08); deck.rotation.x = 0.28; g.add(deck);
-  B(deck, M.black, W + 0.04, 0.03, 0.26, 0, 0, 0.06);
-  B(deck, led, W + 0.04, 0.012, 0.012, 0, 0.012, 0.19);
-  for (const bx of [-0.2, 0.2]) { C(deck, M.chrome, 0.035, 0.035, 0.012, bx, 0.03, 0.05, 20); C(deck, M.red, 0.026, 0.026, 0.016, bx, 0.035, 0.05, 20); }
-  C(deck, M.steelDark, 0.045, 0.04, 0.02, 0, 0.022, 0.05, 20);
+  const deck = new THREE.Group(); deck.position.set(0, 0.9, D / 2 - 0.1); deck.rotation.x = 0.28; g.add(deck);
+  B(deck, M.black, W + 0.02, 0.03, 0.17, 0, 0, 0.035);
+  B(deck, led, W + 0.02, 0.012, 0.012, 0, 0.012, 0.115);
+  for (const bx of [-0.2, 0.2]) { C(deck, M.chrome, 0.033, 0.033, 0.012, bx, 0.03, 0.03, 20); C(deck, M.red, 0.024, 0.024, 0.016, bx, 0.035, 0.03, 20); }
+  C(deck, M.steelDark, 0.042, 0.038, 0.02, 0, 0.022, 0.03, 20);
   // screen tower with LED surround
-  B(g, M.blackGloss, W - 0.04, 1.12, 0.14, 0, 0.92, -D / 2 + 0.1);
-  screen(g, skillScreen(accent, seed), 0.56, 1.0, 0, 0.92 + 0.56, -D / 2 + 0.172);
-  for (const [w, h, x, y] of [[0.62, 0.016, 0, 0.94], [0.62, 0.016, 0, 2.02], [0.016, 1.08, -0.31, 0.94], [0.016, 1.08, 0.31, 0.94]]) B(g, led, w, h, 0.012, x, y, -D / 2 + 0.174);
+  B(g, M.blackGloss, W - 0.04, 1.12, 0.12, 0, 0.92, -D / 2 + 0.07);
+  screen(g, skillScreen(accent, seed), 0.56, 1.0, 0, 0.92 + 0.56, -D / 2 + 0.132);
+  for (const [w, h, x, y] of [[0.62, 0.016, 0, 0.94], [0.62, 0.016, 0, 2.02], [0.016, 1.08, -0.31, 0.94], [0.016, 1.08, 0.31, 0.94]]) B(g, led, w, h, 0.012, x, y, -D / 2 + 0.134);
   // small labels under the screen (18+, take ticket)
   screen(g, signTexture(['18+'], { w: 128, h: 128, bg: '#ffffff', fg: '#c4261c', size: 64 }), 0.06, 0.06, 0.14, 0.87, D / 2 + 0.004);
   screen(g, signTexture(['TAKE', 'TICKET'], { w: 128, h: 128, bg: '#1a1a1a', fg: '#ffffff', size: 34, print: false }), 0.07, 0.07, -0.17, 0.87, D / 2 + 0.004);
@@ -2521,25 +2521,21 @@ function buildKitchen(M, X) {
   for (const [gz, L, gx] of [[pz(12.5), 2.4, px(56)], [pz(19), 4.57, px(58.5)], [pz(25.5), 4.57, px(58.5)], [pz(32), 4.57, px(58.5)]]) {
     const gd = gondola(M, P, r, L); put(main, gd, gx, gz); shadowsFor.push([gd, 0.03]);
   }
-  for (const kx2 of [px(52), px(55)]) { const k = kiosk(M); put(main, k, kx2, pz(39.5)); shadowsFor.push([k, 0.03]); }
-  {
-    const tx = px(47), tz = pz(38.5);
-    B(main, M.woodPanel, 1.8, 0.86, 0.8, tx, 0, tz); B(main, M.quartz, 1.84, 0.04, 0.84, tx, 0.86, tz);
-    fillRun(P, main, r, 'x', tx - 0.85, tx + 0.85, 0.9, tz, 0.6, 0.25, SNACKS);
-  }
+  for (const kx2 of [-4.25, -3.45]) { const k = kiosk(M); put(main, k, kx2, 2.75); shadowsFor.push([k, 0.03]); }
   // along the front windows, door to beer cave: two skill-game machines, the window table,
   // two more machines near the beer cave (each with a chair)
   {
-    const xd = px(43.5), z = Z1 - 0.42;
+    const xd = px(43.5), z = Z1 - 0.34;
     const sx = [xd + 0.47, xd + 1.23, xd + 7.64, xd + 8.4], acc = [0x2f7bff, 0x22e07a, 0xb04dff, 0xff3a2a];
     sx.forEach((x, i) => {
       const m = skillMachine(M, acc[i], 31 + i * 7); put(main, m, x, z, Math.PI); shadowsFor.push([m, 0.03]);
-      officeChair(M, main, x + (i % 2 ? 0.05 : -0.06), Z1 - 1.32, Math.PI + (i % 2 ? 0.25 : -0.18));
+      officeChair(M, main, x + (i % 2 ? 0.05 : -0.06), Z1 - 1.1, i % 2 ? 0.22 : -0.16);
     });
   }
   const se = new THREE.Group(); main.add(se);
+  put(se, seatingCounter(M, 3.6, 5), px(43.5) + 4.435, Z1 - 0.05, Math.PI);
   for (let k = 0; k < 4; k++) {
-    const tx = px(43.5) + 2.5 + k * 1.29, tz = Z1 - 0.4;
+    const tx = 0.6 + k * 1.4, tz = 4.6;
     cafeTable(M, se, tx, tz);
     redChair(M, se, tx - 0.43, tz, Math.PI / 2 + (k % 2 ? 0.06 : -0.05));
     redChair(M, se, tx + 0.43, tz, -Math.PI / 2 + (k % 2 ? -0.08 : 0.04));

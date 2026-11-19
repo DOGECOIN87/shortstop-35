@@ -59,9 +59,11 @@ the building was built to (about 93 x 50 ft, storefront on the south):
   window aisle straight to it; its walk-in door sits between glass cooler
   doors, two on each side, under the BEER CAVE sign (owner).
 - along the front windows from the doors to the beer cave (owner): two
-  skill-game machines side by side near the doors, four two-person tables
-  against the glass with a red metal chair at each end, then two more
-  machines near the beer cave, each machine with an office chair. The screens are generic ("SKILL GAMES", prize panels, game tiles);
+  skill-game machines side by side near the doors, the window counter with
+  stools, then two more machines near the beer cave; each machine has an
+  office chair facing it. Just inside, a row of four two-person tables with
+  a red metal chair at each end (owner; placement in the store is a guess).
+  The self-checkouts stand beside the main checkout. The screens are generic ("SKILL GAMES", prize panels, game tiles);
   no game or maker names. No crypto ATM (owner).
 
 Owner-confirmed (standing at the front doors, looking in): kitchen and its
