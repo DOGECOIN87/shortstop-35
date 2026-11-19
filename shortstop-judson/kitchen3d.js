@@ -48,8 +48,11 @@ const VAULT_X = px(72.6);
 // right, all the way to the wall, is the beer cave and its door). Its glass door is on the side
 // facing the entrance, near the front, at the end of the aisle along the windows; three glass
 // reach-in doors sit beside it on the same face. door and reach are z ranges on x = VAULT_X.
-const CAVE = { x0: VAULT_X, x1: X1, z0: pz(35), z1: Z1, door: [Z1 - 1.95, Z1 - 1.0] };
-CAVE.reach = [CAVE.door[0] - 0.1 - 3 * 0.76, CAVE.door[0] - 0.1];
+const CAVE = { x0: VAULT_X, x1: X1, z0: pz(35), z1: Z1 };
+// owner: the walk-in door sits between glass cooler doors, two on each side
+CAVE.reachN = [CAVE.z0 + 0.12, CAVE.z0 + 0.12 + 2 * 0.76];
+CAVE.door = [CAVE.reachN[1] + 0.08, CAVE.reachN[1] + 1.03];
+CAVE.reachS = [CAVE.door[1] + 0.08, CAVE.door[1] + 0.08 + 2 * 0.76];
 // Light fixtures (shared by the geometry and the lights): pendant strip rows over the sales
 // floor, 2 x 4 lay-in troffers in the back of house, restrooms and hallway.
 const PENDANT_ROWS = [9, 17, 25, 33, 41].map((f) => {
@@ -87,8 +90,8 @@ const ITEMS = {
   checkout: { zone: 'store', name: 'Store checkout', lines: ['Registers, with a tobacco and lottery back bar', 'Beside the restaurant counter, near the front doors'], size: '12 ft counter' },
   bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee brewers, fountain and frozen drinks along the back wall'], size: 'About 32 ft long' },
   hotfood: { zone: 'store', name: 'Hot food island', lines: ['Self-serve hot case, roller grill and condiments'], size: 'Island' },
-  coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front-right corner: its door is at the end of the aisle along the windows, with three more glass doors beside it'], size: '16 doors' },
-  seating: { zone: 'store', name: 'Window seating', lines: ['Counter seating with stools along the front windows'], size: '5 seats' },
+  coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front-right corner, at the end of the aisle along the windows: its door sits between glass cooler doors'], size: '17 doors' },
+  seating: { zone: 'store', name: 'Window seating', lines: ['Four two-person tables along the front windows, red metal chairs', 'Between the skill-game machines'], size: '8 seats' },
   restrooms: { zone: 'store', name: 'Restrooms', lines: ["Men's and women's restrooms off the side hallway"], size: '2 rooms' },
   entrance: { zone: 'store', name: 'Front entrance', lines: ['Double glass doors facing the fuel islands'], size: '6 ft' },
   doorway: { zone: 'doors', name: 'Doorway to the back room', lines: ['From the kitchen straight into prep, wash-up and the walk-ins'], size: '36 in' },
@@ -903,6 +906,7 @@ function makeMaterials(X) {
   M.towel = std({ color: 0xf1efe8, roughness: 0.95 });
   M.car = [0x1d3557, 0xb9bec2, 0x7d1d1d, 0x2b2d30].map((c) => phys({ color: c, metalness: 0.55, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.06 }));
   M.tire = std({ color: 0x18191a, roughness: 0.85 });
+  M.redMetal = phys({ color: 0xb3221a, metalness: 0.55, roughness: 0.32, clearcoat: 0.6, clearcoatRoughness: 0.2 });
   for (const m of [M.steel, M.steelV, M.steelDark, M.steelIn, M.chrome, M.alum]) METALS.add(m);
   // Floors: the captured environment would otherwise mirror the bright store evenly across the
   // floor, and reflections ignore shadows; keep them as a soft sheen so cast shadows read.
@@ -2047,6 +2051,31 @@ function skillMachine(M, accentHex, seed) {
   screen(g, signTexture(['TAKE', 'TICKET'], { w: 128, h: 128, bg: '#1a1a1a', fg: '#ffffff', size: 34, print: false }), 0.07, 0.07, -0.17, 0.87, D / 2 + 0.004);
   return g;
 }
+// Two-person cafe table: wood-look top on a black pedestal.
+function cafeTable(M, p, x, z) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); p.add(g);
+  B(g, M.blackPaint, 0.42, 0.025, 0.42, 0, 0, 0);
+  C(g, M.blackPaint, 0.035, 0.035, 0.72, 0, 0.025, 0, 12);
+  B(g, M.blackPaint, 0.36, 0.03, 0.36, 0, 0.705, 0);
+  B(g, M.woodPanel, 0.5, 0.03, 0.6, 0, 0.735, 0);
+  return g;
+}
+// Red powder-coated steel cafe chair (four splayed legs, ribbed back), facing +z.
+function redChair(M, p, x, z, ry) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; p.add(g);
+  const red = M.redMetal;
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+    const leg = addMesh(g, new THREE.CylinderGeometry(0.011, 0.013, 0.46, 8), red, sx * 0.18, 0.23, sz * 0.18, sz * 0.07, 0, -sx * 0.07);
+    leg.castShadow = true;
+  }
+  for (const [w, d, zz] of [[0.34, 0.012, 0.15], [0.34, 0.012, -0.15]]) B(g, red, w, 0.012, d, 0, 0.17, zz);
+  B(g, red, 0.4, 0.025, 0.4, 0, 0.44, 0);
+  B(g, red, 0.4, 0.035, 0.012, 0, 0.43, 0.2);
+  const back = new THREE.Group(); back.position.set(0, 0.46, -0.19); back.rotation.x = -0.1; g.add(back);
+  for (const sx of [-1, 1]) B(back, red, 0.02, 0.4, 0.02, sx * 0.18, 0, 0);
+  for (let i = 0; i < 3; i++) B(back, red, 0.36, 0.05, 0.012, 0, 0.18 + i * 0.075, 0);
+  return g;
+}
 // Black mesh office chair on a five-star base.
 function officeChair(M, p, x, z, ry) {
   const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; p.add(g);
@@ -2317,7 +2346,7 @@ function buildKitchen(M, X) {
   // east side: cooler vault behind the main run of doors, utility room behind it; the beer cave
   // is a walk-in box in the front-right corner, entered from the aisle along the windows
   iwall('x', CAVE.z0, CAVE.x0, X1, [], 2.75, M.walkin, null);
-  iwall('z', CAVE.x0, CAVE.z0, Z1, [{ a: CAVE.reach[0], b: CAVE.reach[1], y0: 0, y1: 2.36 }, { a: CAVE.door[0], b: CAVE.door[1], y0: 0, y1: 2.13 }], 2.75, M.walkin, null);
+  iwall('z', CAVE.x0, CAVE.z0, Z1, [{ a: CAVE.reachN[0], b: CAVE.reachN[1], y0: 0, y1: 2.36 }, { a: CAVE.door[0], b: CAVE.door[1], y0: 0, y1: 2.13 }, { a: CAVE.reachS[0], b: CAVE.reachS[1], y0: 0, y1: 2.36 }], 2.75, M.walkin, null);
   iwall('z', px(80), Z0, CAVE.z0, [{ a: pz(30), b: pz(33), y0: 0, y1: 2.13 }], H_DECK);
   worldBox(main, M.blackPaint, VAULT_X - 0.02, VAULT_X + 0.12, 2.36, 2.75, Z0, CAVE.z0).castShadow = false;
   worldBox(main, M.walkin, VAULT_X - 0.02, VAULT_X + 0.1, 0, 2.36, pz(1.5) + COOLER_RUN.len + 0.04, CAVE.z0 - IW / 2, 0.6).castShadow = false;
@@ -2502,18 +2531,25 @@ function buildKitchen(M, X) {
   // two more machines near the beer cave (each with a chair)
   {
     const xd = px(43.5), z = Z1 - 0.42;
-    const sx = [xd + 1.23, xd + 2.03, xd + 6.47, xd + 7.27], acc = [0x2f7bff, 0x22e07a, 0xb04dff, 0xff3a2a];
+    const sx = [xd + 0.47, xd + 1.23, xd + 7.64, xd + 8.4], acc = [0x2f7bff, 0x22e07a, 0xb04dff, 0xff3a2a];
     sx.forEach((x, i) => {
       const m = skillMachine(M, acc[i], 31 + i * 7); put(main, m, x, z, Math.PI); shadowsFor.push([m, 0.03]);
       officeChair(M, main, x + (i % 2 ? 0.05 : -0.06), Z1 - 1.32, Math.PI + (i % 2 ? 0.25 : -0.18));
     });
   }
-  const se = seatingCounter(M, 3.0, 5); put(main, se, px(43.5) + 4.25, Z1 - 0.05, Math.PI); reg('seating', se, { face: [0, 0, -1] });
+  const se = new THREE.Group(); main.add(se);
+  for (let k = 0; k < 4; k++) {
+    const tx = px(43.5) + 2.5 + k * 1.29, tz = Z1 - 0.4;
+    cafeTable(M, se, tx, tz);
+    redChair(M, se, tx - 0.43, tz, Math.PI / 2 + (k % 2 ? 0.06 : -0.05));
+    redChair(M, se, tx + 0.43, tz, -Math.PI / 2 + (k % 2 ? -0.08 : 0.04));
+  }
+  reg('seating', se, { face: [0, 0, -1] }); shadowsFor.push([se, 0.02]);
   const co = checkoutCounter(M, P, r, 3.6); put(main, co, -5.85, 4.2, Math.PI / 2); reg('checkout', co, { face: [1, 0, 0] }); shadowsFor.push([co, 0.03]);
   const bbk = backBar(M, 3.8); put(main, bbk, px(19) + IW / 2, 4.2, Math.PI / 2); shadowsFor.push([bbk, 0.02]);
   B(main, M.paintGrey, 0.6, 1.55, 0.5, px(34.5), 0, Z1 - 0.4);
   screen(main, screenTexture(96, 64, (c) => { c.fillStyle = '#0e1a1c'; c.fillRect(0, 0, 96, 64); c.fillStyle = '#3bb3a0'; c.font = 'bold 18px Arial'; c.fillText('ATM', 30, 38); }), 0.3, 0.2, px(34.5), 1.2, Z1 - 0.651, Math.PI);
-  trashCan(M, px(43.5) + 0.36, Z1 - 0.52, M.greyPlastic, main);
+  trashCan(M, px(32.6), Z1 - 0.5, M.greyPlastic, main);
   basketStack(M, main, px(36.3), Z1 - 0.55, -0.15);
 
   // cold vault: main run of doors along the east wall
@@ -2529,14 +2565,14 @@ function buildKitchen(M, X) {
     worldBox(main, M.coolerFrame, xf - 0.08, xf + 0.04, 2.12, 2.2, a, b);
     worldBox(main, M.glass, xf - 0.02, xf, 0.05, 2.1, a + 0.06, b - 0.06).castShadow = false;
     B(main, M.chrome, 0.03, 0.6, 0.03, xf - 0.05, 0.8, a + 0.16);
-    screen(main, signTexture(['BEER CAVE'], { w: 512, h: 128, bg: '#16302f', fg: '#eebe54', size: 70 }), 1.5, 0.34, xf - 0.065, 2.555, (CAVE.reach[0] + b) / 2, -Math.PI / 2);
-    const cv1 = coolerRun(M, P, r, 3); put(main, cv1, CAVE.x0, (CAVE.reach[0] + CAVE.reach[1]) / 2, -Math.PI / 2);
+    screen(main, signTexture(['BEER CAVE'], { w: 512, h: 128, bg: '#16302f', fg: '#eebe54', size: 70 }), 1.5, 0.34, xf - 0.065, 2.555, (a + b) / 2, -Math.PI / 2);
+    for (const run of [CAVE.reachN, CAVE.reachS]) { const cv = coolerRun(M, P, r, 2); put(main, cv, CAVE.x0, (run[0] + run[1]) / 2, -Math.PI / 2); }
   }
   // behind the doors: cases in the vault, pallets in the beer cave
   for (let zc = pz(2.5); zc < pz(33); zc += 0.6) for (let k = 0; k < 3; k++) P.add('case', main, VAULT_X + 1.3 + (k % 2) * 0.5, k * 0.3, zc, 0.42, 0.28, 0.5, Math.floor(r() * 16));
   for (let xi = 0; xi < 5; xi++) for (let zi = 0; zi < 3; zi++) {
     const bx = CAVE.x0 + 1.45 + xi * 1.05, bz = CAVE.z0 + 0.85 + zi * 1.25;
-    if (xi === 0 && zi === 2) continue;   // keep the way in from the door clear
+    if (xi === 0 && zi === 1) continue;   // keep the way in from the door clear
     B(main, M.wood, 1.0, 0.13, 1.2, bx, 0, bz);
     const c = Math.floor(r() * 16);
     for (let h2 = 0; h2 < 4; h2++) for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) P.add('case', main, bx - 0.24 + i * 0.48, 0.13 + h2 * 0.26, bz - 0.4 + j * 0.4, 0.46, 0.25, 0.38, c, (j % 2) * Math.PI);
@@ -3026,7 +3062,7 @@ async function create(host) {
   } else TROFFERS.forEach(([x, z], i) => pt(COOL, i < 5 ? 2.5 : 8, 7, x, H_ACT - 0.3, z));
   // the glow of the cooler doors spilling onto the floor in front of them
   rect(0xe6f1ff, 0.7, COOLER_RUN.len - 0.2, 1.8, VAULT_X - 0.12, 1.15, COOLER_RUN.z, 'west');
-  if (!mobile) pt(0xe6f1ff, 1.2, 4, CAVE.x0 - 0.5, 1.2, (CAVE.reach[0] + CAVE.reach[1]) / 2);
+  if (!mobile) pt(0xe6f1ff, 1.4, 5, CAVE.x0 - 0.5, 1.2, (CAVE.door[0] + CAVE.door[1]) / 2);
   pt(0xeef4ff, 4, 8, (CAVE.x0 + CAVE.x1) / 2, 2.45, (CAVE.z0 + CAVE.z1) / 2);
   { const pl = new THREE.PointLight(0xf2f6ff, 2.2, 3.4, 1.5); pl.position.set((WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, (WALKIN.split + WALKIN.z1) / 2); scene.add(pl); }
 
