@@ -237,7 +237,7 @@
   .field label small{font-weight:500;color:var(--muted)}
   .field input,.field select,.field textarea{font:inherit;font-size:16px;color:var(--ink);background:var(--steel-3);border:1px solid var(--field-line);border-radius:10px;padding:12px 13px;width:100%;min-width:0}
   .field textarea{min-height:110px;resize:vertical}
-  .field input:focus,.field select:focus,.field textarea:focus,.field input:focus-within{outline:none;border-color:var(--ink);background:#fff;box-shadow:0 0 0 1px var(--ink),0 0 0 5px rgba(238,190,84,.55)}
+  .field input:focus,.field select:focus,.field textarea:focus,.field input:focus-within{outline:2px solid var(--ink);outline-offset:0;border-color:var(--ink);background:#fff;box-shadow:0 0 0 5px rgba(238,190,84,.55)}
   .form-foot{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between}
   .form-foot p{font-size:13px;color:var(--muted);max-width:360px}
   .form-msg{grid-column:1/-1;font-size:15px;border-radius:10px;padding:12px 14px;background:#fff6e5;border:1px solid #f3d395}
@@ -312,6 +312,11 @@
     .info-row a{text-decoration:none}
     .foot a[href="#top"]{display:none}
   }
+  /* Windows High Contrast and other forced colours: drop the decorative "$" (it would print as a
+     big black glyph over the button) and keep the green "leasing" dot */
+  @media (forced-colors:active){.value-tour::before{display:none}.eyebrow i{forced-color-adjust:none}}
+  /* if a logo fails to load, its alt text stays inside the badge instead of spilling out */
+  .brand-logo,.sticker,.info-head img,.foot-brand img{font-size:10px;line-height:1.1;overflow:hidden}
   [hidden]{display:none !important}
 </style>
 </head>
@@ -863,6 +868,23 @@ const LISTING = {
   }));
   const hashView = /^#3d(?:-(\w+))?$/.exec(location.hash);
   if (hashView) open3d(hashView[1] || "overview", null);
+
+  // Headings and FAQ questions never end on one short word (for browsers without text-wrap:balance):
+  // the last two words are held together when they are short enough to fit any screen.
+  $$("h1,h2,h3,summary").forEach((h) => {
+    const t = [...h.childNodes].reverse().find((n) => n.nodeType === 3 && n.textContent.trim());
+    const m = t && /(\S+) (\S+)\s*$/.exec(t.textContent);
+    if (m && (m[1] + m[2]).length <= 16) t.textContent = t.textContent.slice(0, m.index) + m[1] + " " + m[2] + t.textContent.slice(m.index + m[0].length);
+  });
+
+  // Keyboard focus never hides behind the phone action bar (some browsers ignore scroll-padding
+  // when focus moves).
+  const mbar = document.querySelector(".mbar");
+  document.addEventListener("focusin", (e) => requestAnimationFrame(() => {
+    if (!mbar || mbar.contains(e.target) || getComputedStyle(mbar).display === "none" || getComputedStyle(mbar).visibility === "hidden") return;
+    const r = e.target.getBoundingClientRect(), top = mbar.getBoundingClientRect().top;
+    if (r.bottom > top - 8 && r.top < innerHeight) scrollBy(0, r.bottom - top + 16);
+  }));
 
   // Print every FAQ answer: open the closed ones for printing, then close them again.
   let printOpened = [];
