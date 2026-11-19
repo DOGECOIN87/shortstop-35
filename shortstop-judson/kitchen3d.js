@@ -15,6 +15,7 @@ import { RenderPass } from './vendor/jsm/postprocessing/RenderPass.js';
 import { OutputPass } from './vendor/jsm/postprocessing/OutputPass.js';
 import { UnrealBloomPass } from './vendor/jsm/postprocessing/UnrealBloomPass.js';
 import { GTAOPass } from './vendor/jsm/postprocessing/GTAOPass.js';
+import { RectAreaLightUniformsLib } from './vendor/jsm/lights/RectAreaLightUniformsLib.js';
 
 const IN = 0.0254, FT = 0.3048;
 // The whole store, laid out like a current-generation ~4,650 sq ft convenience
@@ -43,6 +44,14 @@ const BOH = { x0: X0, x1: px(19) - IW / 2, z0: pz(20.5) + IW / 2, z1: Z1 };
 const WALKIN = { x0: X0, x1: X0 + 2.83, z0: BOH.z0, z1: BOH.z0 + 3.08, h: 2.4, t: 0.1 };
 WALKIN.split = WALKIN.z0 + 1.5;
 const VAULT_X = px(72.6);
+// Light fixtures (shared by the geometry and the lights): pendant strip rows over the sales
+// floor, 2 x 4 lay-in troffers in the back of house, restrooms and hallway.
+const PENDANT_ROWS = [9, 17, 25, 33, 41].map((f) => {
+  const xs = []; for (let x = f > 30 ? px(24.5) : px(33); x < px(70); x += 3.3) xs.push(x);
+  return { z: pz(f), xs, x0: xs[0] - 1.2, x1: xs[xs.length - 1] + 1.2 };
+});
+const TROFFERS = [[px(5), pz(36)], [px(13), pz(36)], [px(5), pz(46)], [px(14.5), pz(47)], [px(14), pz(28)], [px(4.7), pz(13)], [px(14.2), pz(13)], [px(9), pz(2.7)], [px(23), pz(3)]];
+const COOLER_RUN = { n: 13, len: 13 * 0.76, z: pz(1.5) + 13 * 0.76 / 2 };
 
 const ZONES = { kitchen: 'Kitchen', counter: 'Restaurant counter', back: 'Back room', store: 'The store', doors: 'Doors' };
 const ITEMS = {
@@ -92,7 +101,35 @@ const VIEWS = {
 
 // Quality tier: high (desktop) gets physical materials, rounded edges, full-size
 // procedural textures, ambient occlusion and 4x MSAA; low (phones) keeps it light.
+// Value tour: what each piece would cost bought new. Typical figures from public dealer listings
+// and installer cost guides (2025-26); estimates for comparison, not quotes, and not an
+// appraisal of the equipment in this kitchen. The README lists the sources.
+const TOUR = [
+  { id: 'hood', cam: [[KW + 1.15, 1.5, KZC + 3.0], [KW + 0.55, 1.95, KZC - 1.2]], title: 'Exhaust hood system', price: 40000, range: [25000, 60000], basis: 'About 12 ft of hood with fans, duct and make-up air, installed. Installers quote roughly $950 to $2,800 a foot, plus $8,000 to $25,000 for make-up air.' },
+  { id: 'suppression', cam: [[KW + 2.2, 1.42, KZC + 0.6], [KW + 0.3, 1.9, KZC - 3.0]], title: 'Fire suppression system', price: 6500, range: [4000, 10000], basis: 'Wet-chemical system over the cook line, installed.' },
+  { id: 'griddle', title: '36 in flattop griddle', price: 3500, range: [2200, 5000], basis: 'Commercial 36 to 48 in griddles. The refrigerated base under it is not counted.' },
+  { id: 'range', title: '24 in four-burner range top', price: 1800, range: [850, 2600], basis: 'Dealer listings for 24 in, four-burner gas hot plates.' },
+  { id: 'fryers', title: 'Two 40 lb fryers', price: 4850, basis: 'Two at about $2,425 each, from a dealer listing for a new 40 lb gas fryer.' },
+  { id: 'hotcab', title: 'Heated holding cabinet', price: 2400, range: [1300, 3400], basis: 'Full-size insulated holding cabinets with a glass door.' },
+  { id: 'handsink1', title: 'Hand sinks (2)', price: 600, range: [250, 800], basis: 'Wall-mount commercial hand sinks run about $125 to $415 each.' },
+  { id: 'counter', title: 'Heated display at the counter', price: 4500, basis: 'One 45 in heated glass display case at dealer price. The 21 ft serving counter itself is not counted.' },
+  { id: 'ovens', title: 'Two rapid-cook ovens', price: 16400, range: [16200, 46500], basis: 'Two entry-level high-speed ovens at about $8,100 to $8,300 each. Larger models list at $17,000 to $23,000 each.' },
+  { id: 'prep', title: '72 in refrigerated prep table', price: 5400, range: [2400, 9300], basis: 'Dealer listings for 72 in sandwich and salad prep tables.' },
+  { id: 'dough', title: 'Mixer and tortilla press', price: 3700, range: [2500, 12800], basis: 'A 20 qt planetary mixer ($840 to $3,900) and a heated tortilla press ($1,700 to $8,900).' },
+  { id: 'sink3', title: '3-compartment sink', price: 1500, range: [530, 1930], basis: 'Dealer listings for 90 in sinks with two drainboards.' },
+  { id: 'ice', title: 'Ice machine and bin', price: 6200, range: [3000, 10200], basis: 'Cube ice machines on a 500 lb storage bin.' },
+  { id: 'cooler', title: 'Walk-in cooler and freezer', price: 35000, range: [30000, 50000], basis: 'Combination boxes list at $25,600 to $30,300 before installation. Installed walk-in coolers run $12,000 to $25,000; freezers 20 to 30% more.' },
+  { id: 'reachin', title: 'Two-door reach-in freezer', price: 3500, range: [2200, 3900], basis: 'Dealer listings for 54 in two-section freezers.' },
+  { id: 'dry', title: 'Storage shelving', price: 500, range: [300, 550], basis: 'NSF wire shelving units at about $160 to $270 each.' }
+];
+const TOUR_TOTAL = TOUR.reduce((a, q) => a + q.price, 0);
+
 let HQ = true;
+// The environment map is captured from inside the lit store. Used at full strength as diffuse
+// light it flattens everything into an even glow, so only a share of it is kept as bounce
+// light; reflections (the specular part) stay at full strength.
+const IBL_DIFFUSE = 0.35;
+THREE.ShaderChunk.lights_fragment_maps = THREE.ShaderChunk.lights_fragment_maps.replace('iblIrradiance += getIBLIrradiance( geometryNormal );', `iblIrradiance += ${IBL_DIFFUSE.toFixed(3)} * getIBLIrradiance( geometryNormal );`);
 const METALS = new Set();
 
 /* ------------------------------------------------------------------ utils */
@@ -475,6 +512,69 @@ function makeTextures(aniso) {
     g.fillStyle = '#2a1d12'; g.font = `bold ${Math.round(t * 0.1)}px Arial, sans-serif`; g.fillText(['24 CT', '12 PK', '18 PK', '6 PK'][i % 4], t / 2, t * 0.6);
     g.fillStyle = 'rgba(80,50,20,.35)'; g.fillRect(0, t * 0.48, t, 2);
   });
+  // Asphalt for the lot out front: dark binder, light aggregate, worn patches.
+  {
+    const S = Math.round(512 * TS), na = makeNoise(131);
+    const m = pbrMaps(S, S, (x, y, o) => {
+      const f = fbm(na, x / S * 10, y / S * 10, 10, 10, 4), sp = hash2(x * 3 + 1, y * 7 + 2);
+      const v = 66 + (f - 0.5) * 30 + (sp < 0.05 ? 36 : sp > 0.97 ? -16 : 0);
+      o.r = v; o.g = v; o.b = v + 3; o.h = f; o.ro = 0.86 + (f - 0.5) * 0.14;
+    });
+    X.asphalt = T(m.color, true); X.asphaltR = T(m.rough, false);
+  }
+  // Shelf-edge price tag, order tickets, the kitchen clock face.
+  {
+    const c = canvas(128, 80), g = c.getContext('2d');
+    g.fillStyle = '#fbfbf6'; g.fillRect(0, 0, 128, 80);
+    g.fillStyle = '#f2c230'; g.fillRect(0, 0, 128, 18);
+    g.fillStyle = '#1a1a1a'; g.font = 'bold 30px Arial'; g.textAlign = 'right'; g.fillText('$', 120, 58);
+    g.fillRect(70, 34, 22, 6); g.fillRect(70, 48, 22, 6);
+    for (let i = 0; i < 22; i++) g.fillRect(8 + i * 2.2, 54, i % 3 ? 1 : 1.6, 18);
+    g.fillRect(8, 28, 44, 5); g.fillRect(8, 38, 30, 5);
+    X.tag = T(c, true); X.tag.wrapS = X.tag.wrapT = THREE.ClampToEdgeWrapping;
+    const k = canvas(64, 112), q = k.getContext('2d'), rr = rng(9);
+    q.fillStyle = '#fbfaf4'; q.fillRect(0, 0, 64, 112); q.fillStyle = '#333';
+    q.fillRect(6, 6, 40, 6);
+    for (let i = 0; i < 9; i++) q.fillRect(6, 20 + i * 9, 18 + rr() * 34, 3);
+    q.fillStyle = '#c4261c'; q.fillRect(6, 102, 26, 4);
+    X.ticket = T(k, true); X.ticket.wrapS = X.ticket.wrapT = THREE.ClampToEdgeWrapping;
+    const cl = canvas(256, 256), h = cl.getContext('2d');
+    h.fillStyle = '#fdfdfb'; h.beginPath(); h.arc(128, 128, 124, 0, 6.3); h.fill();
+    h.strokeStyle = '#222'; h.lineCap = 'round';
+    for (let i = 0; i < 60; i++) { const a = i * Math.PI / 30, r0 = i % 5 ? 112 : 100; h.lineWidth = i % 5 ? 2 : 6; h.beginPath(); h.moveTo(128 + Math.cos(a) * r0, 128 + Math.sin(a) * r0); h.lineTo(128 + Math.cos(a) * 118, 128 + Math.sin(a) * 118); h.stroke(); }
+    const hand = (a, len, w, col) => { h.strokeStyle = col; h.lineWidth = w; h.beginPath(); h.moveTo(128, 128); h.lineTo(128 + Math.sin(a) * len, 128 - Math.cos(a) * len); h.stroke(); };
+    hand(-0.95, 62, 9, '#222'); hand(0.95, 92, 6, '#222'); hand(2.6, 100, 2, '#c4261c');
+    X.clock = T(cl, true); X.clock.wrapS = X.clock.wrapT = THREE.ClampToEdgeWrapping;
+  }
+  // Daylight sky seen through the storefront (equirectangular): blue overhead, haze at the
+  // horizon, soft clouds, and a distant tree line with a few low buildings.
+  {
+    const W = HQ ? 2048 : 1024, H = W / 2, hz = H / 2, c = canvas(W, H), g = c.getContext('2d'), r = rng(77);
+    const gr = g.createLinearGradient(0, 0, 0, hz);
+    gr.addColorStop(0, '#3b72b8'); gr.addColorStop(0.55, '#76a5d6'); gr.addColorStop(0.9, '#c9dceb'); gr.addColorStop(1, '#e2ebef');
+    g.fillStyle = gr; g.fillRect(0, 0, W, hz);
+    g.fillStyle = '#7f8278'; g.fillRect(0, hz, W, H - hz);
+    g.filter = `blur(${Math.round(W / 220)}px)`;
+    for (let i = 0; i < 46; i++) {
+      const cx = r() * W, cy = hz * (0.42 + r() * 0.48), s = W * (0.012 + r() * 0.03) * (0.6 + (cy / hz) * 0.6), a = 0.35 + r() * 0.45;
+      const puffs = []; for (let k = 0; k < 7; k++) puffs.push([(r() - 0.5) * s * 2.6, (r() - 0.5) * s * 0.35, s * (0.5 + r() * 0.6), s * (0.22 + r() * 0.16)]);
+      for (const dx of [-W, 0, W]) { g.fillStyle = `rgba(255,255,255,${a})`; for (const [px2, py2, rx, ry] of puffs) { g.beginPath(); g.ellipse(cx + dx + px2, cy + py2, rx, ry, 0, 0, 6.3); g.fill(); } }
+    }
+    g.filter = 'none';
+    const prof = (x) => { const u = x / W * Math.PI * 2; return 0.55 + 0.25 * Math.sin(u * 7 + 1) + 0.12 * Math.sin(u * 23 + 2) + 0.08 * Math.sin(u * 61 + 0.5); };
+    for (let k = 0; k < 9; k++) {
+      const bx = r() * W, bw = W * (0.015 + r() * 0.04), bh = H * (0.008 + r() * 0.016);
+      g.fillStyle = ['#a3a8aa', '#b6b2a6', '#9aa2a8'][k % 3]; g.fillRect(bx, hz - bh, bw, bh); g.fillRect(bx - W, hz - bh, bw, bh);
+    }
+    for (let x = 0; x < W; x += 1) {
+      const th = H * 0.006 + prof(x) * H * 0.016 + hash2(x, 3) * H * 0.004;
+      g.fillStyle = x % 7 < 4 ? '#55604e' : '#4c5847'; g.fillRect(x, hz - th, 1, th + 1);
+    }
+    const hzG = g.createLinearGradient(0, hz - H * 0.06, 0, hz);
+    hzG.addColorStop(0, 'rgba(226,235,239,0)'); hzG.addColorStop(1, 'rgba(226,235,239,.55)');
+    g.fillStyle = hzG; g.fillRect(0, hz - H * 0.06, W, H * 0.06);
+    X.sky = T(c, true); X.sky.wrapT = THREE.ClampToEdgeWrapping;
+  }
   return X;
 }
 
@@ -510,6 +610,109 @@ function signTexture(lines, { w = 512, h = 256, bg = '#fff', fg = '#1a1a1a', siz
 }
 
 /* -------------------------------------------------------------- materials */
+
+// What you see through the storefront: nose-in parking along the front walk, the drive
+// aisle, a fuel canopy over three islands, two parked cars, and the sky. Only shown when
+// the camera is inside the store or down at street level.
+function siteExterior(M, g) {
+  const yL = -0.12, curb = Z1 + 2.6;
+  const lot = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(BLD.w + 34, 36, 20, 12), (BLD.w + 34) / 5, 36 / 5), M.asphalt);
+  lot.rotation.x = -Math.PI / 2; lot.position.set(0, yL, curb + 18); g.add(lot);
+  const far = new THREE.Mesh(new THREE.CircleGeometry(76, 64), M.ground); far.rotation.x = -Math.PI / 2; far.position.y = yL - 0.02; g.add(far);
+  worldBox(g, M.concrete, X0 - EW, X1 + EW, yL, 0, curb - 0.15, curb, 1.5);
+  // stalls: white stripes and wheel stops, a hatched walkway in front of the doors
+  const door0 = px(36.5), door1 = px(44.5), stalls = [];
+  for (let x = px(19.5); x <= px(72.5); x += 2.74) {
+    if (x > door0 && x < door1) continue;
+    B(g, M.paintWhite, 0.1, 0.004, 5.3, x, yL, curb + 2.75);
+    const cx = x + 1.37;
+    if (cx < px(72) && !(cx > door0 && cx < door1)) { B(g, M.concrete, 1.8, 0.12, 0.16, cx, yL, curb + 0.75); stalls.push(cx); }
+  }
+  for (let x = door0 + 0.2; x < door1; x += 0.6) B(g, M.paintWhite, 0.32, 0.004, 5.3, x, yL, curb + 2.75);
+  B(g, M.paintWhite, 50, 0.004, 0.1, (px(19.5) + px(72.5)) / 2, yL, curb + 5.45);
+  // fuel canopy over three islands
+  const cz = curb + 17.5, CW = 25, CD = 10, cb = 4.9;
+  B(g, M.cladding, CW, 0.06, CD, 0, cb, cz);
+  B(g, M.canopyTop, CW - 0.2, 0.05, CD - 0.2, 0, cb + 0.72, cz);
+  for (const [w, d, x, z] of [[CW + 0.12, 0.12, 0, cz - CD / 2], [CW + 0.12, 0.12, 0, cz + CD / 2], [0.12, CD, -CW / 2, cz], [0.12, CD, CW / 2, cz]]) {
+    B(g, M.fascia, w, 0.56, d, x, cb, z); B(g, M.paintWhite, w, 0.2, d, x, cb + 0.56, z);
+  }
+  for (let i = 0; i < 8; i++) for (let j = 0; j < 3; j++) plane(g, M.troffer, 0.6, 0.6, -CW / 2 + (i + 0.5) * CW / 8, cb - 0.005, cz - CD / 2 + (j + 0.5) * CD / 3, Math.PI / 2);
+  for (const ix of [-7.5, 0, 7.5]) {
+    B(g, M.concrete, 1.3, 0.18, 6.4, ix, yL, cz);
+    for (const s of [-1, 1]) { B(g, M.yellow, 1.3, 0.181, 0.3, ix, yL, cz + s * 3.05); C(g, M.yellow, 0.09, 0.09, 1.0, ix, yL + 0.18, cz + s * 2.85, 14); }
+    for (const s of [-1, 1]) B(g, M.cladding, 0.5, cb - yL - 0.18, 0.5, ix, yL + 0.18, cz + s * 2.0);
+    const d = new THREE.Group(); d.position.set(ix, yL + 0.18, cz); g.add(d);
+    B(d, M.paintGrey, 0.55, 0.12, 1.25, 0, 0, 0);
+    B(d, M.hdpe, 0.52, 1.45, 1.22, 0, 0.12, 0);
+    B(d, M.fascia, 0.56, 0.3, 1.26, 0, 1.57, 0);
+    B(d, M.paintWhite, 0.56, 0.06, 1.26, 0, 1.87, 0);
+    for (const sx of [-1, 1]) {
+      const fx = sx * 0.265;
+      plane(d, M.darkGlass, 0.26, 0.2, fx + sx * 0.004, 1.2, -0.25, 0, sx * Math.PI / 2);
+      B(d, M.black, 0.02, 0.18, 0.24, fx + sx * 0.01, 0.85, 0.2);
+      for (let k = 0; k < 3; k++) {
+        B(d, M.black, 0.06, 0.22, 0.07, fx + sx * 0.03, 0.72, 0.05 + k * 0.14);
+        tube(d, M.rubber, [[fx + sx * 0.04, 0.95, 0.05 + k * 0.14], [fx + sx * 0.32, 0.55, 0.12 + k * 0.1], [fx + sx * 0.16, 0.05, 0.3], [fx + sx * 0.02, 1.4, 0.45]], 0.014, 16);
+      }
+    }
+  }
+  // a couple of parked cars, nose-in to the walk
+  const car = (x, z, mat, ry = 0) => {
+    const c = new THREE.Group(); c.position.set(x, yL, z); c.rotation.y = ry; g.add(c);
+    addMesh(c, new RoundedBoxGeometry(1.82, 0.72, 4.55, 3, 0.16), mat, 0, 0.62, 0);
+    addMesh(c, new RoundedBoxGeometry(1.6, 0.58, 2.35, 3, 0.18), mat, 0, 1.16, 0.25);
+    addMesh(c, new RoundedBoxGeometry(1.63, 0.46, 2.2, 2, 0.14), M.darkGlass, 0, 1.17, 0.25);
+    for (const sx of [-1, 1]) for (const sz of [-1.45, 1.45]) addMesh(c, new THREE.CylinderGeometry(0.33, 0.33, 0.24, 20), M.tire, sx * 0.8, 0.33, sz, 0, 0, Math.PI / 2);
+    for (const sx of [-1, 1]) { B(c, M.lamp, 0.32, 0.08, 0.02, sx * 0.6, 0.72, 2.27); B(c, M.pilotRed, 0.32, 0.08, 0.02, sx * 0.6, 0.78, -2.27); }
+  };
+  car(stalls[3], curb + 2.6, M.car[0]);
+  car(stalls[1], curb + 2.75, M.car[1]);
+  car(-4.5, cz + 4.3, M.car[2], Math.PI / 2);
+}
+
+// Utensils on a rail over the flattop and burners, tickets on the pass, a sanitizer
+// bucket and a clock: kitchen frame (x along the line, z out from the wall).
+function lineSmallwares(M, g) {
+  const ry = 1.74, rz = 0.045;
+  B(g, M.steel, 1.5, 0.02, 0.02, -0.25, ry - 0.01, rz);
+  for (const x of [-0.95, 0.45]) B(g, M.steelDark, 0.02, 0.04, 0.045, x, ry - 0.02, 0.022);
+  const kinds = ['ladle', 'spatula', 'tongs', 'ladle', 'spoon', 'spatula', 'tongs', 'whisk'];
+  kinds.forEach((k, i) => {
+    const x = -0.88 + i * 0.18;
+    addMesh(g, new THREE.TorusGeometry(0.012, 0.003, 6, 12), M.chrome, x, ry - 0.012, rz + 0.012);
+    if (k === 'ladle' || k === 'spoon') {
+      C(g, M.chrome, 0.005, 0.005, 0.3, x, ry - 0.33, rz + 0.012, 8);
+      const bowl = addMesh(g, new THREE.SphereGeometry(k === 'ladle' ? 0.045 : 0.035, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.steel, x, ry - 0.33, rz + 0.04);
+      if (k === 'spoon') bowl.scale.set(1, 0.4, 1.3);
+    } else if (k === 'spatula') {
+      C(g, M.black, 0.011, 0.011, 0.14, x, ry - 0.16, rz + 0.012, 10);
+      B(g, M.chrome, 0.012, 0.08, 0.004, x, ry - 0.24, rz + 0.012);
+      B(g, M.steel, 0.1, 0.12, 0.003, x, ry - 0.36, rz + 0.014);
+    } else if (k === 'tongs') {
+      for (const s of [-1, 1]) addMesh(g, new THREE.BoxGeometry(0.014, 0.3, 0.006), M.chrome, x + s * 0.012, ry - 0.17, rz + 0.012, 0, 0, s * 0.06);
+    } else {
+      C(g, M.steel, 0.01, 0.01, 0.12, x, ry - 0.14, rz + 0.012, 10);
+      const w = addMesh(g, new THREE.SphereGeometry(0.04, 10, 8), M.wire, x, ry - 0.24, rz + 0.04); w.scale.set(0.8, 1.6, 0.8);
+    }
+  });
+  // ticket rail along the kitchen edge of the counter's upper glass shelf, with orders
+  const tz = KF.z1 - 0.425 - 0.24;
+  B(g, M.steel, 5.2, 0.026, 0.032, -0.1, 1.33, tz);
+  [-2.25, -2.05, -1.6, -0.2, 0.05, 0.9, 1.15, 2.1].forEach((x, i) => {
+    const t = plane(g, M.ticket, 0.075, 0.13, x, 1.28, tz - 0.02, 0, Math.PI); t.rotation.z = (i % 3 - 1) * 0.04;
+  });
+  // clock over the doorway to the back room
+  addMesh(g, new THREE.CylinderGeometry(0.17, 0.17, 0.04, 32), M.black, (DOORWAY.a + DOORWAY.b) / 2, 2.5, 0.02, Math.PI / 2, 0, 0);
+  addMesh(g, new THREE.CircleGeometry(0.155, 32), M.clock, (DOORWAY.a + DOORWAY.b) / 2, 2.5, 0.042).castShadow = false;
+}
+
+function sanitizerBucket(M, p, x, y, z) {
+  C(p, M.red, 0.095, 0.082, 0.17, x, y, z, 24);
+  C(p, M.water, 0.088, 0.088, 0.004, x, y + 0.13, z, 24);
+  addMesh(p, new THREE.TorusGeometry(0.09, 0.004, 6, 24, Math.PI), M.greyPlastic, x, y + 0.17, z, 0, 0, 0);
+  B(p, M.towel, 0.05, 0.16, 0.12, x + 0.09, y + 0.05, z).rotation.z = -0.2;
+}
 
 function makeMaterials(X) {
   const std = (o) => new THREE.MeshStandardMaterial(o);
@@ -604,6 +807,19 @@ function makeMaterials(X) {
   M.instBottle = atlasMat(phys({ map: X.bottleAtlas, roughness: 0.12, clearcoat: 0.6, clearcoatRoughness: 0.08 }), 4);
   M.instCan = atlasMat(std({ map: X.canAtlas, roughness: 0.28, metalness: 0.55 }), 4);
   M.instCase = atlasMat(std({ map: X.caseAtlas, roughness: 0.85 }), 4);
+  M.asphalt = std({ map: X.asphalt, roughnessMap: X.asphaltR, roughness: 1 });
+  M.ground = std({ color: 0x5c6056, roughness: 0.97 });
+  M.sky = new THREE.MeshBasicMaterial({ map: X.sky, side: THREE.BackSide, depthWrite: false, fog: false }); M.sky.color.setScalar(1.75);
+  M.paintWhite = std({ color: 0xecebe6, roughness: 0.7 });
+  M.cladding = std({ color: 0xe7e5de, roughness: 0.42, metalness: 0.1 });
+  M.canopyTop = std({ color: 0x9a9d9f, roughness: 0.6 });
+  M.tag = std({ map: X.tag, roughness: 0.38 });
+  M.ticket = std({ map: X.ticket, roughness: 0.8, side: THREE.DoubleSide });
+  M.clock = std({ map: X.clock, roughness: 0.25 });
+  M.sprinkler = std({ color: 0xb3261e, roughness: 0.45, metalness: 0.2 });
+  M.towel = std({ color: 0xf1efe8, roughness: 0.95 });
+  M.car = [0x1d3557, 0xb9bec2, 0x7d1d1d, 0x2b2d30].map((c) => phys({ color: c, metalness: 0.55, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.06 }));
+  M.tire = std({ color: 0x18191a, roughness: 0.85 });
   for (const m of [M.steel, M.steelV, M.steelDark, M.steelIn, M.chrome, M.alum]) METALS.add(m);
   for (const m of [M.steel, M.steelV, M.woodPanel, M.quartz]) m.userData.tile = 0.6;
   const food = (c, r = 0.65) => std({ color: c, roughness: r });
@@ -921,6 +1137,7 @@ function landing(M) {
   for (let i = 0; i < 3; i++) B(g, M.foil, 0.32, 0.05, 0.26, 0.05, top + i * 0.012, 0.08);
   for (let i = 0; i < 2; i++) C(g, M.hdpe, 0.045, 0.04, 0.32, -0.2 + i * 0.1, top, -0.24, 16);
   for (let i = 0; i < 4; i++) B(g, M.alum, 0.46, 0.022, 0.33, 0, 0.27 + i * 0.024, 0);
+  sanitizerBucket(M, g, -0.19, top, 0.22);
   return g;
 }
 
@@ -1429,6 +1646,7 @@ function gondola(M, P, r, L) {
   for (const s of [-1, 1]) levels.forEach((y, i) => {
     B(g, M.gondola, L - 0.06, 0.022, D / 2 - 0.05, 0, y, s * (D / 4 + 0.01));
     B(g, M.blackGloss, L - 0.06, 0.035, 0.012, 0, y - 0.01, s * (D / 2 - 0.025));
+    for (let tx = -L / 2 + 0.16; tx < L / 2 - 0.08; tx += 0.29 + ((i * 7 + tx * 13) % 3 === 0 ? 0.12 : 0)) plane(g, M.tag, 0.045, 0.028, tx, y + 0.0075, s * (D / 2 - 0.0185), 0, s > 0 ? 0 : Math.PI);
     fillRun(P, g, r, 'x', -L / 2 + 0.05, L / 2 - 0.05, y + 0.022, s * (D / 4 + 0.02), D / 2 - 0.12, i === 3 ? 0.24 : 0.3, SNACKS);
   });
   for (const sx of [-1, 1]) {
@@ -1808,9 +2026,9 @@ function storefront(M, g, a, b, doors) {
 function buildKitchen(M, X) {
   const r = rng(42), P = new Instancer();
   const groups = {};
-  for (const k of ['main', 'N', 'S', 'E', 'W', 'stubN', 'stubS', 'stubE', 'stubW', 'ceiling', 'deck', 'roof']) groups[k] = new THREE.Group();
+  for (const k of ['main', 'N', 'S', 'E', 'W', 'stubN', 'stubS', 'stubE', 'stubW', 'ceiling', 'deck', 'roof', 'site']) groups[k] = new THREE.Group();
   const items = [], occ = [], shadowsFor = [];
-  const reg = (id, obj, { face = [0, 0, 1], anchor, box, cut } = {}) => items.push({ id, ...ITEMS[id], obj, face: new THREE.Vector3(...face), anchor, box, cut });
+  const reg = (id, obj, { face = [0, 0, 1], anchor, box, cut, show } = {}) => items.push({ id, ...ITEMS[id], obj, face: new THREE.Vector3(...face), anchor, box, cut, show });
   const put = (parent, obj, x, z, ry = 0, y = 0) => { obj.position.set(x, y, z); obj.rotation.y = ry; parent.add(obj); return obj; };
   const addOcc = (x0, x1, z0, z1, h, key = null) => occ.push({ x0, x1, z0, z1, h, key });
   const main = groups.main;
@@ -1819,7 +2037,8 @@ function buildKitchen(M, X) {
   /* ---------------- floors ---------------- */
   const floor = new THREE.Group();
   const fl = (mat, x0, x1, z0, z1, rx, rz, y = 0) => {
-    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x1 - x0) / rx, (z1 - z0) / rz), mat);
+    // subdivided so no triangle is huge (big quads that cross the near plane clip badly on some GPUs)
+    const m = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(x1 - x0, z1 - z0, Math.max(1, Math.round((x1 - x0) / 3)), Math.max(1, Math.round((z1 - z0) / 3))), (x1 - x0) / rx, (z1 - z0) / rz), mat);
     m.rotation.x = -Math.PI / 2; m.position.set((x0 + x1) / 2, y, (z0 + z1) / 2); m.receiveShadow = true; floor.add(m);
   };
   fl(M.plank, X0, X1, Z0, Z1, 1.2192, 0.6096);
@@ -1926,7 +2145,7 @@ function buildKitchen(M, X) {
     const g = groups.ceiling;
     const act = (x0, x1, z0, z1) => { const c = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(x1 - x0, z1 - z0), (x1 - x0) / 1.2192, (z1 - z0) / 1.2192), M.ceiling); c.rotation.x = Math.PI / 2; c.position.set((x0 + x1) / 2, H_ACT, (z0 + z1) / 2); g.add(c); };
     act(X0, kStore, Z0, pz(6.5)); act(X0, px(19), pz(6.5), pz(20.5)); act(BOH.x0, BOH.x1, BOH.z0, BOH.z1); act(KW, kStore, KZC - KF.x1, KZC - KF.x0);
-    for (const [x, z] of [[px(5), pz(36)], [px(13), pz(36)], [px(5), pz(46)], [px(14.5), pz(47)], [px(14), pz(28)], [px(4.7), pz(13)], [px(14.2), pz(13)], [px(9), pz(2.7)], [px(23), pz(3)]]) {
+    for (const [x, z] of TROFFERS) {
       B(g, M.steel, 1.22, 0.04, 0.61, x, H_ACT - 0.04, z).castShadow = false;
       B(g, M.troffer, 1.16, 0.004, 0.55, x, H_ACT - 0.044, z).castShadow = false;
     }
@@ -1936,8 +2155,8 @@ function buildKitchen(M, X) {
       addMesh(g, new THREE.CircleGeometry(0.075, 24), M.troffer, x, H_ACT - 0.012, z, Math.PI / 2, 0, 0).castShadow = false;
     }
     const d = groups.deck;
-    const deck = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(BLD.w, BLD.d), 1, BLD.d / 0.3), M.deck); deck.rotation.x = Math.PI / 2; deck.position.y = H_DECK; d.add(deck);
-    for (const z of [pz(9), pz(17), pz(25), pz(33), pz(41)]) for (let x = px(33); x < px(70); x += 3.3) {
+    const deck = new THREE.Mesh(scaleUV(new THREE.PlaneGeometry(BLD.w, BLD.d, 10, 5), 1, BLD.d / 0.3), M.deck); deck.rotation.x = Math.PI / 2; deck.position.y = H_DECK; d.add(deck);
+    for (const { z, xs } of PENDANT_ROWS) for (const x of xs) {
       B(d, M.blackPaint, 2.4, 0.06, 0.1, x, 3.52, z).castShadow = false;
       B(d, M.troffer, 2.36, 0.006, 0.07, x, 3.514, z).castShadow = false;
       for (const s of [-1, 1]) C(d, M.steelDark, 0.003, 0.003, H_DECK - 3.58, x + s * 1.0, 3.58, z, 4).castShadow = false;
@@ -1976,6 +2195,7 @@ function buildKitchen(M, X) {
   const sup = suppression(M, hd, nozzles); KG.add(sup);
   reg('hood', hd, { face: [1, 0, 0], anchor: Lw((HOOD.x0 + HOOD.x1) / 2 - 0.9, HOOD.bottom + 0.35, HOOD.depth + 0.05), box: new THREE.Box3(V(KW, HOOD.bottom, KZC - HOOD.x1), V(KW + HOOD.depth, H_ACT, KZC - HOOD.x0)) });
   reg('suppression', sup, { face: [0, 0, 1], anchor: Lw(KF.x1 - 0.2, 2.72, 0.45) });
+  lineSmallwares(M, KG);
   const hc = hotCabinet(M, r); put(KG, hc, HOOD.x1 + 0.45, LINE_BACK + 31 * IN / 2 - 0.05); reg('hotcab', hc, { face: [1, 0, 0] }); shadowsFor.push([hc, 0.04]);
   const ws = shelving(M, 1.22, 0.46, 0, [0.15, 0.6, 1.05, 1.5], stockShelf(M, r, 1.22, 0.46, ['napkins', 'foil', 'cups', 'tortilla', 'container']));
   put(KG, ws, -2.3, 0.26); shadowsFor.push([ws, 0.03]);
@@ -2005,7 +2225,7 @@ function buildKitchen(M, X) {
   /* ---------------- back room ---------------- */
   const wi = walkInBack(M, r, groups.roof);
   main.add(wi.shell, wi.cooler, wi.freezer);
-  reg('cooler', wi.cooler, { face: [0, 0, 1], anchor: [WALKIN.x0 + 1.33, 2.3, WALKIN.z1 + 0.12], box: new THREE.Box3(V(WALKIN.x0, 0, WALKIN.split), V(WALKIN.x1, WALKIN.h, WALKIN.z1)) });
+  reg('cooler', wi.cooler, { face: [0, 0, 1], anchor: [WALKIN.x0 + 1.33, 2.3, WALKIN.z1 + 0.12], box: new THREE.Box3(V(WALKIN.x0, 0, WALKIN.split), V(WALKIN.x1, WALKIN.h, WALKIN.z1)), show: [wi.shell, wi.cooler, wi.freezer] });
   reg('freezer', wi.freezer, { face: [0, 0, 1], anchor: [WALKIN.x0 + 1.9, WALKIN.h + 0.3, (WALKIN.z0 + WALKIN.split) / 2], box: new THREE.Box3(V(WALKIN.x0, 0, WALKIN.z0), V(WALKIN.x1, WALKIN.h, WALKIN.split)) });
   addOcc(WALKIN.x0, WALKIN.x1, WALKIN.z0, WALKIN.z1, WALKIN.h);
   const s3 = sink3(M); put(main, s3, WALKIN.x1 + 24 * IN / 2 + 0.01, (WALKIN.z0 + WALKIN.z1) / 2, Math.PI / 2); reg('sink3', s3, { face: [1, 0, 0] }); shadowsFor.push([s3, 0.03]);
@@ -2014,7 +2234,7 @@ function buildKitchen(M, X) {
   const hs2 = handSink(M); put(main, hs2, BOH.x1, -0.3, -Math.PI / 2); reg('handsink2', hs2, { face: [-1, 0, 0] });
   const ov = ovens(M); put(main, ov, BOH.x1 - 30 * IN / 2 - 0.02, 2.95, -Math.PI / 2); reg('ovens', ov, { face: [-1, 0, 0] }); shadowsFor.push([ov, 0.04]);
   const wt = worktable(M, r); put(main, wt, BOH.x1 - 30 * IN / 2 - 0.02, 4.75, -Math.PI / 2); shadowsFor.push([wt, 0.04]);
-  const pt = prepTable(M, r); put(main, pt, -12.4, 3.3, Math.PI); reg('prep', pt, { face: [0, 0, -1] }); shadowsFor.push([pt, 0.04]);
+  const pt = prepTable(M, r); put(main, pt, -12.4, 3.3, Math.PI); reg('prep', pt, { face: [0.8, 0, -0.6] }); shadowsFor.push([pt, 0.04]);
   const ds = doughStation(M, r); put(main, ds, -12.4, 4.18, 0); reg('dough', ds, { face: [0, 0, 1] }); shadowsFor.push([ds, 0.04]);
   const sr = speedRack(M, r); put(main, sr, -10.6, 4.95, 0); shadowsFor.push([sr, 0.03]);
   const dry = dryStorage(M, r); put(main, dry, X0 + 0.33, 6.1, Math.PI / 2); reg('dry', dry, { face: [1, 0, 0] }); shadowsFor.push([dry, 0.03]);
@@ -2079,7 +2299,7 @@ function buildKitchen(M, X) {
   trashCan(M, px(36.5), Z1 - 0.55, M.greyPlastic, main); trashCan(M, px(58.5), Z1 - 0.6, M.greyPlastic, main);
 
   // cold vault: main run of doors along the east wall
-  const nMain = 13, runA = pz(1.5);
+  const nMain = COOLER_RUN.n, runA = pz(1.5);
   const cv2 = coolerRun(M, P, r, nMain); put(main, cv2, VAULT_X, runA + nMain * 0.76 / 2, -Math.PI / 2);
   reg('coldvault', cv2, { face: [-1, 0, 0], anchor: [VAULT_X - 0.25, 2.62, runA + nMain * 0.76 / 2] });
   // beer cave in the front corner: glass entry door, then its own reach-in doors
@@ -2105,6 +2325,73 @@ function buildKitchen(M, X) {
   C(main, M.hdpe, 0.3, 0.3, 1.6, X1 - 0.5, 0, pz(4), 24);
   for (const zz of [pz(10), pz(16)]) { const u = shelving(M, 1.22, 0.46, 0, [0.15, 0.6, 1.05, 1.5, 1.85], stockShelf(M, r, 1.22, 0.46, ['cups', 'napkins', 'foil', 'produce'])); put(main, u, X1 - 0.3, zz, -Math.PI / 2); }
   for (const zz of [pz(26), pz(28)]) B(main, M.paintGrey, 0.1, 0.9, 0.36, X1 - 0.05, 1.05, zz);
+
+  /* ---------------- life-safety, ceiling and front-walk details ---------------- */
+  {
+    const d = groups.deck, cg = groups.ceiling;
+    // sprinkler mains under the deck, with drops and pendent heads
+    for (const z of [pz(21), pz(29)]) {
+      barX(d, M.sprinkler, px(71) - px(25), 0.05, (px(25) + px(71)) / 2, 4.32, z, 12).castShadow = false;
+      for (let x = px(27); x < px(70); x += 3.05) {
+        C(d, M.sprinkler, 0.014, 0.014, 0.3, x, 4.0, z, 8).castShadow = false;
+        C(d, M.chrome, 0.012, 0.03, 0.03, x, 3.97, z, 10).castShadow = false;
+      }
+    }
+    // security domes on drop rods and in the lay-in ceilings; speakers and smoke detectors
+    const dome = (p, x, y, z, rod) => {
+      if (rod) C(p, M.blackPaint, 0.012, 0.012, H_DECK - y, x, y, z, 8).castShadow = false;
+      C(p, M.hdpe, 0.075, 0.075, 0.03, x, y - 0.03, z, 20).castShadow = false;
+      addMesh(p, new THREE.SphereGeometry(0.065, 20, 10, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), M.smoke, x, y - 0.03, z).castShadow = false;
+    };
+    for (const [x, z] of [[px(29), pz(44)], [px(50), pz(4)], [px(68), pz(45)], [px(56), pz(29.5)]]) dome(d, x, 3.35, z, true);
+    for (const [x, z] of [[px(9), pz(40.5)], [px(16.5), pz(3)], [px(4), pz(24)]]) dome(cg, x, H_ACT, z, false);
+    for (const [x, z] of [[px(3.5), pz(31)], [px(16), pz(41)], [px(5), pz(2.5)]]) {
+      addMesh(cg, new THREE.CylinderGeometry(0.13, 0.13, 0.012, 24), M.hdpe, x, H_ACT - 0.006, z).castShadow = false;
+      addMesh(cg, new THREE.CircleGeometry(0.1, 24), M.blackPaint, x, H_ACT - 0.0125, z, Math.PI / 2, 0, 0).castShadow = false;
+    }
+    for (const [x, z] of [[px(9), pz(31)], [px(12), pz(46)], [px(9.5), pz(13)]]) C(cg, M.hdpe, 0.06, 0.06, 0.035, x, H_ACT - 0.035, z, 20).castShadow = false;
+    // exit sign over the front doors, inside
+    B(groups.S, M.hdpe, 0.36, 0.2, 0.08, px(40.5), 3.0, Z1 - 0.04);
+    screen(groups.S, signTexture(['EXIT'], { w: 256, h: 128, bg: '#fdf8f2', fg: '#d01e14', size: 92, print: false }), 0.32, 0.16, px(40.5), 3.1, Z1 - 0.081, Math.PI);
+    // fire extinguishers with signs
+    const ext = (p, x, z, ry) => {
+      const e = new THREE.Group(); e.position.set(x, 0, z); e.rotation.y = ry; p.add(e);
+      B(e, M.blackPaint, 0.06, 0.12, 0.03, 0, 1.12, 0.015);
+      C(e, M.red, 0.075, 0.075, 0.4, 0, 0.72, 0.1, 20); C(e, M.black, 0.03, 0.03, 0.06, 0, 1.12, 0.1, 12);
+      tube(e, M.black, [[0.02, 1.15, 0.1], [0.09, 1.05, 0.13], [0.07, 0.85, 0.16]], 0.008, 12);
+      screen(e, signTexture(['FIRE', 'EXTINGUISHER'], { w: 256, h: 192, bg: '#c4261c', fg: '#ffffff', size: 40, print: true }), 0.22, 0.16, 0, 1.5, 0.004);
+    };
+    ext(groups.N, px(27.5), Z0 + 0.002, 0);
+    ext(main, VAULT_X - 0.05, Z1 - 0.55, -Math.PI / 2);
+    ext(main, px(19) + IW / 2, pz(44.5), Math.PI / 2);
+    // wet-floor sign at the restroom hallway
+    { const wf = new THREE.Group(); wf.position.set(px(21.5), 0, pz(4.2)); wf.rotation.y = 0.5; main.add(wf);
+      for (const s2 of [-1, 1]) addMesh(wf, new THREE.BoxGeometry(0.3, 0.64, 0.012), M.yellow, 0, 0.31, s2 * 0.08, -s2 * 0.25, 0, 0);
+      screen(wf, signTexture(['CAUTION', 'WET FLOOR'], { w: 256, h: 192, bg: '#f0c018', fg: '#1a1a1a', size: 40 }), 0.24, 0.18, 0, 0.4, 0.165).rotation.x = -0.25; }
+    // on the front walk: ice merchandiser, propane exchange cage, trash cans
+    const zw = Z1 + EW + 0.5;
+    { const x = px(78);
+      B(main, M.blackPaint, 1.86, 0.1, 0.76, x, 0, zw);
+      B(main, M.binWhite, 1.9, 1.08, 0.8, x, 0.1, zw);
+      for (const s2 of [-1, 1]) B(main, M.paintGrey, 0.9, 0.01, 0.02, x + s2 * 0.47, 1.0, zw + 0.4);
+      for (const s2 of [-1, 1]) B(main, M.chrome, 0.16, 0.025, 0.03, x + s2 * 0.47, 0.98, zw + 0.42);
+      screen(main, signTexture(['ICE'], { w: 512, h: 192, bg: '#1f63b5', fg: '#ffffff', size: 120 }), 1.3, 0.46, x, 0.58, zw + 0.402); }
+    { const x = px(86.5), W2 = 1.55, Hc = 1.65, D2 = 0.8;
+      for (const sx of [-1, 1]) for (const sz of [-1, 1]) B(main, M.steelDark, 0.04, Hc, 0.04, x + sx * (W2 / 2 - 0.02), 0, zw + sz * (D2 / 2 - 0.02));
+      B(main, M.steelDark, W2, 0.03, D2, x, 0.02, zw); B(main, M.steelDark, W2, 0.03, D2, x, Hc * 0.5, zw); B(main, M.steelDark, W2, 0.04, D2, x, Hc - 0.04, zw);
+      for (const lvl of [0.05, Hc * 0.5 + 0.03]) for (let i = 0; i < 4; i++) for (const tz of [-0.18, 0.18]) {
+        const tx = x - W2 / 2 + 0.22 + i * 0.37;
+        addMesh(main, new THREE.CapsuleGeometry(0.15, 0.22, 6, 18), M.hdpe, tx, lvl + 0.27, zw + tz);
+        C(main, M.steelDark, 0.07, 0.07, 0.08, tx, lvl + 0.55, zw + tz, 14);
+      }
+      plane(main, M.wire, W2 - 0.04, Hc - 0.04, x, Hc / 2, zw + D2 / 2 - 0.01);
+      for (const sx of [-1, 1]) plane(main, M.wire, D2 - 0.04, Hc - 0.04, x + sx * (W2 / 2 - 0.01), Hc / 2, zw, 0, Math.PI / 2);
+      screen(main, signTexture(['PROPANE', 'EXCHANGE'], { w: 512, h: 192, bg: '#c4261c', fg: '#ffffff', size: 64 }), 0.9, 0.32, x, Hc + 0.2, zw + D2 / 2);
+      B(main, M.steelDark, 0.9, 0.36, 0.02, x, Hc + 0.02, zw + D2 / 2 - 0.012); }
+    trashCan(M, px(35.6), Z1 + EW + 0.45, M.greyPlastic, main);
+    trashCan(M, px(45.6), Z1 + EW + 0.45, M.greyPlastic, main);
+  }
+  siteExterior(M, groups.site);
 
   return { groups, floor, items, shadowsFor, occ, P };
 }
@@ -2199,6 +2486,106 @@ const CSS = `
   .k3d-list.open{display:block}
   .k3d-spot{width:24px;height:24px;line-height:20px}
 }
+.k3d-tourbtn{font:inherit;font-size:13px;font-weight:800;color:#143236;background:#eebe54;border:0;border-radius:999px;padding:8px 14px;cursor:pointer;white-space:nowrap;display:inline-flex;gap:6px;align-items:center;flex:0 0 auto;animation:ktPulse 2.6s infinite}
+@keyframes ktPulse{0%{box-shadow:0 0 0 0 rgba(238,190,84,.55)}70%{box-shadow:0 0 0 11px rgba(238,190,84,0)}100%{box-shadow:0 0 0 0 rgba(238,190,84,0)}}
+.k3d.touring .k3d-tourbtn{animation:none;opacity:.5}
+.k3d.touring .k3d-spots,.k3d.touring .k3d-card,.k3d.touring .k3d-list,.k3d.touring .k3d-listbtn,.k3d.touring .k3d-side>.k3d-note{display:none!important}
+.k3d-tour{position:absolute;inset:0;z-index:4;pointer-events:none;font-variant-numeric:tabular-nums}
+.k3d-tour[hidden]{display:none}
+.kt-top{position:absolute;left:16px;top:14px;display:flex;flex-direction:column;gap:7px;width:min(300px,42%)}
+.kt-step{align-self:flex-start;font:800 11px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.8px;text-transform:uppercase;color:#eebe54;background:rgba(13,35,38,.8);border:1px solid rgba(238,190,84,.45);padding:5px 10px;border-radius:999px;backdrop-filter:blur(6px)}
+.kt-step b{color:#fff}
+.kt-bar{height:4px;background:rgba(255,255,255,.2);border-radius:4px;overflow:hidden}
+.kt-bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#eebe54,#ffd98a);transition:width .7s ease}
+.kt-total{position:absolute;right:16px;top:14px;background:rgba(13,35,38,.84);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:10px 14px;min-width:210px;text-align:right;backdrop-filter:blur(8px);transition:transform .25s cubic-bezier(.2,.9,.3,1.6);box-shadow:0 12px 30px rgba(0,0,0,.3)}
+.kt-total small{display:block;font:700 10px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.6px;text-transform:uppercase;color:#a9c1c0}
+.kt-total b{display:block;font-size:27px;line-height:1.15;color:#fff;font-weight:800}
+.kt-total.bump{transform:scale(1.08)}
+.kt-meter{height:6px;border-radius:6px;background:rgba(255,255,255,.12);margin-top:7px;overflow:hidden}
+.kt-meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,#3bb3a0,#eebe54)}
+.kt-card{position:absolute;left:16px;bottom:16px;display:flex;gap:14px;align-items:stretch;background:rgba(13,35,38,.9);border:1px solid rgba(238,190,84,.38);border-radius:18px;padding:10px;width:min(600px,calc(100% - 32px));box-shadow:0 22px 50px rgba(0,0,0,.45);backdrop-filter:blur(10px);transform:translateY(24px);opacity:0;transition:transform .5s cubic-bezier(.2,.9,.25,1.25),opacity .3s}
+.kt-card.in{transform:none;opacity:1}
+.kt-tt{flex:0 0 156px;height:156px;border-radius:12px;position:relative;overflow:hidden;background:#10292c}
+.kt-tt::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 1px rgba(238,190,84,.45),inset 0 -24px 34px rgba(0,0,0,.22);pointer-events:none}
+.kt-tt canvas{display:block;width:100%;height:100%}
+.kt-info{min-width:0;padding:2px 6px 2px 0;display:flex;flex-direction:column}
+.kt-zone{font:700 10px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.5px;text-transform:uppercase;color:#a9c1c0}
+.kt-info h3{font-size:18px;margin:3px 0 6px;color:#fff;line-height:1.2}
+.kt-info small{font-size:12px;color:#cfdcdb}
+.kt-est{display:inline-block;font:700 9px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1.2px;text-transform:uppercase;border:1px solid rgba(255,255,255,.3);border-radius:4px;padding:1px 5px;margin-left:4px;color:#cfdcdb;vertical-align:1px}
+.kt-price{display:block;font-size:42px;line-height:1.02;font-weight:900;color:#eebe54;letter-spacing:-.5px;margin:3px 0 4px;text-shadow:0 0 26px rgba(238,190,84,.35);transform-origin:left center}
+.kt-price.done{animation:ktPop .55s cubic-bezier(.2,.9,.3,1.6)}
+@keyframes ktPop{0%{transform:scale(1)}40%{transform:scale(1.15)}100%{transform:scale(1)}}
+.kt-range{font-size:12.5px;color:#f5f3e6}
+.kt-basis{font-size:11.5px;color:#a9c1c0;margin:6px 0 0;line-height:1.45}
+.kt-ctrl{position:absolute;left:16px;top:66px;display:flex;gap:6px;pointer-events:auto}
+.kt-ctrl button{display:inline-grid;place-items:center;width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.22);background:rgba(13,35,38,.86);color:#f5f3e6;cursor:pointer;backdrop-filter:blur(6px)}
+.kt-ctrl button:hover{background:rgba(32,70,73,.95)}
+.kt-ctrl .kt-exit{width:auto;padding:0 16px;border-radius:999px;font:inherit;font-size:13px;font-weight:700}
+.kt-pin{position:absolute;left:0;top:0;translate:-50% -100%;background:#eebe54;color:#143236;font-weight:900;font-size:16px;padding:6px 11px;border-radius:10px;box-shadow:0 10px 24px rgba(0,0,0,.4);white-space:nowrap}
+.kt-pin[hidden]{display:none}
+.kt-pin::after{content:"";position:absolute;left:50%;bottom:-6px;margin-left:-6px;border:6px solid transparent;border-top-color:#eebe54;border-bottom:0}
+.kt-pin.pop{animation:ktPin .6s cubic-bezier(.2,.9,.3,1.6)}
+@keyframes ktPin{from{opacity:0;scale:.2}to{opacity:1;scale:1}}
+.kt-pin.kt-fly{transition:left .75s cubic-bezier(.55,0,.2,1),top .75s cubic-bezier(.55,0,.2,1),opacity .75s ease-in,scale .75s}
+.kt-coin{position:absolute;width:15px;height:15px;margin:-7px 0 0 -7px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#fff6cf,#eebe54 45%,#a8771f);box-shadow:0 0 8px rgba(238,190,84,.9);pointer-events:none;animation:ktCoin .95s cubic-bezier(.15,.7,.3,1) both}
+@keyframes ktCoin{0%{transform:translate(0,0) scale(.3);opacity:1}100%{transform:translate(var(--dx),var(--dy)) scale(1) rotate(200deg);opacity:0}}
+.kt-end{position:absolute;inset:0;display:grid;place-items:center;overflow:auto;background:radial-gradient(80% 70% at 50% 45%,rgba(13,35,38,.5),rgba(5,18,20,.86));pointer-events:auto}
+.kt-end[hidden]{display:none}
+.kt-endcard{max-width:580px;margin:16px;text-align:center;background:rgba(20,50,54,.95);border:1px solid rgba(238,190,84,.5);border-radius:22px;padding:26px 24px 20px;box-shadow:0 30px 80px rgba(0,0,0,.5);animation:ktRise .7s cubic-bezier(.2,.9,.25,1.15) both}
+@keyframes ktRise{from{opacity:0;transform:translateY(34px) scale(.95)}to{opacity:1;transform:none}}
+.kt-kicker{font:800 11px ui-monospace,Menlo,Consolas,monospace;letter-spacing:2px;text-transform:uppercase;color:#eebe54;margin:0}
+.kt-endcard h3{font-size:19px;margin:8px 0 2px;color:#fff}
+.kt-endcard .big{font-size:clamp(46px,8vw,72px);font-weight:900;color:#eebe54;line-height:1.05;letter-spacing:-1px;text-shadow:0 0 40px rgba(238,190,84,.35)}
+.kt-endcard p{color:#cfdcdb;font-size:14.5px;margin:8px 0;line-height:1.5}
+.kt-endcard .rent{font-size:19px;color:#fff;font-weight:800}
+.kt-endbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0 6px}
+.kt-endbtns button{font:inherit;font-size:14px;font-weight:800;border-radius:999px;padding:11px 18px;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:transparent;color:#f5f3e6}
+.kt-endbtns .primary{background:#e93f24;border-color:#e93f24;color:#fff}
+.kt-fine{font-size:11.5px!important;color:#a9c1c0!important}
+.kt-confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.kt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.k3d-receipt{background:#1c4044;border:1px solid rgba(238,190,84,.32);border-radius:14px;padding:14px;font-variant-numeric:tabular-nums}
+.k3d-receipt[hidden]{display:none}
+.k3d-receipt h3{font-size:16px;margin:0 0 8px;color:#fff}
+.k3d-receipt ol{list-style:none;margin:0;padding:0;font-size:13.5px}
+.k3d-receipt li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.12);color:#7f9998;transition:color .3s}
+.k3d-receipt li.done{color:#dfe9e8}
+.k3d-receipt li.on{color:#fff;font-weight:700}
+.k3d-receipt li.on span::before{content:"▸ ";color:#eebe54}
+.k3d-receipt li b{color:#eebe54;font-weight:700;white-space:nowrap}
+.k3d-receipt .tot{display:flex;justify-content:space-between;margin-top:10px;padding-top:8px;border-top:2px solid rgba(238,190,84,.55);font-weight:900;font-size:17px;color:#fff}
+.k3d-receipt .tot b{color:#eebe54}
+.k3d-receipt .k3d-note{margin-top:8px}
+@media (max-width:820px){
+  .k3d-tourbtn{padding:7px 11px}
+  .k3d.touring .k3d-side{max-height:24vh}
+  .kt-top{left:8px;top:8px;width:34%}
+  .kt-lbl{display:none}
+  .kt-total{right:8px;top:8px;min-width:0;padding:6px 10px}
+  .kt-total small{font-size:9px;letter-spacing:1px}
+  .kt-total b{font-size:19px}
+  .kt-pin{font-size:13px;padding:4px 8px}
+  .kt-endcard{padding:18px 14px 14px;margin:10px}
+  .kt-endcard h3{font-size:16px}
+  .kt-endcard p{font-size:13px;margin:6px 0}
+  .kt-endcard .rent{font-size:16px}
+  .kt-endbtns{gap:8px;margin:12px 0 4px}
+  .kt-endbtns button{padding:9px 14px;font-size:13px}
+  .kt-card{left:8px;right:8px;bottom:60px;width:auto;gap:10px;padding:8px}
+  .kt-tt{flex-basis:92px;height:92px}
+  .kt-info h3{font-size:15px;margin:2px 0 3px}
+  .kt-price{font-size:30px}
+  .kt-basis{display:none}
+  .kt-ctrl{left:8px;right:8px;top:auto;bottom:8px;justify-content:center}
+  .kt-ctrl button{width:40px;height:40px}
+}
+@media (prefers-reduced-motion:reduce){
+  .k3d-tourbtn{animation:none}
+  .kt-card,.kt-total,.kt-bar i{transition:none}
+  .kt-price.done,.kt-pin.pop,.kt-endcard{animation:none}
+}
+@media (min-width:821px) and (max-width:1320px){.k3d-title{display:none}}
 .k3d.capture .k3d-top,.k3d.capture .k3d-side,.k3d.capture .k3d-spots{display:none}
 .k3d.capture .k3d-main{grid-template-columns:1fr}
 `;
@@ -2211,15 +2598,18 @@ export async function open(host, { view = 'overview', opener } = {}) {
   if (!K) K = await create(host);
   K.opener = opener || null;
   K.open = true;
+  const tourNow = view === 'tour';
   K.setView(view in VIEWS ? view : 'overview', !K.started);
   K.started = true;
   K.loop();
+  if (tourNow && K.tourStart) K.tourStart();
   host.querySelector('.k3d-close').focus();
   return K;
 }
 
 function close() {
   if (!K) return;
+  if (K.tourStop) K.tourStop();
   K.open = false; K.host.hidden = true;
   document.documentElement.style.overflow = '';
   if (K.opener) K.opener.focus();
@@ -2232,13 +2622,44 @@ async function create(host) {
   host.innerHTML = `
     <div class="k3d-top">
       <div class="k3d-title"><b id="k3d-title">The store and kitchen in 3D</b><span>Drag to look around · scroll or pinch to zoom</span></div>
+      <button type="button" class="k3d-tourbtn" data-tour><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Value tour</button>
       <div class="k3d-views" role="toolbar" aria-label="Camera views">${Object.entries(VIEWS).map(([k, v]) => `<button type="button" data-view="${k}" aria-pressed="false">${v.label}</button>`).join('')}</div>
       <button type="button" class="k3d-close" aria-label="Close the 3D kitchen">✕</button>
     </div>
     <div class="k3d-main">
-      <div class="k3d-stage"><div class="k3d-spots"></div><div class="k3d-dims" aria-hidden="true"></div><p class="k3d-status" role="status">Building the kitchen…</p></div>
+      <div class="k3d-stage"><div class="k3d-spots"></div><div class="k3d-dims" aria-hidden="true"></div><p class="k3d-status" role="status">Building the kitchen…</p>
+        <div class="k3d-tour" hidden>
+          <div class="kt-top"><span class="kt-step"><span class="kt-lbl">Value tour · </span><b>01</b> / ${TOUR.length}</span><div class="kt-bar"><i></i></div></div>
+          <div class="kt-total"><small>Kitchen value so far</small><b>$0</b><div class="kt-meter"><i></i></div></div>
+          <div class="kt-pin" hidden></div>
+          <div class="kt-card">
+            <div class="kt-tt" aria-hidden="true"><canvas></canvas></div>
+            <div class="kt-info"><span class="kt-zone"></span><h3></h3><small>If you bought it new <span class="kt-est">Estimate</span></small><b class="kt-price">$0</b><span class="kt-range"></span><p class="kt-basis"></p></div>
+          </div>
+          <div class="kt-ctrl" role="group" aria-label="Tour controls">
+            <button type="button" data-kt="prev" aria-label="Previous item"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M6 6h2v12H6zM9.5 12 18 6v12z"/></svg></button>
+            <button type="button" data-kt="play" aria-label="Pause the tour"></button>
+            <button type="button" data-kt="next" aria-label="Next item"><svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M16 6h2v12h-2zM6 6l8.5 6L6 18z"/></svg></button>
+            <button type="button" class="kt-exit" data-kt="exit">Exit tour</button>
+          </div>
+          <div class="kt-end" hidden>
+            <div class="kt-endcard" role="group" aria-label="Value tour summary">
+              <p class="kt-kicker">Value tour complete</p>
+              <h3>Bought new, the equipment you just toured runs about</h3>
+              <div class="big">$0</div>
+              <p>Most of that is equipment alone, at typical new prices, before delivery, gas and electrical hookups, permits and the months it takes to build a kitchen out.</p>
+              <p class="rent">Here it’s already built. Rent it and start cooking.</p>
+              <div class="kt-endbtns"><button type="button" class="primary" data-kt="book">Book a walkthrough</button><button type="button" data-kt="replay">Replay the tour</button><button type="button" data-kt="explore">Explore on my own</button></div>
+              <p class="kt-fine">Estimates from public dealer listings and installer cost guides (2025–26), not quotes and not an appraisal of the equipment in this kitchen. Makes, models and condition are confirmed at your walkthrough.</p>
+            </div>
+          </div>
+          <canvas class="kt-confetti" aria-hidden="true"></canvas>
+          <p class="kt-sr" role="status" aria-live="polite"></p>
+        </div>
+      </div>
       <aside class="k3d-side" aria-label="Kitchen equipment">
         <div class="k3d-card" aria-live="polite"></div>
+        <div class="k3d-receipt" hidden><h3>Priced new, piece by piece</h3><ol>${TOUR.map((q) => `<li><span>${q.title}</span><b>—</b></li>`).join('')}</ol><div class="tot"><span>Total</span><b>$0</b></div><p class="k3d-note">Typical new prices from dealer listings and installer cost guides. Estimates only.</p></div>
         <button type="button" class="k3d-listbtn" aria-expanded="false">Equipment list</button>
         <div class="k3d-list">${Object.entries(ZONES).map(([z, zn]) => `<h4>${zn}</h4><ol>${order.filter((id) => ITEMS[id].zone === z).map((id) => `<li><button type="button" data-item="${id}"><b>${order.indexOf(id) + 1}</b>${ITEMS[id].name}</button></li>`).join('')}</ol>`).join('')}</div>
         <p class="k3d-note">The store follows the standard layout of the modern convenience-store format this building uses (about 93 × 50 ft). The kitchen line follows the owner’s photo. Other equipment and sizes are typical; the real layout is confirmed at your walkthrough.</p>
@@ -2249,7 +2670,15 @@ async function create(host) {
   const defaultCard = '<h3>Explore the kitchen</h3><p>Tap a number on the model, or pick from the list, to see each piece of equipment. Use the view buttons to jump around the room.</p>';
   card.innerHTML = defaultCard;
   host.querySelector('.k3d-close').addEventListener('click', close);
-  host.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  host.addEventListener('keydown', (e) => {
+    const T = K.tour;
+    if (e.key === 'Escape') { if (T && T.on) { K.tourStop(); K.setView('overview'); } else close(); return; }
+    if (!T || !T.on || e.target.closest('input,textarea,select')) return;
+    const btn = (k) => host.querySelector(`[data-kt="${k}"]`);
+    if (e.key === 'ArrowRight') { e.preventDefault(); btn('next').click(); }
+    else if (e.key === 'ArrowLeft') { e.preventDefault(); btn('prev').click(); }
+    else if ((e.key === ' ' || e.key === 'k') && !e.target.closest('button')) { e.preventDefault(); btn('play').click(); }
+  });
   const listBtn = host.querySelector('.k3d-listbtn'), list = host.querySelector('.k3d-list');
   listBtn.addEventListener('click', () => { const o = list.classList.toggle('open'); listBtn.setAttribute('aria-expanded', o); });
   await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 30)));
@@ -2266,7 +2695,9 @@ async function create(host) {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, mobile ? 1.6 : 2));
   renderer.setClearColor(0x000000, 0);
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.93;
+  const QS = /[?&]debug/.test(location.search) ? new URLSearchParams(location.search) : new URLSearchParams();
+  renderer.toneMapping = QS.get('tm') === 'aces' ? THREE.ACESFilmicToneMapping : THREE.AgXToneMapping;
+  renderer.toneMappingExposure = +(QS.get('exp') || 1.0);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
   renderer.domElement.setAttribute('aria-label', '3D model of the kitchen. Drag to orbit, scroll to zoom.');
   renderer.domElement.tabIndex = 0;
@@ -2314,28 +2745,54 @@ async function create(host) {
   for (const [k, g] of Object.entries(groups)) { scene.remove(g); baked[k] = bake(g); scene.add(baked[k]); }
   // stubs start hidden
   for (const k of ['N', 'S', 'E', 'W']) baked['stub' + k].visible = false;
+  // daylight sky, centred on the camera so it always sits inside the far plane
+  const sky = new THREE.Mesh(new THREE.SphereGeometry(62, 48, 24), M.sky); sky.renderOrder = -1; sky.frustumCulled = false; sky.visible = false; scene.add(sky);
 
-  // lights
-  scene.add(new THREE.HemisphereLight(0xfffaf0, 0x7a5444, 1.1));
-  const sun = new THREE.DirectionalLight(0xfff8ef, 2.1);
-  sun.position.set(3, 18, 8); sun.target.position.set(0, 0, 0.3);
+  // The building shell blocks daylight: walls, deck, ceilings and roofs cast shadows, glass doesn't.
+  for (const k of ['N', 'S', 'E', 'W', 'deck', 'ceiling', 'roof']) baked[k].traverse((o) => { if (o.isMesh && !o.material.transparent) o.castShadow = true; });
+  baked.site.traverse((o) => { if (o.isMesh) { o.castShadow = false; o.receiveShadow = !o.material.isMeshBasicMaterial; } });
+
+  // Lights. Inside, light comes from the fixtures themselves (area lights the size of each
+  // fixture); daylight only gets in through the storefront glass; a low sky/bounce fill.
+  scene.add(new THREE.HemisphereLight(0xf2efe6, 0x5c4636, 0.32));
+  const sun = new THREE.DirectionalLight(0xffe6c4, 3.4);
+  sun.target.position.set(0, 0, 1); sun.position.set(6.5, 15, 15);
   sun.castShadow = true;
-  const sm = mobile ? 1024 : (renderer.capabilities.maxTextureSize >= 8192 ? 4096 : 2048); sun.shadow.mapSize.set(sm, sm);
-  Object.assign(sun.shadow.camera, { left: -16, right: 16, top: 11, bottom: -11, near: 4, far: 34 });
-  sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.015; sun.shadow.radius = mobile ? 2 : 4;
-  scene.add(sun, sun.target);
-  const hoodLights = mobile ? 1 : 3;
-  for (let i = 0; i < hoodLights; i++) {
-    const pl = new THREE.PointLight(0xffe4b8, 2.2, 3.2, 1.6);
-    const [hx, hz] = kxz(HOOD.x0 + (i + 0.5) * (HOOD.x1 - HOOD.x0) / hoodLights, HOOD.depth - 0.35);
-    pl.position.set(hx, HOOD.top - 0.15, hz);
-    scene.add(pl);
+  const sm = mobile ? 2048 : (renderer.capabilities.maxTextureSize >= 8192 ? 4096 : 2048); sun.shadow.mapSize.set(sm, sm);
+  {
+    // fit the shadow camera tightly around the building and the front walk
+    const cam = new THREE.PerspectiveCamera(); cam.position.copy(sun.position); cam.lookAt(sun.target.position); cam.updateMatrixWorld(true);
+    const b = new THREE.Box3(), q = new THREE.Vector3(), lo = [X0 - 1, -0.2, Z0 - 1], hi = [X1 + 1, H_DECK + 0.4, Z1 + 3.5];
+    for (let i = 0; i < 8; i++) { q.set(i & 1 ? hi[0] : lo[0], i & 2 ? hi[1] : lo[1], i & 4 ? hi[2] : lo[2]).applyMatrix4(cam.matrixWorldInverse); b.expandByPoint(q); }
+    Object.assign(sun.shadow.camera, { left: b.min.x, right: b.max.x, bottom: b.min.y, top: b.max.y, near: -b.max.z - 1, far: -b.min.z + 1 });
+    sun.shadow.camera.updateProjectionMatrix();
   }
-  const pt = (c, i, d, x, y, z) => { const pl = new THREE.PointLight(c, i, d, 1.5); pl.position.set(x, y, z); scene.add(pl); };
-  { const [x, z] = kxz(0, 2.25); pt(0xfff1dc, 3.2, 5.5, x, H_ACT - 0.15, z); }
-  pt(0xf6f7ff, 4, 7, px(9), H_ACT - 0.2, pz(36));
-  pt(0xf2f6ff, 2.5, 3.4, (WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, (WALKIN.split + WALKIN.z1) / 2);
-  if (!mobile) { pt(0xfff6ea, 9, 14, px(45), 3.3, pz(24)); pt(0xfff6ea, 9, 14, px(62), 3.3, pz(24)); pt(0xf6f7ff, 4, 7, px(9.5), H_ACT - 0.2, pz(13)); }
+  sun.shadow.bias = -0.0003; sun.shadow.normalBias = 0.02; sun.shadow.radius = mobile ? 2 : 3;
+  scene.add(sun, sun.target);
+  RectAreaLightUniformsLib.init();
+  const rect = (color, lum, w, h, x, y, z, face = 'down') => {
+    const l = new THREE.RectAreaLight(color, lum, w, h); l.position.set(x, y, z);
+    if (face === 'down') l.rotation.set(-Math.PI / 2, 0, 0);       // width along x, height along z
+    else if (face === 'west') l.rotation.set(0, Math.PI / 2, 0);   // width along z, height along y
+    else if (face === 'south') l.rotation.set(0, Math.PI, 0);      // width along x, height along y
+    scene.add(l); return l;
+  };
+  const WARM = 0xfff1de, NEUTRAL = 0xfff6ec, COOL = 0xf1f5ff;
+  // sales floor: one emitter per row of pendant strips
+  for (const row of PENDANT_ROWS) rect(NEUTRAL, 9, row.x1 - row.x0, 0.12, (row.x0 + row.x1) / 2, 3.505, row.z);
+  // kitchen: lamps inside the hood over the line, ceiling cans down the aisle, soffit cans over the counter
+  { const [x, z] = kxz((HOOD.x0 + HOOD.x1) / 2, HOOD.depth * 0.55); rect(0xffe6bf, 26, 0.32, HOOD.x1 - HOOD.x0 - 0.3, x, HOOD.bottom + 0.12, z); }
+  { const [x, z] = kxz(0, 2.25); rect(WARM, 30, 0.22, 5.6, x, H_ACT - 0.02, z); }
+  const pt = (c, i, d, x, y, z) => { const pl = new THREE.PointLight(c, i, d, 2); pl.position.set(x, y, z); scene.add(pl); return pl; };
+  for (const f of [-0.28, 0.28]) pt(WARM, 4, 7, KW + KF.z1 + 1.3, 2.75, KZC - (KF.x0 + KF.x1) / 2 + f * (KF.x1 - KF.x0));
+  // back of house, restrooms and hallway: a light just under each 2 x 4 lay-in troffer
+  if (mobile) {
+    pt(COOL, 6, 9, px(9), H_ACT - 0.35, pz(38)); pt(COOL, 4, 7, px(9.5), H_ACT - 0.35, pz(13)); pt(COOL, 3, 7, px(14), H_ACT - 0.35, pz(3));
+  } else for (const [x, z] of TROFFERS) pt(COOL, 8, 7, x, H_ACT - 0.3, z);
+  // the glow of the cooler doors spilling onto the floor in front of them
+  rect(0xe6f1ff, 3.2, COOLER_RUN.len - 0.2, 1.8, VAULT_X - 0.12, 1.15, COOLER_RUN.z, 'west');
+  if (!mobile) pt(0xe6f1ff, 1.2, 4, VAULT_X - 0.4, 1.2, pz(36.5) + 0.92 + 0.12 + 1.5 * 0.76);
+  { const pl = new THREE.PointLight(0xf2f6ff, 2.2, 3.4, 1.5); pl.position.set((WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, (WALKIN.split + WALKIN.z1) / 2); scene.add(pl); }
 
   const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 80);
   const controls = new OrbitControls(camera, renderer.domElement);
@@ -2351,10 +2808,16 @@ async function create(host) {
     gtao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.5, thickness: 1.0, scale: 1.15, samples: 16, distanceFallOff: 1.0 });
     gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, radiusExponent: 1.5, rings: 2, samples: 16 });
     gtao.blendIntensity = 1.0;
+    // Leave glass and cut-out materials out of the AO depth/normal pass, and take the background
+    // texture away while it runs: with an override material three.js would otherwise draw the
+    // background's 2 x 2 quad as a black plane in the middle of the store.
     gtao.overrideVisibility = function () {
       const cache = this._visibilityCache;
+      this._bg = this.scene.background; this.scene.background = null;
       this.scene.traverse((o) => { cache.set(o, o.visible); if (o.isPoints || o.isLine || (o.material && (o.material.transparent || o.material.alphaTest > 0))) o.visible = false; });
     };
+    const restoreVis = gtao.restoreVisibility;
+    gtao.restoreVisibility = function () { restoreVis.call(this); this.scene.background = this._bg; };
     composer.addPass(gtao);
   }
   composer.addPass(new UnrealBloomPass(new THREE.Vector2(4, 4), HQ ? 0.38 : 0.28, 0.55, 1.4));
@@ -2392,6 +2855,7 @@ async function create(host) {
   items.forEach((it) => it.pick.updateMatrixWorld(true));
 
   const K = { host, open: true, started: false, needs: true, tween: null, current: null, view: null };
+  if (/[?&]debug/.test(location.search)) window.__k3d = { scene, camera, renderer, items, baked, THREE, K, M, get controls() { return controls; }, get composer() { return composer; } };
   const ray = new THREE.Raycaster(), v = new THREE.Vector3(), ndc = new THREE.Vector2();
 
   function resize() {
@@ -2410,6 +2874,8 @@ async function create(host) {
     baked.ceiling.visible = p.y < H_ACT - 0.02;
     baked.deck.visible = p.y < H_DECK - 0.02;
     baked.roof.visible = p.y < 2.8;
+    baked.site.visible = sky.visible = (p.y < H_DECK && p.x > X0 && p.x < X1 && p.z > Z0 && p.z < Z1) || p.y < 3.2;
+    sky.position.copy(p);
     const key = `${baked.roof.visible}${vis.N}${vis.S}${vis.E}${vis.W}`;
     if (key !== shadowState) { shadowState = key; renderer.shadowMap.needsUpdate = true; }
     return vis;
@@ -2446,7 +2912,8 @@ async function create(host) {
   // Reflections from the store itself: render a cube map from the middle of the sales floor once.
   function captureEnv() {
     for (const k of ['N', 'S', 'E', 'W']) { baked[k].visible = true; baked['stub' + k].visible = false; }
-    baked.ceiling.visible = baked.deck.visible = baked.roof.visible = true;
+    baked.ceiling.visible = baked.deck.visible = baked.roof.visible = baked.site.visible = sky.visible = true;
+    sky.position.set(px(46), 1.8, pz(24));
     renderer.shadowMap.needsUpdate = true;
     const crt = new THREE.WebGLCubeRenderTarget(HQ ? 256 : 128, { type: THREE.HalfFloatType });
     const cc = new THREE.CubeCamera(0.1, 60, crt); cc.position.set(px(46), 1.8, pz(24)); scene.add(cc);
@@ -2477,6 +2944,22 @@ async function create(host) {
   };
   host.querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => K.setView(b.dataset.view)));
 
+  // narrow screens: step back along the line of sight so the same things fit
+  function pullback(pos, tgt) {
+    const k = THREE.MathUtils.clamp(1.35 / camera.aspect, 1, 1.8);
+    if (k > 1) { pos.sub(tgt).multiplyScalar(k).add(tgt); keepInside(pos, tgt); }
+    return { pos, tgt };
+  }
+  // a camera position that shows one item, from the side it's used from
+  function frameItem(it, k = 1) {
+    const s = it.box.getSize(new THREE.Vector3());
+    const r = Math.max(s.x, s.y * 0.8, s.z);
+    const dist = THREE.MathUtils.clamp(r * 1.15 + 1.0, 1.6, 5.2) * k * THREE.MathUtils.clamp(1.25 / camera.aspect, 1, 1.5);
+    const tgt = it.center.clone(); if (it.id === 'cooler' || it.id === 'freezer') tgt.z = WALKIN.z1 - 0.4;
+    const pos = tgt.clone().addScaledVector(it.face, dist); pos.y = tgt.y + Math.min(dist * 0.42, 1.0) + 0.3;
+    keepInside(pos, tgt);
+    return { pos, tgt };
+  }
   function select(id, fly) {
     const it = items.find((q) => q.id === id);
     items.forEach((q) => q.el.classList.toggle('on', q === it));
@@ -2486,11 +2969,7 @@ async function create(host) {
     sel.scale.set(s.x + 0.04, s.y + 0.04, s.z + 0.04); sel.position.copy(it.center); sel.visible = true;
     card.innerHTML = `<h3><i>${it.n}</i>${it.name}</h3><ul>${it.lines.map((l) => `<li>${l}</li>`).join('')}</ul><p class="sz">Typical size · ${it.size}</p>`;
     if (fly) {
-      const r = Math.max(s.x, s.y * 0.8, s.z);
-      const dist = THREE.MathUtils.clamp(r * 1.15 + 1.0, 1.6, 5.2);
-      const tgt = it.center.clone(); if (it.id === 'cooler' || it.id === 'freezer') tgt.z = WALKIN.z1 - 0.4;
-      const pos = tgt.clone().addScaledVector(it.face, dist); pos.y = tgt.y + Math.min(dist * 0.42, 1.0) + 0.3;
-      keepInside(pos, tgt);
+      const { pos, tgt } = frameItem(it);
       flyTo(pos, tgt);
       host.querySelectorAll('[data-view]').forEach((b) => b.setAttribute('aria-pressed', 'false')); K.view = null;
     }
@@ -2513,6 +2992,241 @@ async function create(host) {
   });
   controls.addEventListener('change', () => { K.needs = true; });
 
+  /* ---------------------------------------------------------- value tour */
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const money = (n) => '$' + Math.round(n).toLocaleString('en-US');
+  const tourEl = host.querySelector('.k3d-tour'), tCard = tourEl.querySelector('.kt-card'), tTT = tourEl.querySelector('.kt-tt');
+  const tPrice = tourEl.querySelector('.kt-price'), tTotal = tourEl.querySelector('.kt-total'), tTotalB = tTotal.querySelector('b'), tMeter = tTotal.querySelector('.kt-meter i');
+  const tBar = tourEl.querySelector('.kt-bar i'), tStep = tourEl.querySelector('.kt-step b'), tEnd = tourEl.querySelector('.kt-end'), tPin = tourEl.querySelector('.kt-pin');
+  const tPlay = tourEl.querySelector('[data-kt="play"]'), tSR = tourEl.querySelector('.kt-sr'), confCanvas = tourEl.querySelector('.kt-confetti');
+  const receipt = host.querySelector('.k3d-receipt'), rLines = [...receipt.querySelectorAll('li')], rTot = receipt.querySelector('.tot b');
+  const DWELL = reduce ? 5600 : 4700, COUNT = reduce ? 1 : 1250, FLY = 1800;
+
+  // the item on its own, spinning on a lit turntable in the price card
+  const show = { scene: new THREE.Scene(), cam: new THREE.PerspectiveCamera(26, 1, 0.1, 40), pivot: new THREE.Group(), cache: new Map(), on: false };
+  show.scene.add(new THREE.HemisphereLight(0xfff8ee, 0x30413f, 1.4));
+  { const key = new THREE.DirectionalLight(0xfff0d8, 2.8); key.position.set(-2.5, 4.2, 3.4); const rim = new THREE.DirectionalLight(0xbfe4ff, 2.0); rim.position.set(3, 2.4, -3.2); show.scene.add(key, rim); }
+  {
+    const ped = new THREE.Group();
+    addMesh(ped, new THREE.CylinderGeometry(1.12, 1.18, 0.07, 64), new THREE.MeshStandardMaterial({ color: 0x163a3d, roughness: 0.3, metalness: 0.5 }), 0, -0.035, 0);
+    addMesh(ped, new THREE.TorusGeometry(1.15, 0.014, 8, 96), new THREE.MeshBasicMaterial({ color: new THREE.Color(0xeebe54).multiplyScalar(2.4) }), 0, 0, 0, Math.PI / 2, 0, 0);
+    show.scene.add(ped, show.pivot);
+  }
+  show.cam.position.set(0, 1.35, 4.1); show.cam.lookAt(0, 0.62, 0);
+  function showModel(it) {
+    if (show.cache.has(it.id)) return show.cache.get(it.id);
+    const holder = new THREE.Group();
+    for (const o of it.show || [it.obj]) { const c = o.clone(true); o.matrixWorld.decompose(c.position, c.quaternion, c.scale); holder.add(c); }
+    holder.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(holder), size = bb.getSize(new THREE.Vector3()), c = bb.getCenter(new THREE.Vector3());
+    holder.position.set(-c.x, -bb.min.y, -c.z);
+    const wrap = new THREE.Group(); wrap.add(holder); wrap.scale.setScalar(1.75 / Math.max(size.x, size.z, size.y * 1.2));
+    wrap.traverse((o) => { if (o.isMesh) o.castShadow = o.receiveShadow = false; });
+    show.cache.set(it.id, wrap); return wrap;
+  }
+  function renderShowcase(now) {
+    if (!show.on) return;
+    const cr = renderer.domElement.getBoundingClientRect(), q = tTT.getBoundingClientRect();
+    if (q.width < 8 || q.bottom < cr.top || q.top > cr.bottom) return;
+    const x = q.left - cr.left, y = cr.bottom - q.bottom, w = q.width, h = q.height;
+    show.pivot.rotation.y = reduce ? 0.7 : now * 0.00055;
+    show.scene.environment = scene.environment;
+    show.cam.aspect = w / h; show.cam.updateProjectionMatrix();
+    renderer.setRenderTarget(null);
+    renderer.setViewport(x, y, w, h); renderer.setScissor(x, y, w, h); renderer.setScissorTest(true);
+    renderer.setClearColor(0x10292c, 1); renderer.clear(true, true, false);
+    renderer.render(show.scene, show.cam);
+    renderer.setScissorTest(false); renderer.setViewport(0, 0, cr.width, cr.height); renderer.setClearColor(0x000000, 0);
+    // copy it into the card's own canvas (the card sits on top of this part of the stage)
+    const pr = renderer.getPixelRatio(), tc = tTT.firstElementChild, cw = Math.round(w * pr), ch = Math.round(h * pr);
+    if (tc.width !== cw || tc.height !== ch) { tc.width = cw; tc.height = ch; }
+    tc.getContext('2d').drawImage(renderer.domElement, Math.round(x * pr), Math.round((q.top - cr.top) * pr), cw, ch, 0, 0, cw, ch);
+  }
+
+  // in the store: a glowing ring on the floor, a stage light, the gold outline
+  const ring = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false, blending: THREE.AdditiveBlending }));
+  {
+    const c = canvas(256, 256), g = c.getContext('2d'), gr = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+    gr.addColorStop(0, 'rgba(255,210,120,0.10)'); gr.addColorStop(0.62, 'rgba(255,210,120,0.12)'); gr.addColorStop(0.8, 'rgba(255,214,130,0.95)'); gr.addColorStop(0.88, 'rgba(255,214,130,0.3)'); gr.addColorStop(1, 'rgba(255,214,130,0)');
+    g.fillStyle = gr; g.fillRect(0, 0, 256, 256);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; ring.material.map = t; ring.material.color.setRGB(1.8, 1.5, 1.0);
+  }
+  ring.rotation.x = -Math.PI / 2; ring.visible = false; ring.renderOrder = 3; scene.add(ring);
+  const spot = new THREE.SpotLight(0xffe0a8, 0, 9, 0.5, 0.75, 1.3); scene.add(spot, spot.target);
+
+  const tour = { on: false, i: -1, paused: false, phase: 'idle', t: 0, last: 0, total: 0, shown: 0, counted: false, it: null, base: null };
+  const ICON = {
+    play: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>',
+    pause: '<svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"><path d="M7 5h4v14H7zM13 5h4v14h-4z"/></svg>'
+  };
+  const setPlay = () => { tPlay.innerHTML = tour.paused ? ICON.play : ICON.pause; tPlay.setAttribute('aria-label', tour.paused ? 'Resume the tour' : 'Pause the tour'); };
+  const fillReceipt = (upTo) => {
+    tour.total = 0;
+    rLines.forEach((li, k) => { const done = k < upTo; li.classList.toggle('done', done); li.classList.remove('on'); li.querySelector('b').textContent = done ? money(TOUR[k].price) : '—'; if (done) tour.total += TOUR[k].price; });
+    tour.shown = tour.total; rTot.textContent = money(tour.total); tTotalB.textContent = money(tour.total); tMeter.style.width = (tour.total / TOUR_TOTAL * 100) + '%';
+  };
+  function tourStart() {
+    stopConfetti();
+    tour.on = true; tour.paused = false; tour.last = 0;
+    host.classList.add('touring'); tourEl.hidden = false; receipt.hidden = false; tEnd.hidden = true;
+    select(null); fillReceipt(0); setPlay(); tourGo(0, false);
+  }
+  function tourStop() {
+    if (!tour.on) return;
+    tour.on = false; tour.phase = 'idle';
+    host.classList.remove('touring'); tourEl.hidden = true; receipt.hidden = true; tCard.classList.remove('in');
+    ring.visible = false; spot.intensity = 0; sel.visible = false; show.on = false; tPin.hidden = true;
+    stopConfetti(); K.needs = true;
+  }
+  function tourGo(i, flyPrev = true) {
+    if (flyPrev) flyPin();
+    if (i >= TOUR.length) { tourEnd(); return; }
+    const st = TOUR[i], it = items.find((q) => q.id === st.id);
+    Object.assign(tour, { i, it, phase: 'fly', t: 0, counted: false });
+    const fr = st.cam ? pullback(new THREE.Vector3(...st.cam[0]), new THREE.Vector3(...st.cam[1])) : frameItem(it, 0.9); tour.base = fr;
+    flyTo(fr.pos, fr.tgt, reduce); if (K.tween) K.tween.dur = FLY;
+    const s = it.box.getSize(new THREE.Vector3());
+    sel.scale.set(s.x + 0.06, s.y + 0.06, s.z + 0.06); sel.position.copy(it.center); sel.visible = true;
+    const rs = Math.max(s.x, s.z) * 1.45 + 0.9; ring.scale.set(rs, rs, 1); ring.position.set(it.center.x, 0.012, it.center.z); ring.visible = true;
+    spot.position.set(it.center.x + it.face.x * 1.3, Math.min(H_ACT - 0.15, it.box.max.y + 1.5), it.center.z + it.face.z * 1.3); spot.target.position.copy(it.center); spot.intensity = 0;
+    show.pivot.clear(); show.pivot.add(showModel(it)); show.on = true;
+    tCard.classList.remove('in');
+    tCard.querySelector('.kt-zone').textContent = ZONES[it.zone] + ' · ' + String(i + 1).padStart(2, '0') + ' of ' + TOUR.length;
+    tCard.querySelector('h3').textContent = st.title;
+    tCard.querySelector('.kt-range').textContent = st.range ? `Typical range ${money(st.range[0])} to ${money(st.range[1])}` : 'Based on one dealer listing';
+    tCard.querySelector('.kt-basis').textContent = st.basis;
+    tPrice.textContent = money(0); tPrice.classList.remove('done');
+    setTimeout(() => { if (tour.on && tour.i === i) tCard.classList.add('in'); }, reduce ? 0 : 350);
+    tStep.textContent = String(i + 1).padStart(2, '0'); tBar.style.width = (i / TOUR.length * 100) + '%';
+    rLines.forEach((li, k) => li.classList.toggle('on', k === i));
+    rLines[i].scrollIntoView({ block: 'nearest', behavior: reduce ? 'auto' : 'smooth' });
+    tPin.hidden = true; K.needs = true;
+  }
+  function tourJump(j) {
+    j = THREE.MathUtils.clamp(j, 0, TOUR.length - 1);
+    tPin.hidden = true; tEnd.hidden = true; stopConfetti(); fillReceipt(j);
+    if (tour.paused) { tour.paused = false; setPlay(); }
+    tourGo(j, false);
+  }
+  function landPrice() {
+    const st = TOUR[tour.i];
+    tour.counted = true; tPrice.textContent = money(st.price); tPin.textContent = '+' + money(st.price);
+    tPrice.classList.add('done'); coins(tPrice);
+    tour.total += st.price;
+    const li = rLines[tour.i]; li.classList.add('done'); li.querySelector('b').textContent = money(st.price);
+    tSR.textContent = `${st.title}: about ${money(st.price)} if bought new. Running total ${money(tour.total)}.`;
+  }
+  function pinShow() {
+    tPin.textContent = '+' + money(0); tPin.hidden = false; tPin.className = 'kt-pin'; void tPin.offsetWidth; tPin.classList.add('pop');
+  }
+  function placePin() {
+    if (tPin.hidden || tPin.classList.contains('kt-fly') || !tour.it) return;
+    v.copy(tour.it.anchorV).project(camera);
+    tPin.style.left = ((v.x * 0.5 + 0.5) * stage.clientWidth) + 'px'; tPin.style.top = ((-v.y * 0.5 + 0.5) * stage.clientHeight) + 'px';
+  }
+  function flyPin() {
+    if (tPin.hidden || !tour.counted) { tPin.hidden = true; return; }
+    const sr = stage.getBoundingClientRect(), mr = tTotalB.getBoundingClientRect(), pin = tPin;
+    pin.classList.add('kt-fly');
+    requestAnimationFrame(() => { pin.style.left = (mr.left - sr.left + mr.width / 2) + 'px'; pin.style.top = (mr.top - sr.top + mr.height) + 'px'; pin.style.opacity = '0'; pin.style.scale = '.45'; });
+    setTimeout(() => { pin.hidden = true; pin.classList.remove('kt-fly'); pin.style.opacity = ''; pin.style.scale = ''; tTotal.classList.add('bump'); setTimeout(() => tTotal.classList.remove('bump'), 260); }, reduce ? 0 : 760);
+  }
+  function coins(el) {
+    if (reduce) return;
+    const sr = stage.getBoundingClientRect(), r = el.getBoundingClientRect(), cx = r.left - sr.left + Math.min(r.width, 160) * 0.5, cy = r.top - sr.top + r.height / 2;
+    for (let k = 0; k < 14; k++) {
+      const c = document.createElement('i'), a = -Math.PI * (0.1 + Math.random() * 0.8), d = 50 + Math.random() * 80;
+      c.className = 'kt-coin'; c.style.left = cx + 'px'; c.style.top = cy + 'px';
+      c.style.setProperty('--dx', Math.cos(a) * d * 1.4 + 'px'); c.style.setProperty('--dy', Math.sin(a) * d + 'px'); c.style.animationDelay = k * 16 + 'ms';
+      tourEl.appendChild(c); setTimeout(() => c.remove(), 1300);
+    }
+  }
+  function tourEnd() {
+    Object.assign(tour, { phase: 'end', it: null });
+    tour.shown = tour.total; tTotalB.textContent = rTot.textContent = money(tour.total); tMeter.style.width = (tour.total / TOUR_TOTAL * 100) + '%';
+    tBar.style.width = '100%'; ring.visible = false; sel.visible = false; spot.intensity = 0; show.on = false; tCard.classList.remove('in');
+    rLines.forEach((li) => li.classList.remove('on'));
+    K.setView('overview');
+    tEnd.hidden = false;
+    const big = tEnd.querySelector('.big'), t0 = performance.now(), dur = reduce ? 0 : 2200;
+    const step = (now) => { const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = 1 - Math.pow(1 - k, 4); big.textContent = money(TOUR_TOTAL * e); if (k < 1 && tour.phase === 'end') requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+    tSR.textContent = `Tour complete. Bought new, this equipment runs about ${money(TOUR_TOTAL)}.`;
+    confetti();
+    setTimeout(() => { const b = tEnd.querySelector('[data-kt="book"]'); if (b && tour.phase === 'end') b.focus(); }, 400);
+  }
+  let confRAF = 0;
+  function confetti() {
+    if (reduce) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1), W = stage.clientWidth, H = stage.clientHeight, g = confCanvas.getContext('2d');
+    confCanvas.width = W * dpr; confCanvas.height = H * dpr; g.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const cols = ['#eebe54', '#e93f24', '#f5f3e6', '#3bb3a0', '#ffd98a'], P = [];
+    for (let k = 0; k < 190; k++) P.push({ x: W / 2 + (Math.random() - 0.5) * W * 0.3, y: H * 0.42, vx: (Math.random() - 0.5) * 15, vy: -6 - Math.random() * 11, r: Math.random() * 6, vr: (Math.random() - 0.5) * 0.4, w: 6 + Math.random() * 6, h: 3 + Math.random() * 5, c: cols[k % cols.length], coin: k % 9 === 0 });
+    const t0 = performance.now();
+    const step = (now) => {
+      const age = now - t0; g.clearRect(0, 0, W, H);
+      for (const q of P) {
+        q.vy += 0.32; q.vx *= 0.985; q.x += q.vx; q.y += q.vy; q.r += q.vr;
+        g.save(); g.translate(q.x, q.y); g.rotate(q.r); g.globalAlpha = Math.max(0, 1 - age / 4200);
+        if (q.coin) { g.fillStyle = '#eebe54'; g.beginPath(); g.ellipse(0, 0, 6, 6 * Math.abs(Math.cos(q.r * 2)) + 1, 0, 0, 6.3); g.fill(); }
+        else { g.fillStyle = q.c; g.fillRect(-q.w / 2, -q.h / 2, q.w, q.h * Math.abs(Math.cos(q.r))); }
+        g.restore();
+      }
+      if (age < 4300) confRAF = requestAnimationFrame(step); else g.clearRect(0, 0, W, H);
+    };
+    confRAF = requestAnimationFrame(step);
+  }
+  function stopConfetti() { cancelAnimationFrame(confRAF); const g = confCanvas.getContext('2d'); g.clearRect(0, 0, confCanvas.width, confCanvas.height); }
+
+  function tourTick(now) {
+    if (!tour.on) return;
+    const dt = tour.last ? Math.min(100, now - tour.last) : 16; tour.last = now;
+    if (tour.phase === 'end' || tour.paused) return;
+    K.needs = true;
+    const st = TOUR[tour.i], pulse = 0.5 + 0.5 * Math.sin(now * 0.0055);
+    ring.material.opacity = 0.5 + 0.5 * pulse;
+    sel.material.color.setRGB(0.93, 0.68 + 0.2 * pulse, 0.3);
+    spot.intensity += (16 - spot.intensity) * 0.06;
+    if (tour.phase === 'fly') { if (!K.tween) { tour.phase = 'show'; tour.t = 0; pinShow(); } return; }
+    tour.t += dt;
+    if (!reduce) {
+      // slow drift around the item while its price is up
+      const k = Math.min(1, tour.t / DWELL), a = 0.24 * (k * k * (3 - 2 * k)) - 0.05;
+      const { pos, tgt } = tour.base, off = pos.clone().sub(tgt).applyAxisAngle(new THREE.Vector3(0, 1, 0), a);
+      camera.position.copy(tgt).add(off); controls.target.copy(tgt);
+    }
+    if (!tour.counted) {
+      const k = Math.min(1, tour.t / COUNT), e = 1 - Math.pow(1 - k, 3), val = st.price * e;
+      tPrice.textContent = money(val); tPin.textContent = '+' + money(val);
+      if (k >= 1) landPrice();
+    }
+    if (Math.abs(tour.shown - tour.total) > 0.5) {
+      tour.shown += (tour.total - tour.shown) * 0.12; if (Math.abs(tour.shown - tour.total) < 1) tour.shown = tour.total;
+      tTotalB.textContent = money(tour.shown); rTot.textContent = money(tour.shown);
+      tMeter.style.width = (tour.shown / TOUR_TOTAL * 100) + '%';
+    }
+    if (tour.t >= DWELL) tourGo(tour.i + 1);
+  }
+  host.querySelector('[data-tour]').addEventListener('click', () => { history.replaceState(null, '', '#3d-tour'); tourStart(); });
+  tourEl.querySelector('[data-kt="play"]').addEventListener('click', () => {
+    if (tour.phase === 'end') return;
+    tour.paused = !tour.paused; setPlay();
+    if (!tour.paused) tourJump(tour.i);
+  });
+  tourEl.querySelector('[data-kt="next"]').addEventListener('click', () => { if (tour.phase === 'end') return; if (tour.i >= TOUR.length - 1) { if (!tour.counted) landPrice(); tourGo(TOUR.length); } else tourJump(tour.i + 1); });
+  tourEl.querySelector('[data-kt="prev"]').addEventListener('click', () => tourJump(tour.phase === 'end' ? TOUR.length - 1 : tour.i - 1));
+  tourEl.querySelector('[data-kt="exit"]').addEventListener('click', () => { tourStop(); K.setView('overview'); });
+  tEnd.querySelector('[data-kt="replay"]').addEventListener('click', () => tourStart());
+  tEnd.querySelector('[data-kt="explore"]').addEventListener('click', () => { tourStop(); K.setView('overview'); });
+  tEnd.querySelector('[data-kt="book"]').addEventListener('click', () => {
+    tourStop(); close();
+    const c = document.getElementById('contact'); if (c) setTimeout(() => c.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth' }), 60);
+  });
+  renderer.domElement.addEventListener('pointerdown', () => { if (tour.on && tour.phase !== 'end' && !tour.paused) { tour.paused = true; setPlay(); } });
+  K.tourStart = () => { if (!K.ready) { K.pendingTour = true; return; } tourStart(); };
+  K.tourStop = tourStop;
+  K.tour = tour;
+
   K.loop = () => {
     if (K.running) return; K.running = true;
     const frame = (now) => {
@@ -2523,15 +3237,17 @@ async function create(host) {
         camera.position.lerpVectors(tw.p0, tw.p1, e); controls.target.lerpVectors(tw.t0, tw.t1, e);
         if (t >= 1) K.tween = null; K.needs = true;
       }
+      if (K.ready) tourTick(now);
       const moved = controls.update();
       if (camera.position.y < 0.3) { camera.position.y = 0.3; }
       if (moved || K.needs) {
         const vis = applyCut();
         if (!K.envReady) { captureEnv(); K.envReady = true; }
         composer.render();
-        updateSpots(vis);
+        renderShowcase(now);
+        if (tour.on) placePin(); else updateSpots(vis);
         K.needs = false;
-        if (!K.ready) { K.ready = true; status.hidden = true; window.__k3dReady = true; }
+        if (!K.ready) { K.ready = true; status.hidden = true; window.__k3dReady = true; if (K.pendingTour) { K.pendingTour = false; tourStart(); } }
       }
     };
     requestAnimationFrame(frame);

@@ -134,6 +134,12 @@
   .tour-list li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:var(--muted)}
   .tour-list b{display:block;color:var(--ink);font-size:16px}
   .tour-list i{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--amber);font:700 12px var(--mono);font-style:normal}
+  .value-tour{display:flex;align-items:center;justify-content:space-between;gap:22px;margin-top:28px;padding:22px 24px;border-radius:var(--radius);background:linear-gradient(120deg,var(--ink),var(--ink-3));color:var(--paper);box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .value-tour::before{content:"$";position:absolute;right:210px;top:-34px;font:900 150px/1 var(--mono);color:rgba(238,190,84,.08);pointer-events:none}
+  .value-tour h3{font-size:20px;margin:0 0 6px;color:#fff}
+  .value-tour p{margin:0;color:var(--muted-dark);font-size:15px;max-width:620px}
+  .value-tour .btn{flex:0 0 auto;position:relative}
+  @media(max-width:760px){.value-tour{flex-direction:column;align-items:flex-start;padding:20px}.value-tour .btn{width:100%}.value-tour::before{right:12px}}
   .uses{background:var(--sage);border-top:1px solid #b9cdbf;border-bottom:1px solid #b9cdbf}
   .uses .kicker,.uses .use .tag{color:var(--teal)}
   .use-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:40px;border-top:1px solid #a9c2b2}
@@ -520,7 +526,14 @@
           <li><i>05</i><span><b>Seating and restrooms</b>Window seating and customer restrooms.</span></li>
         </ol>
       </div>
-      <p class="note">The 3D model follows the standard layout of the modern convenience-store format this building uses, and the kitchen line follows a photo of the real one. The real layout is confirmed at your walkthrough.</p>
+      <div class="value-tour">
+        <div>
+          <h3>See what it would cost to build.</h3>
+          <p>Take the value tour: the camera walks the kitchen piece by piece and tallies what each one costs bought new, from the hood and walk-ins to the shelving. The equipment alone tops $100,000. Here it's already in place.</p>
+        </div>
+        <button type="button" class="btn btn-red" data-open-3d="tour"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Start the value tour</button>
+      </div>
+      <p class="note">The 3D model follows the standard layout of the modern convenience-store format this building uses, and the kitchen line follows a photo of the real one. The real layout is confirmed at your walkthrough. Value-tour prices are typical new prices from public dealer listings and installer cost guides, shown as estimates.</p>
     </div>
   </section>
 
@@ -766,8 +779,9 @@ const LISTING = {
     });
   };
   document.querySelectorAll("[data-open-3d]").forEach((b) => b.addEventListener("click", () => {
-    history.replaceState(null, "", "#3d");
-    open3d("overview", b);
+    const view = b.dataset.open3d || "overview";
+    history.replaceState(null, "", view === "overview" ? "#3d" : "#3d-" + view);
+    open3d(view, b);
   }));
   const hashView = /^#3d(?:-(\w+))?$/.exec(location.hash);
   if (hashView) open3d(hashView[1] || "overview", null);

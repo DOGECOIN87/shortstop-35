@@ -29,7 +29,8 @@ use a deeper `#D0341B` so white text passes contrast) and headlight gold
 of the whole store. Three.js (r160) is copied into `vendor/` so the folder is
 self-contained; nothing loads until a visitor opens the viewer. Links ending in
 `#3d` open it directly, and `#3d-<view>` opens a named view (`overview`,
-`plan`, `front`, `line`, `back`, `store`, `coolers`).
+`plan`, `front`, `line`, `back`, `store`, `coolers`); `#3d-tour` starts the
+value tour.
 
 Layout: the standard plan of the current-generation convenience-store format
 the building was built to (about 93 x 50 ft, storefront on the south):
@@ -65,14 +66,68 @@ Built in code to standard equipment sizes, in metres. Rendering:
 - shelf products as instances with printed packaging from generated atlases
   (made-up brand names only), puffed chip bags, shaped bottles and cans,
   printed cases;
-- reflections captured from the store itself (cube map from the sales
-  floor), soft shadows, ground-truth ambient occlusion, bloom on lights and
-  screens, 4x MSAA and ACES tone mapping;
-- phones get a lighter tier: standard materials, half-size textures, no
-  ambient occlusion, 2x MSAA.
+- lighting from the fixtures themselves: area lights the size of each
+  pendant row over the sales floor, the lamps inside the hood, the cans down
+  the kitchen aisle and the glow of the cooler doors; a light under every
+  lay-in troffer in the back room, restrooms and hallway;
+- daylight only through the storefront glass: walls, deck and ceilings cast
+  shadows, so sun falls on the floor inside the windows with the mullion
+  shadows, and outside you see the parking lot, a fuel canopy over three
+  islands, parked cars and the sky;
+- reflections captured from the store itself (cube map from the sales floor),
+  used at full strength for reflections but only partly as fill light, so
+  surfaces keep their shading instead of an even glow; ground-truth ambient
+  occlusion, bloom on lights and screens, 4x MSAA, AgX tone mapping (keeps
+  white walls and lit signs from blowing out);
+- small details: utensil rail and order tickets on the line, sanitizer
+  bucket, kitchen clock, shelf-edge price tags, sprinkler mains, security
+  domes, speakers, smoke detectors, exit signs, extinguishers, wet-floor sign,
+  ice merchandiser and propane exchange cage on the front walk;
+- phones get a lighter tier: standard materials, half-size textures, fewer
+  lights, no ambient occlusion, 2x MSAA.
 
-Post-processing modules (`vendor/jsm/`) are copied unmodified from three.js
-0.160.0, the same version as `vendor/three.module.js`. 32 labelled items; tap one for what it is and its typical size. Walls
+### Value tour
+
+"Value tour" in the viewer (or the "Start the value tour" button on the page,
+or a link ending in `#3d-tour`) runs an automated walkthrough of the kitchen
+and back room: the camera flies to each piece, a stage light and a gold ring
+pick it out, the piece spins on a turntable in a price card, and its typical
+new price counts up and drops into a running total and a receipt in the side
+panel. It ends on the total (about $136,350) with confetti and buttons to book
+a walkthrough, replay or explore. Pause, previous, next and exit are on
+screen; arrow keys step, Space pauses, Esc exits. Reduced-motion settings get
+instant moves, no drifting camera and no confetti.
+
+Prices are in `TOUR` at the top of `kitchen3d.js`, labelled on screen as
+estimates of what each piece costs bought new, not quotes and not an appraisal
+of the equipment in this kitchen. Where only one source was found it says so;
+the chef base under the griddle, the 21 ft counter itself, the menu screens,
+the fry station and the mop sink are left out because no price was found.
+
+| Stop | Shown | Range / basis | Sources |
+| --- | --- | --- | --- |
+| Exhaust hood system (12 ft, fans, duct, make-up air, installed) | $40,000 | $25,000 to $60,000; $950 to $2,800 per ft, make-up air $8,000 to $25,000, full packages $35,000 to $80,000 | taxfyle.com/blog/restaurant-hood-installation-cost, therestaurantwarehouse.com/blogs/restaurant-equipment/commercial-kitchen-hood-installation-cost, pulserevops.com/knowledge/bo0154 |
+| Fire suppression, installed | $6,500 | $4,000 to $10,000 | pulserevops.com/knowledge/bo0154, pos.toasttab.com/blog/on-the-line/restaurant-hood-installation-costs |
+| 36 in griddle | $3,500 | $2,200 to $5,000 (36 to 48 in) | gofoodservice.com new restaurant equipment guide |
+| 24 in four-burner range top | $1,800 | $850 to $2,600 dealer listings (Atosa, Vulcan, Star, Vollrath) | restaurantsupply.com, katom.com, tigerchef.com |
+| Two 40 lb fryers | $4,850 | 2 x $2,425.50 (one dealer listing, Vulcan) | shopatstop.com |
+| Heated holding cabinet | $2,400 | $1,300 to $3,400 (Avantco, Metro) | webstaurantstore.com |
+| Hand sinks (2) | $600 | $125 to $415 each | katom.com, chefbuyer.com |
+| Heated display at the counter | $4,500 | one 45 in case, Hatco GRHD-3PD $4,495 | katom.com |
+| Two rapid-cook ovens | $16,400 | TurboChef Eco $8,088 to $8,331 each; Bullet $17,191, Plexor M2 $23,253 | webstaurantstore.com, shop.middleby.com |
+| 72 in refrigerated prep table | $5,400 | $2,404 to $9,274 (Beverage-Air SPE72HC-08 $5,414) | katom.com, chefbuyer.com |
+| Mixer and tortilla press | $3,700 | 20 qt mixer $839 to $3,911; heated press $1,714 to $8,909 | webstaurantstore.com, katom.com, pizzaovens.com |
+| 3-compartment sink, 90 in | $1,500 | $529 to $1,929 | webstaurantstore.com, katom.com |
+| Ice machine and 500 lb bin | $6,200 | $3,018 to $10,155 (Hoshizaki KM-330MAK/B-500SF $6,205) | katom.com |
+| Walk-in cooler and freezer | $35,000 | $30,000 to $50,000; Nor-Lake combos $25,617 to $30,296 before install; installed coolers $12,000 to $25,000, freezers +20 to 30% | deqonline.com, mymortuarycooler.com, homestars.com, thepricer.org |
+| Two-door reach-in freezer | $3,500 | $2,215 to $3,900 | walmart.com, katom.com, restaurantsupply.com, chefbuyer.com |
+| Storage shelving | $500 | NSF 48 x 18 wire units $143 to $267 | restockit.com, sourcesupplycompany.com |
+
+Listings were captured in November 2026 and vary by seller and date; check
+current prices before quoting any of these.
+
+Post-processing and area-light modules (`vendor/jsm/`) are copied unmodified
+from three.js 0.160.0, the same version as `vendor/three.module.js`. 32 labelled items; tap one for what it is and its typical size. Walls
 between the camera and the room are cut away automatically. Menu screens and
 signs show generic "your menu / your brand here" designs, no chain branding.
 `kitchen-3d-poster.jpg` is a render of the overview used on the page.
