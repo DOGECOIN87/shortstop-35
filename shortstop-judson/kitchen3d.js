@@ -2804,7 +2804,7 @@ const CSS = `
 .k3d-status{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:3;background:rgba(20,50,54,.92);border:1px solid rgba(255,255,255,.15);border-radius:12px;padding:12px 16px;font-size:14px;text-align:center;max-width:80%}
 .k3d-status[hidden]{display:none}
 .k3d-side{background:#143236;border-left:1px solid rgba(255,255,255,.1);overflow:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
-.k3d-card{background:#1c4044;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px}
+.k3d-card{background:#1c4044;border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 12px 24px -12px rgba(0,0,0,.5)}
 .k3d-card h3{font-size:17px;margin:0 0 6px;display:flex;gap:8px;align-items:center}
 .k3d-card h3 i{font-style:normal;display:inline-grid;place-items:center;width:24px;height:24px;border-radius:50%;background:#eebe54;color:#143236;font:700 12px ui-monospace,Menlo,Consolas,monospace}
 .k3d-card p{font-size:14px;color:#cfdcdb;margin:0}
@@ -2891,7 +2891,7 @@ const CSS = `
 .kt-fine{font-size:11.5px!important;color:#a9c1c0!important}
 .kt-confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .kt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.k3d-receipt{background:#1c4044;border:1px solid rgba(238,190,84,.32);border-radius:14px;padding:14px;font-variant-numeric:tabular-nums}
+.k3d-receipt{background:#1c4044;border:1px solid rgba(238,190,84,.32);border-radius:14px;padding:14px;font-variant-numeric:tabular-nums;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 12px 24px -12px rgba(0,0,0,.5)}
 .k3d-receipt[hidden]{display:none}
 .k3d-receipt h3{font-size:16px;margin:0 0 8px;color:#fff}
 .k3d-receipt ol{list-style:none;margin:0;padding:0;font-size:13.5px}
