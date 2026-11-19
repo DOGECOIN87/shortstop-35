@@ -269,7 +269,9 @@ What the page does now:
   touch screens and the numbered spots take taps 44 px across;
 - body text runs about 60 to 72 characters a line; headings, FAQ questions
   and contact values never end on one short word;
-- cards share one corner radius and one light shadow;
+- cards share one corner radius; depth comes from three elevation levels lit
+  from above (content cards, featured or interactive pieces, the hero drawing
+  and form), with lighter surfaces and a top highlight on the dark sections;
 - composition: type on a 1.25 scale from 16 px (61 / 39 / 25 / 20 / 16 /
   12.8, subtitles 18), spacing on an 8 px grid, golden-ratio splits for the
   3D poster and its list and for the contact card and form, every section on
