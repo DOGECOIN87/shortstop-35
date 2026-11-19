@@ -64,7 +64,7 @@ const ITEMS = {
   hotcab: { zone: 'kitchen', name: 'Hot holding cabinet', lines: ['Heated cabinet with a glass door and digital display', 'Just past the end of the hood'], size: '26 in wide' },
   handsink1: { zone: 'kitchen', name: 'Hand sink by the line', lines: ['Wall-hung hand sink with soap and towel dispensers'], size: '17 in wide' },
   counter: { zone: 'counter', name: 'Serving counter', lines: ['Heated display wells under two-tier glass, facing the sales floor', 'Wood-look front, register at the pick-up end'], size: 'About 21 ft long' },
-  menu: { zone: 'counter', name: 'Digital menu boards', lines: ['Three screens hung over the line, facing the store'], size: '3 screens' },
+  menu: { zone: 'counter', name: 'Digital menu boards', lines: ['Three screens hung from the sign band over the serving counter, facing the store'], size: '3 screens' },
   signs: { zone: 'counter', name: 'Order point and sign band', lines: ['ORDER HERE and PICK-UP HERE signs', 'A sign band over the counter for your brand'], size: 'Full width of the kitchen' },
   prep: { zone: 'back', name: 'Refrigerated prep table', lines: ['Cold rail with 16 ingredient pans and a hinged lid', 'Full-length cutting board, three refrigerated doors below'], size: '72 in long' },
   dough: { zone: 'back', name: 'Dough and tortilla station', lines: ['Stainless worktable with a heated tortilla press and a 20 qt mixer'], size: '72 in long' },
@@ -93,8 +93,8 @@ const VIEWS = {
   overview: { label: 'Overview', pos: [15.5, 20.5, 23.5], target: [-0.8, 0, 0.6] },
   plan: { label: 'Floor plan', pos: [0, 33.5, 0.9], target: [0, 0, 0.4] },
   front: { label: 'At the counter', pos: [px(44), 1.75, pz(31)], target: [KW + 1.5, 1.95, KZC - 0.5] },
-  line: { label: 'In the kitchen', pos: [KW + 2.1, 1.85, KZC - 3.0], target: [KW + 0.5, 1.0, KZC + 1.4] },
-  back: { label: 'Back room', pos: [px(17.8), 2.65, pz(43.2)], target: [px(6), 0.8, pz(29)] },
+  line: { label: 'In the kitchen', pos: [KW + 2.1, 1.85, KZC - 3.0], target: [KW + 0.5, 1.0, KZC + 1.4], room: [KW, KW + KF.z1, KZC - KF.x1, KZC - KF.x0] },
+  back: { label: 'Back room', pos: [px(17.8), 2.65, pz(43.2)], target: [px(6), 0.8, pz(29)], room: [X0, BOH.x1, WALKIN.z1, pz(44) - IW / 2] },
   store: { label: 'Store floor', pos: [px(41), 1.75, pz(47.5)], target: [px(56), 1.3, pz(16)] },
   coolers: { label: 'Cold vault', pos: [px(70.2), 1.75, pz(4.5)], target: [VAULT_X - 0.2, 1.15, pz(40)] }
 };
@@ -128,7 +128,8 @@ let HQ = true;
 // The environment map is captured from inside the lit store. Used at full strength as diffuse
 // light it flattens everything into an even glow, so only a share of it is kept as bounce
 // light; reflections (the specular part) stay at full strength.
-const IBL_DIFFUSE = 0.35;
+const DBG = /[?&]debug/.test(location.search) ? new URLSearchParams(location.search) : new URLSearchParams();
+const IBL_DIFFUSE = +(DBG.get('ibl') || 0.18);
 THREE.ShaderChunk.lights_fragment_maps = THREE.ShaderChunk.lights_fragment_maps.replace('iblIrradiance += getIBLIrradiance( geometryNormal );', `iblIrradiance += ${IBL_DIFFUSE.toFixed(3)} * getIBLIrradiance( geometryNormal );`);
 const METALS = new Set();
 
@@ -593,6 +594,42 @@ function atlasMat(mat, n) {
   return mat;
 }
 
+// Wear and grime in world space, so it never repeats with the texture tiles: low-frequency
+// blotches in colour and roughness (smudges on stainless, traffic on floors, scuffs on walls)
+// and a darker band near the floor where mops and carts hit.
+const WEATHER_GLSL = `
+varying vec3 vWPos;
+float wHash(vec3 p) { p = fract(p * 0.3183099 + 0.1); p *= 17.0; return fract(p.x * p.y * p.z * (p.x + p.y + p.z)); }
+float wVal(vec3 x) {
+  vec3 i = floor(x), f = fract(x); f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(wHash(i), wHash(i + vec3(1, 0, 0)), f.x), mix(wHash(i + vec3(0, 1, 0)), wHash(i + vec3(1, 1, 0)), f.x), f.y),
+             mix(mix(wHash(i + vec3(0, 0, 1)), wHash(i + vec3(1, 0, 1)), f.x), mix(wHash(i + vec3(0, 1, 1)), wHash(i + vec3(1, 1, 1)), f.x), f.y), f.z);
+}
+float wNoise(vec3 p) { return wVal(p) * 0.55 + wVal(p * 2.13 + 3.1) * 0.3 + wVal(p * 4.71 + 7.7) * 0.15; }
+`;
+function weather(mat, { dirt = 0, base = 0, rough = 0, scale = 1.2, tint = [0.92, 0.88, 0.8] } = {}) {
+  if (!HQ && !base) return mat;
+  const f = (v) => v.toFixed(4);
+  mat.onBeforeCompile = (sh) => {
+    sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nvarying vec3 vWPos;')
+      .replace('#include <project_vertex>', `#include <project_vertex>
+      { vec4 wp = vec4(transformed, 1.0);
+        #ifdef USE_INSTANCING
+        wp = instanceMatrix * wp;
+        #endif
+        vWPos = (modelMatrix * wp).xyz; }`);
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\n' + WEATHER_GLSL)
+      .replace('#include <map_fragment>', `#include <map_fragment>
+      { float n = wNoise(vWPos * ${f(scale)});
+        diffuseColor.rgb *= mix(vec3(1.0), vec3(${tint.map(f).join(',')}), ${f(dirt)} * smoothstep(0.35, 0.85, n));
+        diffuseColor.rgb *= 1.0 - ${f(base)} * (1.0 - smoothstep(0.04, 0.5, vWPos.y)) * (0.6 + 0.8 * n); }`)
+      .replace('#include <roughnessmap_fragment>', `#include <roughnessmap_fragment>
+      roughnessFactor = clamp(roughnessFactor + ${f(rough)} * (wNoise(vWPos * ${f(scale * 2.7)} + 11.3) - 0.5) * 2.0, 0.03, 1.0);`);
+  };
+  mat.customProgramCacheKey = () => `w${dirt}|${base}|${rough}|${scale}`;
+  return mat;
+}
+
 function screenTexture(w, h, draw) {
   const c = canvas(w, h), g = c.getContext('2d'); draw(g, w, h);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
@@ -705,6 +742,43 @@ function lineSmallwares(M, g) {
   // clock over the doorway to the back room
   addMesh(g, new THREE.CylinderGeometry(0.17, 0.17, 0.04, 32), M.black, (DOORWAY.a + DOORWAY.b) / 2, 2.5, 0.02, Math.PI / 2, 0, 0);
   addMesh(g, new THREE.CircleGeometry(0.155, 32), M.clock, (DOORWAY.a + DOORWAY.b) / 2, 2.5, 0.042).castShadow = false;
+}
+
+// Surface-mounted duplex outlet on a steel box, fed by EMT conduit from the ceiling.
+// Faces +z in its own frame; ry turns it to the wall it is on.
+function outlet(M, p, x, y, z, ry = 0, top = 0) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; p.add(g);
+  B(g, M.steelDark, 0.105, 0.105, 0.048, 0, y - 0.0525, 0.024);
+  B(g, M.hdpe, 0.074, 0.118, 0.005, 0, y - 0.059, 0.05);
+  for (const dy of [0.026, -0.026]) B(g, M.black, 0.034, 0.024, 0.003, 0, y - 0.071 + dy, 0.0535);
+  if (top > y) { C(g, M.steelDark, 0.011, 0.011, top - y, 0, y, 0.022, 8); C(g, M.steelDark, 0.016, 0.016, 0.03, 0, y, 0.022, 8); }
+  return g;
+}
+// Wall rack of glove boxes by a hand sink.
+function gloveRack(M, p, x, y, z, ry = 0) {
+  const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; p.add(g);
+  B(g, M.steel, 0.82, 0.02, 0.1, 0, 0, 0.05);
+  B(g, M.steel, 0.82, 0.14, 0.008, 0, 0, 0.004);
+  [0x2f6bb5, 0x7a3d9e, 0xeef0f0].forEach((c, i) => {
+    const m = new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 });
+    B(g, m, 0.25, 0.125, 0.09, -0.27 + i * 0.27, 0.02, 0.052);
+    B(g, M.hdpe, 0.12, 0.004, 0.035, -0.27 + i * 0.27, 0.146, 0.06);
+  });
+  return g;
+}
+// Stack of hand baskets on a floor stand by the doors.
+function basketStack(M, p, x, z, ry = 0, n = 7) {
+  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = ry; p.add(g);
+  B(g, M.blackPaint, 0.5, 0.05, 0.36, 0, 0, 0);
+  const W = 0.43, D = 0.3, H = 0.22, t = 0.008;
+  for (let i = 0; i < n; i++) {
+    const y = 0.05 + i * 0.045;
+    B(g, M.red, W - 0.06, t, D - 0.06, 0, y, 0);
+    B(g, M.red, W, H, t, 0, y, D / 2); B(g, M.red, W, H, t, 0, y, -D / 2);
+    B(g, M.red, t, H, D, W / 2, y, 0); B(g, M.red, t, H, D, -W / 2, y, 0);
+  }
+  for (const s of [-1, 1]) addMesh(g, new THREE.TorusGeometry(0.14, 0.008, 8, 20, Math.PI), M.black, 0, 0.05 + (n - 1) * 0.045 + H, s * 0.06, 0, 0, 0);
+  return g;
 }
 
 function sanitizerBucket(M, p, x, y, z) {
@@ -821,6 +895,26 @@ function makeMaterials(X) {
   M.car = [0x1d3557, 0xb9bec2, 0x7d1d1d, 0x2b2d30].map((c) => phys({ color: c, metalness: 0.55, roughness: 0.28, clearcoat: 1, clearcoatRoughness: 0.06 }));
   M.tire = std({ color: 0x18191a, roughness: 0.85 });
   for (const m of [M.steel, M.steelV, M.steelDark, M.steelIn, M.chrome, M.alum]) METALS.add(m);
+  // Floors: the captured environment would otherwise mirror the bright store evenly across the
+  // floor, and reflections ignore shadows; keep them as a soft sheen so cast shadows read.
+  for (const [m, k] of [[M.plank, 0.42], [M.tile, 0.45], [M.vct, 0.5], [M.concrete, 0.6]]) m.envMapIntensity = k;
+  if (M.plank.clearcoat !== undefined) { M.plank.clearcoat = 0.3; M.plank.clearcoatRoughness = 0.2; }
+  // wear: fingerprints and smears on stainless, grease and traffic on floors, scuffs low on walls
+  weather(M.steel, { rough: 0.16, dirt: 0.35, base: 0.06, scale: 2.4, tint: [0.9, 0.88, 0.84] });
+  weather(M.steelV, { rough: 0.16, dirt: 0.35, base: 0.06, scale: 2.4, tint: [0.9, 0.88, 0.84] });
+  weather(M.steelDark, { rough: 0.12, base: 0.08, scale: 3 });
+  weather(M.frp, { dirt: 0.5, base: 0.16, rough: 0.08, scale: 0.9, tint: [0.93, 0.9, 0.84] });
+  weather(M.drywall, { dirt: 0.4, base: 0.12, scale: 0.8 });
+  weather(M.walkin, { dirt: 0.45, base: 0.14, rough: 0.12, scale: 1.1, tint: [0.92, 0.9, 0.86] });
+  weather(M.tile, { dirt: 0.6, rough: 0.22, scale: 0.7, tint: [0.78, 0.72, 0.66] });
+  weather(M.plank, { dirt: 0.35, rough: 0.16, scale: 0.55, tint: [0.88, 0.86, 0.82] });
+  weather(M.vct, { dirt: 0.4, rough: 0.14, scale: 0.7, tint: [0.86, 0.84, 0.8] });
+  weather(M.concrete, { dirt: 0.5, rough: 0.1, scale: 0.6, tint: [0.8, 0.78, 0.74] });
+  weather(M.ceiling, { dirt: 0.35, scale: 0.7, tint: [0.9, 0.86, 0.76] });
+  weather(M.woodPanel, { rough: 0.1, base: 0.1, scale: 1.6 });
+  weather(M.paintGrey, { rough: 0.12, base: 0.08, scale: 2 });
+  weather(M.doorGrey, { rough: 0.12, dirt: 0.3, base: 0.1, scale: 2 });
+  weather(M.hdpe, { dirt: 0.3, base: 0.06, scale: 2.2 });
   for (const m of [M.steel, M.steelV, M.woodPanel, M.quartz]) m.userData.tile = 0.6;
   const food = (c, r = 0.65) => std({ color: c, roughness: r });
   M.food = {
@@ -1184,10 +1278,15 @@ function menuScreen(kind) {
   });
 }
 
-function menuBoards(M) {
-  const g = new THREE.Group(), sw = 1.24, sh = 0.7, gap = 0.04, W = sw * 3 + gap * 4, y0 = 2.15;
+// Three menu screens in one black surround, hung from the underside of the sign band over
+// the serving counter (in line with the ORDER HERE and PICK-UP HERE signs), facing the store.
+function menuBoards(M, ceil = 2.85) {
+  const g = new THREE.Group(), sw = 1.24, sh = 0.7, gap = 0.04, W = sw * 3 + gap * 4, y0 = ceil - 0.07 - (sh + 0.08);
   B(g, M.blackGloss, W, sh + 0.08, 0.07, 0, y0, 0);
-  for (const sx of [-1, 1]) C(g, M.black, 0.035, 0.035, ROOM.h - (y0 + sh + 0.08), sx * 1.2, y0 + sh + 0.08, 0, 12);
+  B(g, M.steelDark, W - 0.3, 0.04, 0.04, 0, y0 + sh + 0.08, -0.01);
+  for (const sx of [-1, -0.33, 0.33, 1]) B(g, M.steelDark, 0.04, 0.07, 0.04, sx * (W / 2 - 0.25), y0 + sh + 0.08, -0.01);
+  // cables up into the sign band from each screen
+  for (let i = 0; i < 3; i++) C(g, M.black, 0.006, 0.006, 0.08, (i - 1) * (sw + gap) + 0.3, y0 + sh + 0.08, -0.03, 6);
   ['left', 'center', 'right'].forEach((k, i) => screen(g, menuScreen(k), sw, sh, (i - 1) * (sw + gap), y0 + 0.04 + sh / 2, 0.036));
   return g;
 }
@@ -1588,7 +1687,7 @@ class Instancer {
         o.matrix.premultiply(e.parent.matrixWorld); m.setMatrixAt(i, o.matrix); tiles[i] = e.tile;
       });
       geo.setAttribute('aTile', new THREE.InstancedBufferAttribute(tiles, 1));
-      m.castShadow = false; m.receiveShadow = true; m.frustumCulled = false;
+      m.castShadow = HQ; m.receiveShadow = true; m.frustumCulled = false;
       out.push(m);
     }
     return out;
@@ -2196,12 +2295,15 @@ function buildKitchen(M, X) {
   reg('hood', hd, { face: [1, 0, 0], anchor: Lw((HOOD.x0 + HOOD.x1) / 2 - 0.9, HOOD.bottom + 0.35, HOOD.depth + 0.05), box: new THREE.Box3(V(KW, HOOD.bottom, KZC - HOOD.x1), V(KW + HOOD.depth, H_ACT, KZC - HOOD.x0)) });
   reg('suppression', sup, { face: [0, 0, 1], anchor: Lw(KF.x1 - 0.2, 2.72, 0.45) });
   lineSmallwares(M, KG);
+  outlet(M, KG, -2.95, 1.32, 0.004, 0, H_ACT);
+  outlet(M, KG, 2.98, 1.32, 0.004, 0, H_ACT);
+  gloveRack(M, KG, KF.x0 + 0.005, 1.32, 0.85, Math.PI / 2);
   const hc = hotCabinet(M, r); put(KG, hc, HOOD.x1 + 0.45, LINE_BACK + 31 * IN / 2 - 0.05); reg('hotcab', hc, { face: [1, 0, 0] }); shadowsFor.push([hc, 0.04]);
   const ws = shelving(M, 1.22, 0.46, 0, [0.15, 0.6, 1.05, 1.5], stockShelf(M, r, 1.22, 0.46, ['napkins', 'foil', 'cups', 'tortilla', 'container']));
   put(KG, ws, -2.3, 0.26); shadowsFor.push([ws, 0.03]);
   addMesh(KG, new THREE.TorusGeometry(0.11, 0.01, 6, 24), M.black, -1.98, 1.22, 0.3, 0, 0.3, 0);
   C(KG, M.black, 0.09, 0.09, 0.06, -1.98, 1.06, 0.28, 16);
-  const mb = menuBoards(M); put(KG, mb, 0.2, 1.48); reg('menu', mb, { face: [1, 0, 0], anchor: Lw(0.2, 2.03, 1.6) });
+  const mb = menuBoards(M); put(KG, mb, 0.2, 3.45); reg('menu', mb, { face: [1, 0, 0], anchor: Lw(0.2, 1.88, 3.55) });
   const sc = servingCounter(M); put(KG, sc, 0, KF.z1 - 0.425); reg('counter', sc, { face: [1, 0, 0], anchor: Lw(0.1, 1.55, KF.z1 - 0.3) }); shadowsFor.push([sc, 0.03]);
   for (const mx of [-0.85, 0.67]) { const m = addMesh(KG, scaleUV(new THREE.PlaneGeometry(1.52, 0.91), 1.52 / 0.25, 0.91 / 0.25), M.mat, mx, 0.008, LINE_BACK + 1.3, -Math.PI / 2); m.castShadow = false; }
   const hs1 = handSink(M); put(KG, hs1, KF.x0, 1.45, Math.PI / 2); reg('handsink1', hs1, { face: [0, 0, -1] });
@@ -2246,6 +2348,22 @@ function buildKitchen(M, X) {
     B(main, M.louver, s - 0.04, 0.002, s - 0.04, fx, 0.005, fz).castShadow = false;
   }
   addMesh(main, scaleUV(new THREE.PlaneGeometry(0.91, 1.52), 0.91 / 0.25, 1.52 / 0.25), M.mat, WALKIN.x1 + 0.95, 0.008, (WALKIN.z0 + WALKIN.z1) / 2, -Math.PI / 2).castShadow = false;
+  // power: a 208 V receptacle and cords over the ovens, an outlet by the ice machine, a ceiling
+  // drop over the prep island with the mixer's cord; first-aid kit by the office
+  outlet(M, main, BOH.x1, 1.78, 2.95, -Math.PI / 2, H_ACT);
+  for (const dz of [-0.05, 0.05]) tube(main, M.black, [[BOH.x1 - 0.05, 1.7, 2.95 + dz], [BOH.x1 - 0.07, 1.35, 2.95 + dz * 6], [BOH.x1 - 0.1, 1.12, 2.95 + dz * 9]], 0.0065, 14);
+  outlet(M, main, -9.8, 1.85, BOH.z0, 0, H_ACT);
+  tube(main, M.black, [[-9.8, 1.76, BOH.z0 + 0.06], [-9.95, 1.4, BOH.z0 + 0.1], [-10.05, 1.15, BOH.z0 + 0.14]], 0.006, 12);
+  {
+    const dx = -11.85, dz = 3.74;
+    C(main, M.steelDark, 0.014, 0.014, H_ACT - 2.05, dx, 2.05, dz, 8);
+    B(main, M.steelDark, 0.12, 0.12, 0.12, dx, 1.93, dz);
+    for (const s2 of [-1, 1]) B(main, M.hdpe, 0.074, 0.118, 0.005, dx, 1.931, dz + s2 * 0.062);
+    tube(main, M.black, [[dx, 1.94, dz + 0.065], [dx + 0.05, 1.5, dz + 0.2], [dx + 0.12, 1.12, dz + 0.32], [dx + 0.18, 0.97, dz + 0.4]], 0.006, 16);
+  }
+  { const fa = new THREE.Group(); fa.position.set(px(13), 1.5, pz(44) - IW / 2 - 0.004); fa.rotation.y = Math.PI; main.add(fa);
+    B(fa, M.hdpe, 0.3, 0.24, 0.09, 0, 0, 0.045);
+    B(fa, M.red, 0.06, 0.16, 0.004, 0, 0.04, 0.092); B(fa, M.red, 0.16, 0.06, 0.004, 0, 0.09, 0.092); }
 
   /* ---------------- restrooms, hallway, rear exit ---------------- */
   {
@@ -2297,6 +2415,7 @@ function buildKitchen(M, X) {
   B(main, M.paintGrey, 0.6, 1.55, 0.5, px(34.5), 0, Z1 - 0.4);
   screen(main, screenTexture(96, 64, (c) => { c.fillStyle = '#0e1a1c'; c.fillRect(0, 0, 96, 64); c.fillStyle = '#3bb3a0'; c.font = 'bold 18px Arial'; c.fillText('ATM', 30, 38); }), 0.3, 0.2, px(34.5), 1.2, Z1 - 0.651, Math.PI);
   trashCan(M, px(36.5), Z1 - 0.55, M.greyPlastic, main); trashCan(M, px(58.5), Z1 - 0.6, M.greyPlastic, main);
+  basketStack(M, main, px(44.7), Z1 - 0.55, 0.2);
 
   // cold vault: main run of doors along the east wall
   const nMain = COOLER_RUN.n, runA = pz(1.5);
@@ -2697,7 +2816,7 @@ async function create(host) {
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   const QS = /[?&]debug/.test(location.search) ? new URLSearchParams(location.search) : new URLSearchParams();
   renderer.toneMapping = QS.get('tm') === 'aces' ? THREE.ACESFilmicToneMapping : THREE.AgXToneMapping;
-  renderer.toneMappingExposure = +(QS.get('exp') || 1.0);
+  renderer.toneMappingExposure = +(QS.get('exp') || 1.15);
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap; renderer.shadowMap.autoUpdate = false;
   renderer.domElement.setAttribute('aria-label', '3D model of the kitchen. Drag to orbit, scroll to zoom.');
   renderer.domElement.tabIndex = 0;
@@ -2754,7 +2873,7 @@ async function create(host) {
 
   // Lights. Inside, light comes from the fixtures themselves (area lights the size of each
   // fixture); daylight only gets in through the storefront glass; a low sky/bounce fill.
-  scene.add(new THREE.HemisphereLight(0xf2efe6, 0x5c4636, 0.32));
+  scene.add(new THREE.HemisphereLight(0xf2efe6, 0x5c4636, +(DBG.get('hemi') || 0.18)));
   const sun = new THREE.DirectionalLight(0xffe6c4, 3.4);
   sun.target.position.set(0, 0, 1); sun.position.set(6.5, 15, 15);
   sun.castShadow = true;
@@ -2779,18 +2898,31 @@ async function create(host) {
   };
   const WARM = 0xfff1de, NEUTRAL = 0xfff6ec, COOL = 0xf1f5ff;
   // sales floor: one emitter per row of pendant strips
-  for (const row of PENDANT_ROWS) rect(NEUTRAL, 9, row.x1 - row.x0, 0.12, (row.x0 + row.x1) / 2, 3.505, row.z);
+  for (const row of PENDANT_ROWS) rect(NEUTRAL, 1.4, row.x1 - row.x0, 0.12, (row.x0 + row.x1) / 2, 3.505, row.z);
+  // Overhead light that casts shadows (desktop): under tables, shelves, counters and equipment,
+  // and from the gondolas onto the floor. The area lights fill in around them but cast none.
+  const shadowSpot = (color, intensity, x, y, z, angle, dist, size) => {
+    const l = new THREE.SpotLight(color, intensity, dist, angle, 0.95, 2);
+    l.position.set(x, y, z); l.target.position.set(x, 0, z);
+    if (HQ) { l.castShadow = true; l.shadow.mapSize.set(size, size); l.shadow.bias = -0.0005; l.shadow.normalBias = 0.025; l.shadow.camera.near = 0.3; }
+    scene.add(l, l.target); return l;
+  };
+  shadowSpot(NEUTRAL, 62, px(40), 3.9, pz(21), 1.22, 16, 2048);
+  shadowSpot(NEUTRAL, 62, px(59), 3.9, pz(21), 1.22, 16, 2048);
+  { const [x, z] = kxz(0.3, 1.9); shadowSpot(WARM, 26, x, H_ACT - 0.06, z, 1.15, 9, 1024); }
+  shadowSpot(COOL, 24, px(8), H_ACT - 0.06, pz(34.5), 1.15, 9, 1024);
+  shadowSpot(COOL, 20, px(13), H_ACT - 0.06, pz(40.5), 1.15, 9, 1024);
   // kitchen: lamps inside the hood over the line, ceiling cans down the aisle, soffit cans over the counter
   { const [x, z] = kxz((HOOD.x0 + HOOD.x1) / 2, HOOD.depth * 0.55); rect(0xffe6bf, 26, 0.32, HOOD.x1 - HOOD.x0 - 0.3, x, HOOD.bottom + 0.12, z); }
-  { const [x, z] = kxz(0, 2.25); rect(WARM, 30, 0.22, 5.6, x, H_ACT - 0.02, z); }
+  { const [x, z] = kxz(0, 2.25); rect(WARM, 8, 0.22, 5.6, x, H_ACT - 0.02, z); }
   const pt = (c, i, d, x, y, z) => { const pl = new THREE.PointLight(c, i, d, 2); pl.position.set(x, y, z); scene.add(pl); return pl; };
   for (const f of [-0.28, 0.28]) pt(WARM, 4, 7, KW + KF.z1 + 1.3, 2.75, KZC - (KF.x0 + KF.x1) / 2 + f * (KF.x1 - KF.x0));
   // back of house, restrooms and hallway: a light just under each 2 x 4 lay-in troffer
   if (mobile) {
     pt(COOL, 6, 9, px(9), H_ACT - 0.35, pz(38)); pt(COOL, 4, 7, px(9.5), H_ACT - 0.35, pz(13)); pt(COOL, 3, 7, px(14), H_ACT - 0.35, pz(3));
-  } else for (const [x, z] of TROFFERS) pt(COOL, 8, 7, x, H_ACT - 0.3, z);
+  } else TROFFERS.forEach(([x, z], i) => pt(COOL, i < 5 ? 2.5 : 8, 7, x, H_ACT - 0.3, z));
   // the glow of the cooler doors spilling onto the floor in front of them
-  rect(0xe6f1ff, 3.2, COOLER_RUN.len - 0.2, 1.8, VAULT_X - 0.12, 1.15, COOLER_RUN.z, 'west');
+  rect(0xe6f1ff, 0.7, COOLER_RUN.len - 0.2, 1.8, VAULT_X - 0.12, 1.15, COOLER_RUN.z, 'west');
   if (!mobile) pt(0xe6f1ff, 1.2, 4, VAULT_X - 0.4, 1.2, pz(36.5) + 0.92 + 0.12 + 1.5 * 0.76);
   { const pl = new THREE.PointLight(0xf2f6ff, 2.2, 3.4, 1.5); pl.position.set((WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, (WALKIN.split + WALKIN.z1) / 2); scene.add(pl); }
 
@@ -2805,7 +2937,7 @@ async function create(host) {
   composer.addPass(new RenderPass(scene, camera));
   if (HQ) {
     const gtao = new GTAOPass(scene, camera, 4, 4);
-    gtao.updateGtaoMaterial({ radius: 0.45, distanceExponent: 1.5, thickness: 1.0, scale: 1.15, samples: 16, distanceFallOff: 1.0 });
+    gtao.updateGtaoMaterial({ radius: 0.62, distanceExponent: 1.6, thickness: 1.2, scale: 1.3, samples: 16, distanceFallOff: 1.0 });
     gtao.updatePdMaterial({ lumaPhi: 10, depthPhi: 2, normalPhi: 3, radius: 5, radiusExponent: 1.5, rings: 2, samples: 16 });
     gtao.blendIntensity = 1.0;
     // Leave glass and cut-out materials out of the AO depth/normal pass, and take the background
@@ -2935,10 +3067,14 @@ async function create(host) {
     // narrow screens: step back along the view so the same things fit
     const tgt = new THREE.Vector3(...vw.target), pos = new THREE.Vector3(...vw.pos);
     const k = THREE.MathUtils.clamp(1.35 / camera.aspect, 1, 2.0);
+    // inside a room, a wider lens instead of backing through the wall
+    const fov = vw.room && k > 1 ? Math.min(66, 45 * Math.sqrt(k)) : 45;
+    if (camera.fov !== fov) { camera.fov = fov; camera.updateProjectionMatrix(); }
     if (k > 1) {
       const inside = pos.y < H_DECK && pos.x > X0 && pos.x < X1 && pos.z > Z0 && pos.z < Z1 + 2.5;
-      pos.sub(tgt).multiplyScalar(k).add(tgt);
+      pos.sub(tgt).multiplyScalar(vw.room ? Math.sqrt(k) : k).add(tgt);
       if (inside) keepInside(pos, tgt);
+      if (vw.room) { const [a, b, c, d] = vw.room, m = 0.3; pos.x = THREE.MathUtils.clamp(pos.x, a + m, b - m); pos.z = THREE.MathUtils.clamp(pos.z, c + m, d - m); }
     }
     flyTo(pos, tgt, instant && name !== 'overview');
   };
@@ -2952,6 +3088,7 @@ async function create(host) {
   }
   // a camera position that shows one item, from the side it's used from
   function frameItem(it, k = 1) {
+    if (camera.fov !== 45) { camera.fov = 45; camera.updateProjectionMatrix(); }
     const s = it.box.getSize(new THREE.Vector3());
     const r = Math.max(s.x, s.y * 0.8, s.z);
     const dist = THREE.MathUtils.clamp(r * 1.15 + 1.0, 1.6, 5.2) * k * THREE.MathUtils.clamp(1.25 / camera.aspect, 1, 1.5);

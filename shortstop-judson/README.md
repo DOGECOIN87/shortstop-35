@@ -41,7 +41,9 @@ the building was built to (about 93 x 50 ft, storefront on the south):
   with the rear exit;
 - kitchen beside it, styled like a current restaurant counter in these
   stores: patterned soffit, sign band ("YOUR BRAND HERE"), ORDER HERE and
-  PICK-UP HERE signs, menu screens, wood-front heated glass counter. The line
+  PICK-UP HERE signs with three menu screens between them, all hung from the
+  underside of the sign band over the counter (not on the hood), and a
+  wood-front heated glass counter. The line
   itself follows the owner's photo (CaptiveAire hood on a stainless wall,
   flattop, burners with stock pot, two fryers, holding station, wire shelving
   on the left, glass-door holding cabinet on the right), with a doorway at the
@@ -70,6 +72,15 @@ Built in code to standard equipment sizes, in metres. Rendering:
   pendant row over the sales floor, the lamps inside the hood, the cans down
   the kitchen aisle and the glow of the cooler doors; a light under every
   lay-in troffer in the back room, restrooms and hallway;
+- shadows indoors (desktop): five overhead lights cast soft shadows (two over
+  the sales floor, one in the kitchen, two in the back room), so gondolas,
+  islands, tables and equipment shadow the floor; shelf products cast them
+  too; the area lights fill in around them and floors keep only a soft sheen
+  of reflection so the shadows read; stronger ambient occlusion in corners
+  and under counters;
+- wear in world space (it never repeats with the texture tiles): smears and
+  fingerprints on stainless, grease and traffic on the floors, scuffs and a
+  darker band low on walls, stained ceiling tiles, dull spots on paint;
 - daylight only through the storefront glass: walls, deck and ceilings cast
   shadows, so sun falls on the floor inside the windows with the mullion
   shadows, and outside you see the parking lot, a fuel canopy over three
@@ -82,9 +93,13 @@ Built in code to standard equipment sizes, in metres. Rendering:
 - small details: utensil rail and order tickets on the line, sanitizer
   bucket, kitchen clock, shelf-edge price tags, sprinkler mains, security
   domes, speakers, smoke detectors, exit signs, extinguishers, wet-floor sign,
-  ice merchandiser and propane exchange cage on the front walk;
+  ice merchandiser and propane exchange cage on the front walk; outlets on
+  steel boxes fed by conduit from the ceiling, a 208 V receptacle and cords
+  over the ovens, a ceiling power drop over the prep island, glove-box rack by
+  the hand sink, first-aid kit, hand-basket stand by the doors;
 - phones get a lighter tier: standard materials, half-size textures, fewer
-  lights, no ambient occlusion, 2x MSAA.
+  lights, no indoor shadows or ambient occlusion, 2x MSAA, and room views use
+  a wider lens instead of backing the camera through the wall.
 
 ### Value tour
 
