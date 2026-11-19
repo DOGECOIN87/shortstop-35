@@ -2794,7 +2794,7 @@ const CSS = `
 .k3d-stage canvas{display:block;width:100%;height:100%;touch-action:none;outline:none}
 .k3d-stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(130% 100% at 50% 45%,transparent 60%,rgba(5,18,20,.45))}
 .k3d-spots,.k3d-dims{position:absolute;inset:0;pointer-events:none;z-index:2}
-.k3d-spot{position:absolute;left:0;top:0;pointer-events:auto;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;border:2px solid #f5f3e6;background:#e93f24;color:#fff;font:700 12px/22px ui-monospace,Menlo,Consolas,monospace;text-align:center;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.4);transition:background .2s;padding:0}
+.k3d-spot{position:absolute;left:0;top:0;pointer-events:auto;transform:translate(-50%,-50%);width:26px;height:26px;border-radius:50%;border:2px solid #f5f3e6;background:#d0341b;color:#fff;font:700 12px/22px ui-monospace,Menlo,Consolas,monospace;text-align:center;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.4);transition:background .2s;padding:0}
 .k3d-spot.on{background:#eebe54;color:#143236}
 .k3d-spot.off{opacity:0;pointer-events:none}
 .k3d-dim{position:absolute;left:0;top:0;transform:translate(-50%,-50%);font:700 12px ui-monospace,Menlo,Consolas,monospace;letter-spacing:1px;background:rgba(20,50,54,.85);border:1px solid rgba(245,243,230,.35);border-radius:6px;padding:3px 8px;white-space:nowrap}
@@ -2811,7 +2811,7 @@ const CSS = `
 .k3d-list ol{list-style:none;margin:0;padding:0}
 .k3d-list button{display:flex;gap:10px;align-items:center;width:100%;text-align:left;font:inherit;font-size:14px;color:#f5f3e6;background:transparent;border:0;border-radius:8px;padding:6px;cursor:pointer}
 .k3d-list button:hover,.k3d-list button[aria-current="true"]{background:rgba(255,255,255,.08)}
-.k3d-list b{display:inline-grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:#e93f24;color:#fff;font:700 11px ui-monospace,Menlo,Consolas,monospace}
+.k3d-list b{display:inline-grid;place-items:center;width:22px;height:22px;flex:0 0 22px;border-radius:50%;background:#d0341b;color:#fff;font:700 11px ui-monospace,Menlo,Consolas,monospace}
 .k3d-note{font-size:12px;color:#a9c1c0;margin:0;line-height:1.5}
 .k3d-listbtn{display:none}
 @media (max-width:820px){
@@ -2886,7 +2886,7 @@ const CSS = `
 .kt-endcard .rent{font-size:19px;color:#fff;font-weight:800}
 .kt-endbtns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin:16px 0 6px}
 .kt-endbtns button{font:inherit;font-size:14px;font-weight:800;border-radius:999px;padding:11px 18px;cursor:pointer;border:1px solid rgba(255,255,255,.25);background:transparent;color:#f5f3e6}
-.kt-endbtns .primary{background:#e93f24;border-color:#e93f24;color:#fff}
+.kt-endbtns .primary{background:#d0341b;border-color:#d0341b;color:#fff}
 .kt-fine{font-size:11.5px!important;color:#a9c1c0!important}
 .kt-confetti{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
 .kt-sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
@@ -2894,7 +2894,7 @@ const CSS = `
 .k3d-receipt[hidden]{display:none}
 .k3d-receipt h3{font-size:16px;margin:0 0 8px;color:#fff}
 .k3d-receipt ol{list-style:none;margin:0;padding:0;font-size:13.5px}
-.k3d-receipt li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.12);color:#7f9998;transition:color .3s}
+.k3d-receipt li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px dashed rgba(255,255,255,.12);color:#9ab0af;transition:color .3s}
 .k3d-receipt li.done{color:#dfe9e8}
 .k3d-receipt li.on{color:#fff;font-weight:700}
 .k3d-receipt li.on span::before{content:"▸ ";color:#eebe54}
