@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="no-js">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -19,6 +19,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" as="image" href="logo-256.webp" type="image/webp">
+<script>document.documentElement.classList.replace("no-js", "js")</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 <style>
   :root{
@@ -34,6 +35,7 @@
   html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
   @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  @supports (overflow:clip){body{overflow-x:clip}}
   a{color:inherit}
   img,svg{display:block;max-width:100%}
   :focus-visible{outline:3px solid var(--amber);outline-offset:3px;border-radius:6px}
@@ -41,6 +43,7 @@
   .skip:focus{left:8px}
   .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
   @media(max-width:600px){.wrap{padding:0 16px}}
+  @media(min-width:1700px){.wrap{max-width:1240px}}
 
   /* Header */
   header{position:sticky;top:0;z-index:50;background:rgba(20,50,54,.95);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08);color:#fff}
@@ -67,7 +70,8 @@
   .hero-inner{display:grid;grid-template-columns:1.08fr .92fr;gap:48px;align-items:center;padding-top:68px;padding-bottom:76px}
   @media(max-width:960px){.hero-inner{grid-template-columns:1fr;gap:36px;padding-top:44px;padding-bottom:56px}}
   .eyebrow{display:inline-flex;align-items:center;gap:10px;font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:var(--amber-soft);border:1px solid rgba(246,220,154,.35);border-radius:999px;padding:7px 14px}
-  .eyebrow i{width:8px;height:8px;border-radius:50%;background:#46d17a;box-shadow:0 0 0 4px rgba(70,209,122,.18);font-style:normal}
+  .eyebrow i{width:8px;height:8px;flex:0 0 8px;border-radius:50%;background:#46d17a;box-shadow:0 0 0 4px rgba(70,209,122,.18);font-style:normal}
+  @media(max-width:420px){.eyebrow{font-size:11px;letter-spacing:1.1px;padding:6px 12px}.eyebrow .city{display:none}}
   .hero h1{font-size:clamp(38px,5.2vw,62px);line-height:1.02;font-weight:900;letter-spacing:-1.6px;margin:20px 0 18px}
   .hero h1 em{font-style:normal;color:var(--amber)}
   .lead{font-size:clamp(17px,1.9vw,19px);color:#d3e0dd;max-width:560px}
@@ -103,12 +107,14 @@
   @media(max-width:860px){.strip-grid{grid-template-columns:repeat(2,1fr)}.strip-item{padding:16px 14px}.strip-item:nth-child(3){border-left:0;padding-left:0}.strip-item:nth-child(n+3){border-top:1px solid rgba(255,255,255,.22)}}
 
   /* Sections */
-  section{padding:84px 0;scroll-margin-top:64px}
+  section{padding:84px 0;scroll-margin-top:84px}
   @media(max-width:600px){section{padding:60px 0}}
   .kicker{font-family:var(--mono);color:var(--red-2);font-weight:700;letter-spacing:2px;text-transform:uppercase;font-size:12px;margin-bottom:10px}
   h2{font-size:clamp(28px,3.8vw,42px);font-weight:900;letter-spacing:-.8px;line-height:1.1;margin-bottom:14px;max-width:760px}
   .sub{color:var(--muted);font-size:17px;max-width:660px}
   h3{font-size:18px;line-height:1.3;margin-bottom:6px}
+  h1,h2,h3{text-wrap:balance}
+  .sub,.lead,p{text-wrap:pretty}
 
   .spec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
   @media(max-width:960px){.spec-grid{grid-template-columns:repeat(2,1fr)}}
@@ -120,11 +126,12 @@
   .spec .ic svg{width:24px;height:24px}
   .spec .no{font-family:var(--mono);font-size:12px;color:var(--muted);letter-spacing:1px}
   .spec p{color:var(--muted);font-size:15px}
-  .note{font-size:13px;color:var(--muted);margin-top:18px;max-width:760px}
+  .note{font-size:13px;color:var(--muted);margin-top:18px;max-width:68ch}
 
   .tour{background:#fff;border-top:1px solid var(--line)}
   .tour-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:28px;margin-top:36px;align-items:center}
   @media(max-width:900px){.tour-grid{grid-template-columns:1fr}}
+  @media(min-width:601px) and (max-width:900px){.tour-list{grid-template-columns:1fr 1fr;gap:14px 24px}}
   .tour-poster{position:relative;display:block;width:100%;padding:0;border:0;border-radius:20px;overflow:hidden;cursor:pointer;background:var(--ink);box-shadow:var(--shadow);aspect-ratio:16/9}
   .tour-poster img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
   .tour-poster:hover img{transform:scale(1.03)}
@@ -166,6 +173,7 @@
 
   .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:40px}
   @media(max-width:900px){.plans{grid-template-columns:1fr}}
+  @media(min-width:601px) and (max-width:900px){.plans .plan{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;align-items:start}.plans .plan .ptag,.plans .plan h3,.plans .plan > p{grid-column:1}.plans .plan ul{grid-column:2;grid-row:1/span 3;margin:0 0 16px}.plans .plan .rate{grid-column:1/-1}}
   .plan{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:26px;display:flex;flex-direction:column}
   .plan.feature{border:2px solid var(--ink)}
   .plan .ptag{font-family:var(--mono);font-size:12px;letter-spacing:1.4px;text-transform:uppercase;color:var(--muted)}
@@ -222,13 +230,18 @@
   .form-foot p{font-size:13px;color:var(--muted);max-width:360px}
   .form-msg{grid-column:1/-1;font-size:15px;border-radius:10px;padding:12px 14px;background:#fff6e5;border:1px solid #f3d395}
   .form-msg[hidden]{display:none}
+  .form-off{grid-column:1/-1;font-size:15px;border-radius:10px;padding:12px 14px;background:#eef3f0;border:1px solid #c9d8cf;color:var(--ink)}
+  .form-off .btn{display:flex;width:max-content;margin-top:10px}
+  form.inquiry.off .field{opacity:.55}
+  form.inquiry button[disabled]{opacity:.6;cursor:not-allowed}
 
   footer{background:#0d2326;color:#a9c1c0;font-size:14px;padding:38px 0 46px}
   .foot-brand{display:flex;align-items:center;gap:12px}
   .foot-brand img{width:52px;height:52px;border-radius:50%}
   .foot{display:flex;flex-wrap:wrap;justify-content:space-between;gap:20px}
   .foot strong{color:#fff}
-  .fine{font-size:12px;color:#8fa9a8;margin-top:18px;max-width:820px}
+  .fine{font-size:12px;color:#8fa9a8;margin-top:18px;max-width:72ch}
+  .foot a{display:inline-block;padding:10px 0;color:#d3e0dd}
 
   /* Mobile action bar */
   .mbar{display:none}
@@ -237,6 +250,29 @@
     .mbar .btn{flex:1}
     body{padding-bottom:72px}
     .header-cta{display:none}
+  }
+  /* short landscape phones: let the header scroll away and keep the action bar slim */
+  @media(max-height:500px) and (orientation:landscape){
+    header{position:static}
+    section{scroll-margin-top:12px}
+    .mbar{padding-top:6px;padding-bottom:calc(6px + env(safe-area-inset-bottom))}
+    .mbar .btn{padding:9px 16px}
+    body{padding-bottom:58px}
+  }
+  /* side insets on phones with a notch in landscape */
+  @supports (padding:max(0px)){.wrap{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right))}
+    @media(max-width:600px){.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}}}
+  /* without JavaScript the 3D model can't open */
+  .no-js [data-open-3d],.no-js .value-tour{display:none}
+  .no-js .tour-grid{grid-template-columns:1fr}
+  @media print{
+    header,.mbar,.k3d,.hero-cta,.tour-poster,.value-tour,form.inquiry,.skip{display:none!important}
+    body{background:#fff;color:#000;padding:0}
+    .hero,.why,.contact,.strip,footer{background:#fff!important;color:#000!important}
+    .hero *,.why *,.contact *,.strip *,footer *{color:#000!important}
+    section{padding:28px 0;break-inside:avoid-page}
+    .spec,.plan,.why-card,.step-list li,.info{break-inside:avoid;box-shadow:none}
+    .faq-list details p{display:block}
   }
   [hidden]{display:none !important}
 </style>
@@ -265,7 +301,7 @@
   <div class="hero" id="top">
     <div class="wrap hero-inner">
       <div>
-        <span class="eyebrow"><i aria-hidden="true"></i>Now leasing · 1604 &amp; Judson, San Antonio</span>
+        <span class="eyebrow"><i aria-hidden="true"></i>Now leasing · 1604 &amp; Judson<span class="city">, San Antonio</span></span>
         <h1>A full commercial kitchen, <em>ready for your menu.</em></h1>
         <p class="lead">Rent the built-in kitchen inside our gas station: <strong>an open cook line under the hood, a glass serving counter facing the store, and a back room with prep, wash-up and walk-ins</strong>. It was built to run a full hot-food program for a busy store. The station is privately owned, and the kitchen is open to anyone with food to cook.</p>
         <div class="hero-cta">
@@ -647,7 +683,7 @@
     <div class="wrap">
       <p class="kicker">Book a walkthrough</p>
       <h2>Come see the kitchen.</h2>
-      <p class="sub">Send a few details and the owner will get back to you to set up a time.</p>
+      <p class="sub" id="contact-sub">Send a few details and the owner will get back to you to set up a time.</p>
       <div class="contact-grid">
         <div class="info">
           <div class="info-head"><picture><source srcset="logo-256.webp" type="image/webp"><img src="logo-256.png" width="64" height="64" alt="Short Stop logo" loading="lazy"></picture><div><b>Short Stop Judson</b><span>Full commercial kitchen for rent</span></div></div>
@@ -663,6 +699,7 @@
         </div>
 
         <form class="inquiry" id="inquiry" novalidate>
+          <p class="form-off" id="form-off" hidden>Online inquiries open soon. Until the owner's phone and email are listed here, you can look around the whole kitchen in 3D.<button type="button" class="btn btn-dark btn-sm" data-open-3d>Explore in 3D</button></p>
           <div class="field">
             <label for="f-name">Your name</label>
             <input id="f-name" name="name" autocomplete="name" required>
@@ -698,7 +735,7 @@
           </div>
           <p class="form-msg" id="form-msg" role="status" hidden></p>
           <div class="form-foot">
-            <p>Leave a phone number or an email so the owner can reach you. Sending opens your email app with your details filled in.</p>
+            <p id="form-note">Leave a phone number or an email so the owner can reach you. Sending opens your email app with your details filled in.</p>
             <button class="btn btn-dark" type="submit">Send inquiry</button>
           </div>
         </form>
@@ -791,6 +828,18 @@ const LISTING = {
 
   const form = document.getElementById("inquiry");
   const msg = document.getElementById("form-msg");
+  // Say plainly what the form will do with the contact details that are filled in above.
+  const note = document.getElementById("form-note"), sub = document.getElementById("contact-sub");
+  if (!has.email && has.phone) {
+    note.textContent = "Leave a phone number or an email. Sending shows the owner's number so you can call or text to set up a time.";
+  } else if (!has.email && !has.phone) {
+    form.classList.add("off");
+    document.getElementById("form-off").hidden = false;
+    form.querySelectorAll("input,select,textarea,button:not([data-open-3d])").forEach((el) => { el.disabled = true; });
+    form.querySelector("button[type=submit]").textContent = "Inquiries open soon";
+    note.textContent = "The form switches on as soon as the owner's contact details are added.";
+    sub.textContent = "Walkthroughs are set up directly with the owner. Contact details are on their way.";
+  }
   const say = (text) => { msg.textContent = text; msg.hidden = false; };
 
   form.addEventListener("submit", (e) => {

@@ -123,6 +123,44 @@ Built in code to standard equipment sizes, in metres. Rendering:
   lights, no indoor shadows or ambient occlusion, 2x MSAA, and room views use
   a wider lens instead of backing the camera through the wall.
 
+Speed (same picture, less work):
+
+- every shader, including the ambient-occlusion, denoise and bloom passes, is
+  compiled in parallel before the first frame (`compileAsync`), so the first
+  frame doesn't stall on 15 more compiles;
+- the sky's clouds are blurred once as a layer instead of per stroke (this
+  alone took the first frame from about 32 s to 4 s in a software renderer);
+- shelf products are instanced per 4.5 m floor cell, so whole shelf runs out
+  of view are culled; chip bags subdivide only their two puffed faces (same
+  shape, about 30% fewer triangles); wear shaders share one program;
+- the value-tour turntable renders straight into the main canvas (no
+  read-back), and frames are only drawn when something moves;
+- adaptive resolution: if a device can't keep about 24 fps while the camera
+  moves, moving frames draw at 70% pixel ratio and the view is redrawn at full
+  resolution as soon as it stops, so still views are always full quality.
+  `?debug&nodyn` turns it off, `?debug&prepass` tries a depth pre-pass (it
+  measured slower here, so it is off), `?debug` alone logs load timings to
+  `window.__k3dProf`.
+
+Camera:
+
+- every flight is planned against the walls, the frosted kitchen partition
+  and the bounding box of every fixture: a straight glide when nothing is in
+  the way, else a slight dip under hanging things (hood, menu screens, sign
+  band), a walk through the kitchen's back doorway when there is elbow room,
+  or a hop up through the ceiling, over the walls and down into the other
+  room; the overlap of the moves is as smooth as the walls allow. Flight time
+  follows path length;
+- item close-ups (list, hotspots, tour) swing around the item and come closer
+  until no wall or fixture is in the way; on narrow screens tour cameras back
+  off only as far as the view stays clear;
+- on phones and tablets in portrait the overview and floor plan turn so the
+  store's long side runs up the screen and fit it exactly; "At the counter"
+  and "Store floor" widen the lens inside the room instead of backing out of
+  it; during the tour the picture shifts up so the item sits above the price
+  card;
+- the value tour's slow drift starts from where the flight lands (no jump).
+
 ### Value tour
 
 "Value tour" in the viewer (or the "Start the value tour" button on the page,
@@ -181,12 +219,26 @@ Each is empty until the owner supplies it, and the page hides what is missing:
 
 - `phone`: shows Call and Text buttons (contact card and the phone bar).
 - `email`: the inquiry form opens the visitor's email app addressed here.
-  Without it the form asks visitors to call, or says inquiries open soon.
+  Without it the form asks visitors to call. With neither phone nor email the
+  form is shown switched off with a note that inquiries open soon (and a link
+  to the 3D model), and the contact copy stops promising a reply.
 - `address`: set to "Loop 1604 & Judson Rd, San Antonio, TX" (owner); shown
   in the contact card and FAQ with an OpenStreetMap link. Replace with the
   street address when the owner wants it public.
 - `rates.shift`, `rates.monthly`, `rates.lease`, `rates.summary`: replace
   "Ask the owner".
+
+## Layout and edge cases
+
+Checked at 320, 360, 390, 414, 768, 834, 1024, 1280, 1440, 1920 and 2560 px
+wide and on phones held sideways (667 x 375, 740 x 360): no sideways scroll at
+any width; plan cards split into two columns on tablets; the tour list runs in
+two columns on tablets; anchor links land below the sticky header; on short
+landscape screens the header scrolls away and the action bar slims down; side
+padding clears a phone's notch; without JavaScript the 3D buttons are hidden;
+a print stylesheet drops the dark backgrounds and the interactive parts. The
+3D viewer on phones uses a one-line title and a shorter panel so the model
+gets most of the screen, and goes side by side on short landscape screens.
 
 ## What still needs the owner
 
