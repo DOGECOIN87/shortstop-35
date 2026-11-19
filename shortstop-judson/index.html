@@ -19,6 +19,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" as="image" href="logo-256.webp" type="image/webp">
+<script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 <style>
   :root{
     /* from the Short Stop logo: teal ring, cream lettering, red car, sage ground, gold headlights */
@@ -121,6 +122,18 @@
   .spec p{color:var(--muted);font-size:15px}
   .note{font-size:13px;color:var(--muted);margin-top:18px;max-width:760px}
 
+  .tour{background:#fff;border-top:1px solid var(--line)}
+  .tour-grid{display:grid;grid-template-columns:1.35fr .65fr;gap:28px;margin-top:36px;align-items:center}
+  @media(max-width:900px){.tour-grid{grid-template-columns:1fr}}
+  .tour-poster{position:relative;display:block;width:100%;padding:0;border:0;border-radius:20px;overflow:hidden;cursor:pointer;background:var(--ink);box-shadow:var(--shadow);aspect-ratio:16/9}
+  .tour-poster img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
+  .tour-poster:hover img{transform:scale(1.03)}
+  .tour-poster .play{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;gap:10px;background:var(--red);color:#fff;font-weight:800;font-size:16px;padding:14px 22px;border-radius:999px;box-shadow:0 10px 30px rgba(0,0,0,.35);white-space:nowrap}
+  .tour-poster .play svg{width:18px;height:18px}
+  .tour-list{list-style:none;display:grid;gap:12px}
+  .tour-list li{display:flex;gap:12px;align-items:flex-start;font-size:15px;color:var(--muted)}
+  .tour-list b{display:block;color:var(--ink);font-size:16px}
+  .tour-list i{flex:0 0 30px;height:30px;border-radius:50%;display:grid;place-items:center;background:var(--ink);color:var(--amber);font:700 12px var(--mono);font-style:normal}
   .uses{background:var(--sage);border-top:1px solid #b9cdbf;border-bottom:1px solid #b9cdbf}
   .uses .kicker,.uses .use .tag{color:var(--teal)}
   .use-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:40px;border-top:1px solid #a9c2b2}
@@ -233,6 +246,7 @@
     </a>
     <nav class="nav-links" aria-label="Sections">
       <a href="#kitchen">The kitchen</a>
+      <a href="#tour">3D tour</a>
       <a href="#uses">Who it's for</a>
       <a href="#rent">Ways to rent</a>
       <a href="#faq">FAQ</a>
@@ -247,15 +261,15 @@
       <div>
         <span class="eyebrow"><i aria-hidden="true"></i>Now leasing · Short Stop Judson</span>
         <h1>A full commercial kitchen, <em>ready for your menu.</em></h1>
-        <p class="lead">Rent the built-in kitchen inside our gas station: <strong>an exhaust hood, fryers, a flattop, rapid-cook ovens, and a walk-in cooler and freezer</strong>. It was built to run a full hot-food program for a busy store. The station is privately owned, and the kitchen is open to anyone with food to cook.</p>
+        <p class="lead">Rent the built-in kitchen inside our gas station: <strong>an open cook line under the hood, a glass serving counter facing the store, and a back room with prep, wash-up and walk-ins</strong>. It was built to run a full hot-food program for a busy store. The station is privately owned, and the kitchen is open to anyone with food to cook.</p>
         <div class="hero-cta">
           <a class="btn btn-red" href="#contact">Book a walkthrough</a>
-          <a class="btn btn-ghost" href="#kitchen">See the equipment</a>
+          <button type="button" class="btn btn-ghost" data-open-3d>Explore in 3D</button>
         </div>
         <ul class="hero-facts">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Hood over the cook line</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Walk-in cooler and freezer</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Inside a working gas station</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Serving counter facing the store</li>
         </ul>
       </div>
 
@@ -432,7 +446,7 @@
     <div class="wrap">
       <p class="kicker">The kitchen</p>
       <h2>Built for real volume, not a home stove.</h2>
-      <p class="sub">This is a fast-casual style kitchen, built for high-volume cooking in a busy store, and it's ready for a new operator. Skip the build-out and start cooking.</p>
+      <p class="sub">A fast-casual style kitchen in two parts: an open line and serving counter in the store, and a back room through a doorway behind it. Everything is built in, so there's no build-out to pay for before your first order.</p>
 
       <div class="spec-grid">
         <article class="spec">
@@ -480,11 +494,33 @@
             <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
             <span class="no">06</span>
           </div>
-          <h3>Already installed</h3>
-          <p>The equipment is built in. No hood to buy, no walk-in to install, no build-out bill before your first order.</p>
+          <h3>Serving counter and menu screens</h3>
+          <p>A glass-front heated counter faces the store, with three digital menu screens hung above it.</p>
         </article>
       </div>
       <p class="note">Exact pieces, sizes and condition are confirmed with you at the walkthrough.</p>
+    </div>
+  </section>
+
+  <section id="tour" class="tour">
+    <div class="wrap">
+      <p class="kicker">3D tour</p>
+      <h2>Walk the kitchen before you visit.</h2>
+      <p class="sub">Stand at the counter like a customer, step behind the line, then walk through to the back room and the walk-ins. Every piece of equipment is labelled, with what it does and its size.</p>
+      <div class="tour-grid">
+        <button type="button" class="tour-poster" data-open-3d aria-label="Open the 3D kitchen">
+          <img src="kitchen-3d-poster.jpg" width="1600" height="900" alt="3D model of the kitchen seen from above: the serving counter and menu screens in front of the cook line under the hood, and the back room with prep tables, sink and walk-in cooler and freezer" loading="lazy">
+          <span class="play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Open the 3D kitchen</span>
+        </button>
+        <ol class="tour-list">
+          <li><i>01</i><span><b>Open kitchen</b>Flattop, burners and fryers under the hood, facing the store.</span></li>
+          <li><i>02</i><span><b>Serving counter</b>Heated glass display counter with menu screens above.</span></li>
+          <li><i>03</i><span><b>Back room prep</b>Prep table, dough and tortilla station, rapid-cook ovens.</span></li>
+          <li><i>04</i><span><b>Wash-up</b>3-compartment sink, hand sinks and mop sink.</span></li>
+          <li><i>05</i><span><b>Storage</b>Walk-in cooler and freezer, reach-in and dry shelving.</span></li>
+        </ol>
+      </div>
+      <p class="note">The open kitchen is modelled from a photo of the real one. The back room shows a typical layout drawn to standard equipment sizes. The real layout is confirmed at your walkthrough.</p>
     </div>
   </section>
 
@@ -510,7 +546,7 @@
       <h2>A kitchen with customers already walking in.</h2>
       <p class="sub">Most rental kitchens sit in an industrial park. This one is inside a gas station that's open and busy.</p>
       <div class="why-grid">
-        <div class="why-card"><div class="num">01 · TRAFFIC</div><h3>People stop here every day</h3><p>Drivers come in for fuel, drinks and snacks. Ask the owner about selling your food to them.</p></div>
+        <div class="why-card"><div class="num">01 · TRAFFIC</div><h3>People stop here every day</h3><p>Drivers come in for fuel, drinks and snacks, and the serving counter is right there in the store. Ask the owner about selling to them.</p></div>
         <div class="why-card"><div class="num">02 · COST</div><h3>No build-out to pay for</h3><p>A hood system, walk-ins and a cook line cost a lot to buy and install. Here they're already in place.</p></div>
         <div class="why-card"><div class="num">03 · ACCESS</div><h3>Easy in and out</h3><p>A gas station lot makes it simple to load supplies and hand off pickup and delivery orders.</p></div>
       </div>
@@ -668,6 +704,8 @@
   </div>
 </footer>
 
+<div class="k3d" id="k3d" hidden></div>
+
 <nav class="mbar" aria-label="Quick actions">
   <a class="btn btn-red" href="#contact">Book a walkthrough</a>
   <a class="btn btn-ghost" data-needs="phone" data-phone-link href="#" hidden>Call</a>
@@ -717,6 +755,22 @@ const LISTING = {
     const v = LISTING.rates && LISTING.rates[el.dataset.rate];
     if (v) el.textContent = v;
   });
+
+  // 3D kitchen: loaded only when someone opens it (or the link ends in #3d / #3d-<view>)
+  const k3dHost = document.getElementById("k3d");
+  const open3d = (view, opener) => {
+    k3dHost.hidden = false;
+    import("./kitchen3d.js").then((m) => m.open(k3dHost, { view, opener })).catch((e) => {
+      console.error(e);
+      k3dHost.innerHTML = '<p style="padding:24px;color:#f5f3e6">The 3D kitchen could not load. Please try again later.</p>';
+    });
+  };
+  document.querySelectorAll("[data-open-3d]").forEach((b) => b.addEventListener("click", () => {
+    history.replaceState(null, "", "#3d");
+    open3d("overview", b);
+  }));
+  const hashView = /^#3d(?:-(\w+))?$/.exec(location.hash);
+  if (hashView) open3d(hashView[1] || "overview", null);
 
   const year = document.getElementById("year");
   if (year) year.textContent = new Date().getFullYear();
