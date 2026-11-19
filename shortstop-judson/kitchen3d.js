@@ -88,7 +88,7 @@ const ITEMS = {
   dry: { zone: 'back', name: 'Dry storage', lines: ['Wire shelving for flour, canned goods and paper supplies'], size: '7 ft of shelving' },
   office: { zone: 'back', name: 'Office', lines: ['Small office with a desk and safe, off the back room'], size: 'About 9 × 6 ft' },
   checkout: { zone: 'store', name: 'Store checkout', lines: ['Registers, with a tobacco and lottery back bar', 'Beside the restaurant counter, near the front doors'], size: '12 ft counter' },
-  bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee brewers, fountain and frozen drinks along the back wall'], size: 'About 32 ft long' },
+  bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee machines and brewers, fountain, ice and frozen drinks on a counter at the front of the store', 'Just past the window tables, menu boards above'], size: 'About 21 ft long' },
   hotfood: { zone: 'store', name: 'Hot food island', lines: ['Self-serve hot case, roller grill and condiments'], size: 'Island' },
   coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front-right corner, at the end of the aisle along the windows: its door sits between glass cooler doors'], size: '17 doors' },
   seating: { zone: 'store', name: 'Seating', lines: ['Window counter with stools between the skill-game machines', 'Four two-person tables with red metal chairs just inside'], size: '13 seats' },
@@ -1802,18 +1802,22 @@ function coolerRun(M, P, r, n) {
   return g;
 }
 
-function bevBar(M, P, r, L) {
-  // back against the wall at z = 0, customers at +z
-  const g = new THREE.Group(), D = 0.76, top = 0.91;
+function bevBar(M, P, r, L, { island = false, compact = false } = {}) {
+  // back at z = 0 (against a wall, or a finished back if it stands as an island), customers at +z
+  const g = new THREE.Group(), D = 0.76, top = 0.91, gap = compact ? 0.08 : 0.12;
   B(g, M.woodPanel, L, top - 0.1, D - 0.04, 0, 0.1, D / 2);
   B(g, M.blackPaint, L - 0.02, 0.1, D - 0.1, 0, 0, D / 2 - 0.03);
   B(g, M.quartz, L + 0.02, 0.04, D + 0.03, 0, top - 0.04, D / 2);
   B(g, M.pattern, L, 0.7, 0.012, 0, top, 0.006);
   B(g, M.blackPaint, L, 0.5, 0.06, 0, 2.15, 0.03);
+  if (island) {
+    B(g, M.woodPanel, L, top + 0.7, 0.02, 0, 0, -0.01);
+    for (const sx of [-1, 1]) B(g, M.blackPaint, 0.06, 2.15 - (top + 0.7), 0.06, sx * (L / 2 - 0.12), top + 0.7, 0.03);
+  }
   const menus = [['COFFEE', '#204649'], ['FOUNTAIN', '#c9351d'], ['FROZEN', '#1f5ea6'], ['HOT DRINKS', '#204649']];
   menus.forEach(([t, bg], i) => screen(g, signTexture([t, '— your prices here —'], { w: 512, h: 192, bg, fg: '#f5f3e6', size: 56, print: false }), L / 4 - 0.1, 0.42, -L / 2 + (i + 0.5) * L / 4, 2.4, 0.062));
   let x = -L / 2 + 0.3;
-  const at = (w) => { const c = x + w / 2; x += w + 0.12; return c; };
+  const at = (w) => { const c = x + w / 2; x += w + gap; return c; };
   // cup and lid dispensers
   let cx = at(0.7);
   for (let i = 0; i < 4; i++) C(g, M.hdpe, 0.05, 0.045, 0.32, cx - 0.24 + i * 0.16, top, 0.32, 16);
@@ -1830,9 +1834,11 @@ function bevBar(M, P, r, L) {
   B(g, M.steel, 1.0, 0.62, 0.45, cx, top, 0.24);
   for (let i = 0; i < 3; i++) { C(g, M.blackGloss, 0.075, 0.075, 0.36, cx - 0.32 + i * 0.32, top + 0.02, 0.5, 16); B(g, M.blackPaint, 0.1, 0.06, 0.06, cx - 0.32 + i * 0.32, top + 0.33, 0.58); }
   // condiment caddy
-  cx = at(0.7);
-  B(g, M.steel, 0.7, 0.16, 0.4, cx, top, 0.4);
-  for (let i = 0; i < 5; i++) B(g, M.food[['cream', 'tortilla', 'cheese', 'cream', 'egg'][i]], 0.11, 0.02, 0.32, cx - 0.28 + i * 0.14, top + 0.15, 0.4);
+  if (!compact) {
+    cx = at(0.7);
+    B(g, M.steel, 0.7, 0.16, 0.4, cx, top, 0.4);
+    for (let i = 0; i < 5; i++) B(g, M.food[['cream', 'tortilla', 'cheese', 'cream', 'egg'][i]], 0.11, 0.02, 0.32, cx - 0.28 + i * 0.14, top + 0.15, 0.4);
+  }
   // fountain dispenser with lit merchandiser
   cx = at(1.3);
   B(g, M.steel, 1.3, 0.18, 0.7, cx, top, 0.38);
@@ -1854,9 +1860,27 @@ function bevBar(M, P, r, L) {
     B(g, M.blackGloss, 0.1, 0.12, 0.08, bx, top + 0.33, 0.6);
   });
   // lids and straws
-  cx = at(0.6);
-  B(g, M.steel, 0.6, 0.3, 0.35, cx, top, 0.3);
-  for (let i = 0; i < 3; i++) C(g, M.hdpe, 0.045, 0.045, 0.2, cx - 0.18 + i * 0.18, top + 0.3, 0.3, 14);
+  if (!compact) {
+    cx = at(0.6);
+    B(g, M.steel, 0.6, 0.3, 0.35, cx, top, 0.3);
+    for (let i = 0; i < 3; i++) C(g, M.hdpe, 0.045, 0.045, 0.2, cx - 0.18 + i * 0.18, top + 0.3, 0.3, 14);
+  }
+  return g;
+}
+
+// Wall shelving run (one-sided gondola against a wall at z = 0), with category signs above.
+function wallShelf(M, P, r, L, signs) {
+  const g = new THREE.Group(), D = 0.5, H = 1.85;
+  B(g, M.blackPaint, L, 0.1, D - 0.04, 0, 0, D / 2);
+  B(g, M.gondolaBack, L, H - 0.1, 0.04, 0, 0.1, 0.02);
+  for (let x = -L / 2 + 0.025; x <= L / 2; x += 1.22) B(g, M.gondola, 0.05, H, 0.06, Math.min(x, L / 2 - 0.025), 0, 0.05);
+  [0.1, 0.45, 0.8, 1.15, 1.5].forEach((y, i) => {
+    B(g, M.gondola, L - 0.06, 0.022, D - 0.06, 0, y, D / 2);
+    B(g, M.blackGloss, L - 0.06, 0.035, 0.012, 0, y - 0.01, D - 0.025);
+    for (let tx = -L / 2 + 0.16; tx < L / 2 - 0.08; tx += 0.31) plane(g, M.tag, 0.045, 0.028, tx, y + 0.0075, D - 0.0185);
+    fillRun(P, g, r, 'x', -L / 2 + 0.05, L / 2 - 0.05, y + 0.022, D / 2 + 0.03, D - 0.12, i === 4 ? 0.26 : 0.3, SNACKS);
+  });
+  signs.forEach(([t, bg], i) => screen(g, signTexture([t], { w: 512, h: 128, bg, fg: '#f5f3e6', size: 64, print: false }), L / signs.length - 0.3, 0.32, -L / 2 + (i + 0.5) * L / signs.length, 2.3, 0.032));
   return g;
 }
 
@@ -2514,11 +2538,14 @@ function buildKitchen(M, X) {
   }
 
   /* ---------------- sales floor ---------------- */
-  const bb = bevBar(M, P, r, px(63) - px(31)); put(main, bb, (px(31) + px(63)) / 2, Z0); reg('bevbar', bb, { anchor: [(px(31) + px(63)) / 2, 2.95, Z0 + 0.5] }); shadowsFor.push([bb, 0.03]);
+  // owner: the coffee bar is at the front, just past the window tables as you look in from the
+  // doors; the back wall carries shelving
+  const ws2 = wallShelf(M, P, r, px(63) - px(31), [['SNACKS', '#c9351d'], ['CANDY', '#7a3d9e'], ['GROCERY', '#204649'], ['HOME & AUTO', '#1f5ea6']]); put(main, ws2, (px(31) + px(63)) / 2, Z0); shadowsFor.push([ws2, 0.02]);
+  const bb = bevBar(M, P, r, 6.5, { island: true, compact: true }); put(main, bb, 3.4, 2.2); reg('bevbar', bb, { anchor: [3.4, 2.9, 2.5] }); shadowsFor.push([bb, 0.03]);
   const oc = openCase(M, P, r); put(main, oc, px(42), pz(10.3)); shadowsFor.push([oc, 0.03]);
   const hi = hotIsland(M, P, r); put(main, hi, px(42), pz(21.9), Math.PI / 2); reg('hotfood', hi, { face: [1, 0, 0] }); shadowsFor.push([hi, 0.04]);
   const bk = bakeryIsland(M, P, r); put(main, bk, px(41.8), pz(35.7), Math.PI / 2); shadowsFor.push([bk, 0.04]);
-  for (const [gz, L, gx] of [[pz(12.5), 2.4, px(56)], [pz(19), 4.57, px(58.5)], [pz(25.5), 4.57, px(58.5)], [pz(32), 4.57, px(58.5)]]) {
+  for (const [gz, L, gx] of [[pz(12.5), 2.4, px(56)], [pz(19), 4.57, px(58.5)], [pz(25.5), 4.57, px(58.5)]]) {
     const gd = gondola(M, P, r, L); put(main, gd, gx, gz); shadowsFor.push([gd, 0.03]);
   }
   for (const kx2 of [-4.25, -3.45]) { const k = kiosk(M); put(main, k, kx2, 2.75); shadowsFor.push([k, 0.03]); }
@@ -2535,7 +2562,7 @@ function buildKitchen(M, X) {
   const se = new THREE.Group(); main.add(se);
   put(se, seatingCounter(M, 3.6, 5), px(43.5) + 4.435, Z1 - 0.05, Math.PI);
   for (let k = 0; k < 4; k++) {
-    const tx = 0.6 + k * 1.4, tz = 4.6;
+    const tx = 0.6 + k * 1.4, tz = 4.95;
     cafeTable(M, se, tx, tz);
     redChair(M, se, tx, tz - 0.42, k % 2 ? 0.06 : -0.05);
     redChair(M, se, tx, tz + 0.42, Math.PI + (k % 2 ? -0.08 : 0.04));

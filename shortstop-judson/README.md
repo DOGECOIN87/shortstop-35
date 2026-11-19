@@ -49,9 +49,11 @@ the building was built to (about 93 x 50 ft, storefront on the south):
   on the left, glass-door holding cabinet on the right), with a doorway at the
   left end into the back room;
 - checkout with a tobacco and lottery back bar between the kitchen and the
-  front doors; coffee, fountain and frozen-drink bar on the back wall; grab-and-go
-  case, hot food island and bakery island; four gondola runs; self-checkouts;
-  window seating;
+  front doors, self-checkouts beside it; the coffee, fountain and frozen-drink
+  bar is a counter at the front of the store, just past the window tables as
+  you look right from the doors (owner), menu boards on posts above it;
+  shelving along the back wall; grab-and-go case, hot food island and bakery
+  island; three gondola runs;
 - east wall: 13 glass cooler doors with the vault behind and a utility room
   at the back corner;
 - the walk-in beer cave fills the front-right corner, against the front wall.
@@ -62,8 +64,7 @@ the building was built to (about 93 x 50 ft, storefront on the south):
   skill-game machines side by side near the doors, the window counter with
   stools, then two more machines near the beer cave; each machine has an
   office chair facing it. Just inside, a row of four two-person tables with
-  a red metal chair at each end (owner; placement in the store is a guess).
-  The self-checkouts stand beside the main checkout. The screens are generic ("SKILL GAMES", prize panels, game tiles);
+  a red metal chair at each end, then the coffee bar. The screens are generic ("SKILL GAMES", prize panels, game tiles);
   no game or maker names. No crypto ATM (owner).
 
 Owner-confirmed (standing at the front doors, looking in): kitchen and its
