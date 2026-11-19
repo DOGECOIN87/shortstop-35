@@ -54,16 +54,17 @@ the building was built to (about 93 x 50 ft, storefront on the south):
   window seating;
 - east wall: 13 glass cooler doors with the vault behind and a utility room
   at the back corner;
-- the walk-in beer cave runs along the front wall to the right of the doors,
-  entered by a glass door on its face, with three more glass cooler doors
-  beside it (owner: it sits against the same wall as the front doors). The
-  storefront glass runs from the kitchen corner to the beer cave, with the
-  window seating just right of the doors.
+- the walk-in beer cave fills the front-right corner, against the front wall.
+  Its glass door faces the entrance near the windows, so from the front
+  doors you look right along the window aisle straight to it; three more
+  glass cooler doors sit beside the door under the BEER CAVE sign. Window
+  seating runs along the glass between the doors and the beer cave.
 
 Owner-confirmed (standing at the front doors, looking in): kitchen and its
 order counter on the left wall; checkout left of the doors; cooler doors on
-the right wall; beer cave against the front wall; restrooms back left,
-behind the kitchen.
+the right wall; the beer cave and its door all the way to the right, at the
+right-hand wall, against the front wall; restrooms back left, behind the
+kitchen.
 
 The site matches the public records for the building: one-story masonry store
 of about 4,600 sq ft (measured from aerial imagery at about 91 x 48 ft), its

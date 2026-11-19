@@ -44,9 +44,12 @@ const BOH = { x0: X0, x1: px(19) - IW / 2, z0: pz(20.5) + IW / 2, z1: Z1 };
 const WALKIN = { x0: X0, x1: X0 + 2.83, z0: BOH.z0, z1: BOH.z0 + 3.08, h: 2.4, t: 0.1 };
 WALKIN.split = WALKIN.z0 + 1.5;
 const VAULT_X = px(72.6);
-// Walk-in beer cave along the front wall, right of the doors (owner: it sits against the same
-// wall as the front doors); its door faces into the store.
-const CAVE = { x0: px(58), x1: X1, z0: pz(37), z1: Z1, door: [px(61), px(64)], reach: px(66.5) };
+// Walk-in beer cave in the front-right corner (owner: entering the front doors and looking
+// right, all the way to the wall, is the beer cave and its door). Its glass door is on the side
+// facing the entrance, near the front, at the end of the aisle along the windows; three glass
+// reach-in doors sit beside it on the same face. door and reach are z ranges on x = VAULT_X.
+const CAVE = { x0: VAULT_X, x1: X1, z0: pz(35), z1: Z1, door: [Z1 - 1.95, Z1 - 1.0] };
+CAVE.reach = [CAVE.door[0] - 0.1 - 3 * 0.76, CAVE.door[0] - 0.1];
 // Light fixtures (shared by the geometry and the lights): pendant strip rows over the sales
 // floor, 2 x 4 lay-in troffers in the back of house, restrooms and hallway.
 const PENDANT_ROWS = [9, 17, 25, 33, 41].map((f) => {
@@ -84,7 +87,7 @@ const ITEMS = {
   checkout: { zone: 'store', name: 'Store checkout', lines: ['Registers, with a tobacco and lottery back bar', 'Beside the restaurant counter, near the front doors'], size: '12 ft counter' },
   bevbar: { zone: 'store', name: 'Coffee and fountain bar', lines: ['Coffee brewers, fountain and frozen drinks along the back wall'], size: 'About 32 ft long' },
   hotfood: { zone: 'store', name: 'Hot food island', lines: ['Self-serve hot case, roller grill and condiments'], size: 'Island' },
-  coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave along the front wall, right of the doors, with three more glass doors on its face'], size: '16 doors' },
+  coldvault: { zone: 'store', name: 'Cold vault', lines: ['Glass cooler doors along the east wall', 'Walk-in beer cave in the front-right corner: its door is at the end of the aisle along the windows, with three more glass doors beside it'], size: '16 doors' },
   seating: { zone: 'store', name: 'Window seating', lines: ['Counter seating with stools along the front windows'], size: '5 seats' },
   restrooms: { zone: 'store', name: 'Restrooms', lines: ["Men's and women's restrooms off the side hallway"], size: '2 rooms' },
   entrance: { zone: 'store', name: 'Front entrance', lines: ['Double glass doors facing the fuel islands'], size: '6 ft' },
@@ -2235,9 +2238,9 @@ function buildKitchen(M, X) {
   iwall('x', pz(44), px(9.8), BOH.x1, [{ a: px(14), b: px(17), y0: 0, y1: 2.13 }]);
   iwall('z', px(9.8), pz(44), Z1);
   // east side: cooler vault behind the main run of doors, utility room behind it; the beer cave
-  // is a walk-in box along the front wall, entered through a glass door on its north face
-  iwall('x', CAVE.z0, CAVE.x0, X1, [{ a: CAVE.door[0], b: CAVE.door[1], y0: 0, y1: 2.13 }, { a: CAVE.reach, b: CAVE.reach + 3 * 0.76, y0: 0, y1: 2.36 }], 2.75, M.walkin, null);
-  iwall('z', CAVE.x0, CAVE.z0, Z1, [], 2.75, M.walkin, null);
+  // is a walk-in box in the front-right corner, entered from the aisle along the windows
+  iwall('x', CAVE.z0, CAVE.x0, X1, [], 2.75, M.walkin, null);
+  iwall('z', CAVE.x0, CAVE.z0, Z1, [{ a: CAVE.reach[0], b: CAVE.reach[1], y0: 0, y1: 2.36 }, { a: CAVE.door[0], b: CAVE.door[1], y0: 0, y1: 2.13 }], 2.75, M.walkin, null);
   iwall('z', px(80), Z0, CAVE.z0, [{ a: pz(30), b: pz(33), y0: 0, y1: 2.13 }], H_DECK);
   worldBox(main, M.blackPaint, VAULT_X - 0.02, VAULT_X + 0.12, 2.36, 2.75, Z0, CAVE.z0).castShadow = false;
   worldBox(main, M.walkin, VAULT_X - 0.02, VAULT_X + 0.1, 0, 2.36, pz(1.5) + COOLER_RUN.len + 0.04, CAVE.z0 - IW / 2, 0.6).castShadow = false;
@@ -2430,22 +2433,23 @@ function buildKitchen(M, X) {
   const nMain = COOLER_RUN.n, runA = pz(1.5);
   const cv2 = coolerRun(M, P, r, nMain); put(main, cv2, VAULT_X, runA + nMain * 0.76 / 2, -Math.PI / 2);
   reg('coldvault', cv2, { face: [-1, 0, 0], anchor: [VAULT_X - 0.25, 2.62, runA + nMain * 0.76 / 2] });
-  // beer cave on the front wall: glass entry door and three reach-in doors on its north face
+  // beer cave in the front-right corner: glass entry door facing the front aisle, near the
+  // windows, and three reach-in doors beside it, all on its west face
   {
-    const [a, b] = CAVE.door, zf = CAVE.z0 - IW / 2;
-    worldBox(main, M.coolerFrame, a, a + 0.06, 0, 2.2, zf - 0.08, zf + 0.04);
-    worldBox(main, M.coolerFrame, b - 0.06, b, 0, 2.2, zf - 0.08, zf + 0.04);
-    worldBox(main, M.coolerFrame, a, b, 2.12, 2.2, zf - 0.08, zf + 0.04);
-    worldBox(main, M.glass, a + 0.06, b - 0.06, 0.05, 2.1, zf - 0.02, zf).castShadow = false;
-    B(main, M.chrome, 0.03, 0.6, 0.03, b - 0.16, 0.8, zf - 0.05);
-    screen(main, signTexture(['BEER CAVE'], { w: 512, h: 128, bg: '#16302f', fg: '#eebe54', size: 70 }), 1.5, 0.34, CAVE.reach + 1.14, 2.555, zf - 0.065, Math.PI);
-    const cv1 = coolerRun(M, P, r, 3); put(main, cv1, CAVE.reach + 1.5 * 0.76, CAVE.z0 - IW / 2, Math.PI);
+    const [a, b] = CAVE.door, xf = CAVE.x0 - IW / 2;
+    worldBox(main, M.coolerFrame, xf - 0.08, xf + 0.04, 0, 2.2, a, a + 0.06);
+    worldBox(main, M.coolerFrame, xf - 0.08, xf + 0.04, 0, 2.2, b - 0.06, b);
+    worldBox(main, M.coolerFrame, xf - 0.08, xf + 0.04, 2.12, 2.2, a, b);
+    worldBox(main, M.glass, xf - 0.02, xf, 0.05, 2.1, a + 0.06, b - 0.06).castShadow = false;
+    B(main, M.chrome, 0.03, 0.6, 0.03, xf - 0.05, 0.8, a + 0.16);
+    screen(main, signTexture(['BEER CAVE'], { w: 512, h: 128, bg: '#16302f', fg: '#eebe54', size: 70 }), 1.5, 0.34, xf - 0.065, 2.555, (CAVE.reach[0] + b) / 2, -Math.PI / 2);
+    const cv1 = coolerRun(M, P, r, 3); put(main, cv1, CAVE.x0, (CAVE.reach[0] + CAVE.reach[1]) / 2, -Math.PI / 2);
   }
   // behind the doors: cases in the vault, pallets in the beer cave
   for (let zc = pz(2.5); zc < pz(33); zc += 0.6) for (let k = 0; k < 3; k++) P.add('case', main, VAULT_X + 1.3 + (k % 2) * 0.5, k * 0.3, zc, 0.42, 0.28, 0.5, Math.floor(r() * 16));
-  for (let xi = 0; xi < 9; xi++) for (let zi = 0; zi < 2; zi++) {
-    const bx = CAVE.x0 + 0.75 + xi * 1.12, bz = CAVE.z0 + 1.45 + zi * 1.3;
-    if (bx > CAVE.door[0] - 0.4 && bx < CAVE.door[1] + 0.5) continue;
+  for (let xi = 0; xi < 5; xi++) for (let zi = 0; zi < 3; zi++) {
+    const bx = CAVE.x0 + 1.45 + xi * 1.05, bz = CAVE.z0 + 0.85 + zi * 1.25;
+    if (xi === 0 && zi === 2) continue;   // keep the way in from the door clear
     B(main, M.wood, 1.0, 0.13, 1.2, bx, 0, bz);
     const c = Math.floor(r() * 16);
     for (let h2 = 0; h2 < 4; h2++) for (let i = 0; i < 2; i++) for (let j = 0; j < 3; j++) P.add('case', main, bx - 0.24 + i * 0.48, 0.13 + h2 * 0.26, bz - 0.4 + j * 0.4, 0.46, 0.25, 0.38, c, (j % 2) * Math.PI);
@@ -2935,7 +2939,7 @@ async function create(host) {
   } else TROFFERS.forEach(([x, z], i) => pt(COOL, i < 5 ? 2.5 : 8, 7, x, H_ACT - 0.3, z));
   // the glow of the cooler doors spilling onto the floor in front of them
   rect(0xe6f1ff, 0.7, COOLER_RUN.len - 0.2, 1.8, VAULT_X - 0.12, 1.15, COOLER_RUN.z, 'west');
-  if (!mobile) pt(0xe6f1ff, 1.2, 4, CAVE.reach + 1.14, 1.2, CAVE.z0 - 0.5);
+  if (!mobile) pt(0xe6f1ff, 1.2, 4, CAVE.x0 - 0.5, 1.2, (CAVE.reach[0] + CAVE.reach[1]) / 2);
   pt(0xeef4ff, 4, 8, (CAVE.x0 + CAVE.x1) / 2, 2.45, (CAVE.z0 + CAVE.z1) / 2);
   { const pl = new THREE.PointLight(0xf2f6ff, 2.2, 3.4, 1.5); pl.position.set((WALKIN.x0 + WALKIN.x1) / 2, WALKIN.h - 0.3, (WALKIN.split + WALKIN.z1) / 2); scene.add(pl); }
 
@@ -2986,7 +2990,7 @@ async function create(host) {
     { t: 'RESTROOMS', p: new THREE.Vector3(px(9.5), 0.05, pz(15)) },
     { t: 'SALES FLOOR', p: new THREE.Vector3(px(50), 0.05, pz(44)) },
     { t: 'COLD VAULT', p: new THREE.Vector3(px(76.5), 0.05, pz(9)) },
-    { t: 'BEER CAVE', p: new THREE.Vector3(px(76), 0.05, pz(44)) },
+    { t: 'BEER CAVE', p: new THREE.Vector3(px(84), 0.05, pz(42.5)) },
     { t: 'UTILITY', p: new THREE.Vector3(px(86.5), 0.05, pz(22)) }
   ].map((d) => { const el = document.createElement('span'); el.className = 'k3d-dim'; el.textContent = d.t; dims.appendChild(el); return { ...d, el }; });
 
