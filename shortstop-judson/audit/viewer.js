@@ -56,7 +56,7 @@ const pause = (page) => page.evaluate(() => { if (!window.__k3d.K.tour.paused) d
     if (await page.evaluate(() => !window.__k3dReady)) {
       await page.goto(BASE + '?debug&nodyn'); await page.evaluate(() => scrollTo(0, 300));
     }
-    opener = await page.$('.hero-cta [data-open-3d]');
+    opener = page.locator('.hero-cta [data-open-3d]:visible').first();
     await opener.click();
     await page.waitForFunction(() => window.__k3dReady, null, { timeout: T, polling: 500 });
     await waitIdle(page, 800);
@@ -66,7 +66,7 @@ const pause = (page) => page.evaluate(() => { if (!window.__k3d.K.tour.paused) d
     async nowebgl() {
       await page.addInitScript(() => { const g = HTMLCanvasElement.prototype.getContext; HTMLCanvasElement.prototype.getContext = function (t, ...a) { return /webgl/.test(t) ? null : g.call(this, t, ...a); }; });
       await page.goto(BASE);
-      await page.click('.hero-cta [data-open-3d]');
+      await page.click('.hero-cta [data-open-3d]:visible');
       await page.waitForFunction(() => /can.t show/.test((document.querySelector('.k3d-status') || {}).textContent || ''), null, { timeout: 30000 });
       await page.waitForTimeout(500);
       await shot(page, 'nowebgl');
@@ -98,7 +98,7 @@ const pause = (page) => page.evaluate(() => { if (!window.__k3d.K.tour.paused) d
     async open() {
       await page.goto(BASE + '?debug&nodyn');
       await page.evaluate(() => scrollTo(0, 300));
-      opener = await page.$('.hero-cta [data-open-3d]');
+      opener = page.locator('.hero-cta [data-open-3d]:visible').first();
       await opener.click();
       await page.waitForTimeout(300);
       R.activeWhileLoading = await page.evaluate(() => (document.activeElement.closest('.k3d') ? 'IN ' : 'OUT ') + (document.activeElement.className || document.activeElement.tagName));

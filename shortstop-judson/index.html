@@ -19,7 +19,26 @@
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" as="image" href="logo-256.webp" type="image/webp">
-<script>document.documentElement.classList.replace("no-js", "js")</script>
+<script>
+/*
+  Listing details. Fill these in and commit; the page updates itself.
+  Leave a value empty ("") to keep it off the page.
+*/
+const LISTING = {
+  phone: "",        // owner's number, e.g. "(210) 555-0123"; shows Call / Text buttons
+  email: "",        // where inquiries go; the form opens the visitor's email app addressed here
+  address: "Loop 1604 & Judson Rd, San Antonio, TX",   // shown on the page, with an "Open in maps" link
+  rates: {
+    shift: "",      // e.g. "$__ / hour"
+    monthly: "",    // e.g. "$__ / month"
+    lease: "",      // e.g. "Ask the owner"
+    summary: ""     // one line for the contact card, e.g. "Hourly, monthly or lease"
+  }
+};
+// Set before the page draws, so buttons that depend on the listing never move after it loads.
+document.documentElement.classList.replace("no-js", "js");
+if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("booking-off");
+</script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 <style>
   :root{
@@ -99,8 +118,14 @@
   .hero-facts svg{width:18px;height:18px;color:var(--amber);flex:0 0 18px}
 
   .scene{position:relative;background:linear-gradient(180deg,#24494c,#1a3c3f);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),var(--e3)}
-  .scene svg{width:100%;height:auto;border-radius:12px}
-  .sticker{position:absolute;top:-30px;right:-26px;width:116px;height:116px;border-radius:50%;transform:rotate(8deg);box-shadow:0 0 0 5px var(--paper),0 14px 28px rgba(0,0,0,.4);background:var(--teal)}
+  /* the key and caption come first in the source, so they arrive before the long drawing and the
+     figure never grows as the page streams in; on screen they sit under it */
+  .scene{display:flex;flex-direction:column}
+  .scene::before{content:"";order:1;width:100%;aspect-ratio:600/440}  /* the drawing's place, from the first paint */
+  .scene svg{position:absolute;top:14px;left:14px;width:calc(100% - 28px);height:auto;border-radius:12px}
+  .scene .legend{order:2}
+  .scene figcaption{order:3}
+  .sticker{position:absolute;z-index:2;top:-30px;right:-26px;width:116px;height:116px;border-radius:50%;transform:rotate(8deg);box-shadow:0 0 0 5px var(--paper),0 14px 28px rgba(0,0,0,.4);background:var(--teal)}
   @media(max-width:960px){.sticker{right:10px}.scene{max-width:640px}}
   @media(max-width:600px){.sticker{width:84px;height:84px;top:-24px;right:6px;box-shadow:0 0 0 4px var(--paper),0 10px 20px rgba(0,0,0,.4)}}
   .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 6px 2px;font-size:13px;color:#d3e0dd}
@@ -116,11 +141,11 @@
 
   /* Spec strip */
   .strip{background:var(--red);color:#fff}
-  .strip-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+  .strip-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr))}
   .strip-item{padding:20px 22px;border-left:1px solid rgba(255,255,255,.22)}
   .strip-item:first-child{border-left:0;padding-left:0}
   .strip-item .v{font-weight:800;font-size:17px;line-height:1.3}
-  @media(max-width:860px){.strip-grid{grid-template-columns:repeat(2,1fr)}.strip-item{padding:16px 14px}.strip-item:nth-child(3){border-left:0;padding-left:0}.strip-item:nth-child(n+3){border-top:1px solid rgba(255,255,255,.22)}}
+  @media(max-width:860px){.strip-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.strip-item{padding:16px 14px}.strip-item:nth-child(3){border-left:0;padding-left:0}.strip-item:nth-child(n+3){border-top:1px solid rgba(255,255,255,.22)}}
 
   /* Sections */
   section{padding:88px 0}
@@ -132,9 +157,9 @@
   h1,h2,h3,summary{text-wrap:balance}
   .sub,.lead,p{text-wrap:pretty}
 
-  .spec-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);margin-top:40px}
-  @media(max-width:960px){.spec-grid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:600px){.spec-grid{grid-template-columns:1fr}}
+  .spec-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:40px}
+  @media(max-width:960px){.spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:600px){.spec-grid{grid-template-columns:minmax(0,1fr)}}
   .spec{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;position:relative;overflow:hidden;box-shadow:var(--e1)}
   .spec::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:repeating-linear-gradient(90deg,var(--steel) 0 6px,var(--steel-2) 6px 12px)}
   .spec-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
@@ -145,8 +170,8 @@
 
   .tour{background:#fff;border-top:1px solid var(--line)}
   .tour-grid{display:grid;grid-template-columns:minmax(0,1.618fr) minmax(0,1fr);gap:32px;margin-top:40px;align-items:center}
-  @media(max-width:900px){.tour-grid{grid-template-columns:1fr}}
-  @media(min-width:601px) and (max-width:900px){.tour-list{grid-template-columns:1fr 1fr;gap:14px 24px}}
+  @media(max-width:900px){.tour-grid{grid-template-columns:minmax(0,1fr)}}
+  @media(min-width:601px) and (max-width:900px){.tour-list{grid-template-columns:minmax(0,1fr) 1fr;gap:14px 24px}}
   .tour-poster{position:relative;display:block;width:100%;padding:0;border:0;border-radius:var(--radius);overflow:hidden;cursor:pointer;background:var(--ink);box-shadow:var(--e2);transition:box-shadow .3s,transform .3s;aspect-ratio:16/9}
   .tour-poster img{width:100%;height:100%;object-fit:cover;transition:transform .5s}
   .tour-poster:hover img{transform:scale(1.03)}
@@ -164,9 +189,9 @@
   .value-tour .btn{flex:0 0 auto;position:relative}
   @media(max-width:760px){.value-tour{flex-direction:column;align-items:flex-start;padding:24px}.value-tour .btn{width:100%}.value-tour::before{right:12px}}
   .uses{background:var(--sage);border-top:1px solid #b9cdbf;border-bottom:1px solid #b9cdbf}
-  .use-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:40px;border-top:1px solid #a9c2b2}
-  @media(max-width:860px){.use-grid{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:560px){.use-grid{grid-template-columns:1fr}}
+  .use-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin-top:40px;border-top:1px solid #a9c2b2}
+  @media(max-width:860px){.use-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:560px){.use-grid{grid-template-columns:minmax(0,1fr)}}
   .use{padding:24px 22px 26px 0;border-bottom:1px solid #a9c2b2}
   .use + .use{padding-left:22px;border-left:1px solid #a9c2b2}
   .use:nth-child(3n+1){padding-left:0;border-left:0}
@@ -178,14 +203,14 @@
   .why{background:var(--ink);color:#fff}
   .why h2{color:#fff}
   .why .sub{color:#b5cac9}
-  .why-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);margin-top:40px}
-  @media(max-width:860px){.why-grid{grid-template-columns:1fr}}
+  .why-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:40px}
+  @media(max-width:860px){.why-grid{grid-template-columns:minmax(0,1fr)}}
   .why-card{background:var(--ink-2);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:24px;box-shadow:var(--lift-dark)}
   .why-card p{color:#b5cac9;font-size:var(--s0)}
 
-  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--gap);margin-top:40px}
-  @media(max-width:900px){.plans{grid-template-columns:1fr}}
-  @media(min-width:601px) and (max-width:900px){.plans .plan{display:grid;grid-template-columns:1fr 1fr;column-gap:28px;align-items:start}.plans .plan h3,.plans .plan > p{grid-column:1}.plans .plan ul{grid-column:2;grid-row:1/span 3;margin:0 0 16px}.plans .plan .rate{grid-column:1/-1}}
+  .plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:40px}
+  @media(max-width:900px){.plans{grid-template-columns:minmax(0,1fr)}}
+  @media(min-width:601px) and (max-width:900px){.plans .plan{display:grid;grid-template-columns:minmax(0,1fr) 1fr;column-gap:28px;align-items:start}.plans .plan h3,.plans .plan > p{grid-column:1}.plans .plan ul{grid-column:2;grid-row:1/span 3;margin:0 0 16px}.plans .plan .rate{grid-column:1/-1}}
   .plan{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;display:flex;flex-direction:column;box-shadow:var(--e1)}
   .plan.feature{border:2px solid var(--ink);box-shadow:var(--e2)}
   .plan h3{font-size:var(--s2);margin:8px 0}
@@ -197,9 +222,9 @@
   .plan .rate span{font-family:var(--mono);font-size:12px;font-weight:700;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
 
   .steps{background:#fff;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-  .step-list{list-style:none;display:grid;grid-template-columns:repeat(4,1fr);gap:var(--gap);margin-top:40px;counter-reset:step}
-  @media(max-width:900px){.step-list{grid-template-columns:repeat(2,1fr)}}
-  @media(max-width:520px){.step-list{grid-template-columns:1fr}}
+  .step-list{list-style:none;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:var(--gap);margin-top:40px;counter-reset:step}
+  @media(max-width:900px){.step-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  @media(max-width:520px){.step-list{grid-template-columns:minmax(0,1fr)}}
   .step-list li{counter-increment:step;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--e1)}
   .step-list li::before{content:counter(step,decimal-leading-zero);display:block;font-family:var(--mono);font-weight:700;font-size:var(--s2);color:var(--red);line-height:1;margin-bottom:16px}
   .step-list p{color:var(--muted);font-size:var(--s0)}
@@ -298,7 +323,7 @@
     @media(max-width:600px){.wrap{padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}}}
   /* without JavaScript the 3D model can't open */
   .no-js [data-open-3d],.no-js .value-tour{display:none}
-  .no-js .tour-grid{grid-template-columns:1fr}
+  .no-js .tour-grid{grid-template-columns:minmax(0,1fr)}
   @media print{
     header,.mbar,.k3d,.hero-cta,.tour-poster,.value-tour,form.inquiry,.skip,.info .actions,[data-open-3d]{display:none!important}
     body{background:#fff;color:#000;padding:0}
@@ -323,6 +348,9 @@
   @media (forced-colors:active){.value-tour::before{display:none}}
   /* if a logo fails to load, its alt text stays inside the badge instead of spilling out */
   .brand-logo,.sticker,.info-head img,.foot-brand img{font-size:10px;line-height:1.1;overflow:hidden}
+  /* booking buttons: with the owner's phone or email, "Book a walkthrough"; without (class set in
+     the head), "Explore in 3D" and "Walkthrough details" */
+  .booking-off [data-book-on],html:not(.booking-off) [data-book-off]{display:none!important}
   [hidden]{display:none !important}
 </style>
 </head>
@@ -343,7 +371,7 @@
       <a href="#faq">FAQ</a>
     </nav>
     <a class="btn btn-red btn-sm header-cta" href="#contact" data-book-on>Book a walkthrough</a>
-    <button type="button" class="btn btn-red btn-sm header-cta" data-open-3d data-book-off hidden>Explore in 3D</button>
+    <button type="button" class="btn btn-red btn-sm header-cta" data-open-3d data-book-off>Explore in 3D</button>
   </div>
 </header>
 
@@ -351,11 +379,13 @@
   <div class="hero" id="top">
     <div class="wrap hero-inner">
       <div>
-        <h1>A full commercial kitchen, <em>ready for your menu.</em></h1>
+        <h1>A full commercial kitchen, <em>ready for your&nbsp;menu.</em></h1>
         <p class="lead">Rent the built-in kitchen inside our gas station: <strong>an open cook line under the hood, a glass serving counter facing the store, and a back room with prep, wash-up and walk-ins</strong>. It was built to run a full hot-food program for a busy store. The station is privately owned, and the kitchen is open to anyone with food to cook.</p>
         <div class="hero-cta">
-          <a class="btn btn-red" href="#contact" data-book-label="Walkthrough details">Book a walkthrough</a>
-          <button type="button" class="btn btn-ghost" data-open-3d>Explore in 3D</button>
+          <a class="btn btn-red" href="#contact" data-book-on>Book a walkthrough</a>
+          <button type="button" class="btn btn-red" data-open-3d data-book-off>Explore in 3D</button>
+          <button type="button" class="btn btn-ghost" data-open-3d data-book-on>Explore in 3D</button>
+          <a class="btn btn-ghost" href="#contact" data-book-off>Walkthrough details</a>
         </div>
         <ul class="hero-facts">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>1604 &amp; Judson, San Antonio</li>
@@ -366,6 +396,14 @@
       </div>
 
       <figure class="scene">
+        <figcaption>Illustration, not a photo. See the real kitchen and its layout at your walkthrough.</figcaption>
+        <ul class="legend" aria-label="Kitchen line key">
+          <li><b>1</b>Exhaust hood</li>
+          <li><b>2</b>Fryers</li>
+          <li><b>3</b>Flattop</li>
+          <li><b>4</b>Rapid-cook oven</li>
+          <li><b>5</b>Prep station</li>
+        </ul>
         <picture><source srcset="logo-256.webp" type="image/webp"><img class="sticker" src="logo-256.png" width="116" height="116" alt="Short Stop logo"></picture>
         <svg viewBox="0 0 600 440" role="img" aria-labelledby="scene-title scene-desc">
           <title id="scene-title">Illustration of the kitchen line</title>
@@ -513,14 +551,6 @@
             <circle cx="490" cy="244" r="12" fill="#d0341b"/><text x="490" y="248" fill="#fff">5</text>
           </g>
         </svg>
-        <ul class="legend" aria-label="Kitchen line key">
-          <li><b>1</b>Exhaust hood</li>
-          <li><b>2</b>Fryers</li>
-          <li><b>3</b>Flattop</li>
-          <li><b>4</b>Rapid-cook oven</li>
-          <li><b>5</b>Prep station</li>
-        </ul>
-        <figcaption>Illustration, not a photo. See the real kitchen and its layout at your walkthrough.</figcaption>
       </figure>
     </div>
   </div>
@@ -536,7 +566,7 @@
 
   <section id="kitchen">
     <div class="wrap">
-      <h2>Built for real volume, not a home stove.</h2>
+      <h2>Built for real volume, not a home&nbsp;stove.</h2>
       <p class="sub">A fast-casual style kitchen in two parts: an open line and serving counter in the store, and a back room through a doorway behind it. Everything is built in, so there's no build-out to pay for before your first order.</p>
 
       <div class="spec-grid">
@@ -544,42 +574,42 @@
           <div class="spec-top">
             <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3h4v4"/><path d="M3 13 6 7h12l3 6z"/><path d="M6 17v.01M10 17v.01M14 17v.01M18 17v.01M8 20v.01M12 20v.01M16 20v.01"/></svg></div>
           </div>
-          <h3>Ventilation and fire safety</h3>
+          <h3>Ventilation and fire&nbsp;safety</h3>
           <p>A commercial exhaust hood with grease baffle filters over the cook line, with a fire-suppression system.</p>
         </article>
         <article class="spec">
           <div class="spec-top">
             <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="1"/><path d="M8 10 7 4M16 10l1-6"/><path d="M4 14h16"/></svg></div>
           </div>
-          <h3>Fryers and flattop</h3>
+          <h3>Fryers and&nbsp;flattop</h3>
           <p>Commercial fryers and a flattop griddle for breakfast, tacos, burgers, wings and anything fried.</p>
         </article>
         <article class="spec">
           <div class="spec-top">
             <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="6" y="8" width="9" height="8" rx="1"/><path d="M18 9v.01M18 13v.01"/></svg></div>
           </div>
-          <h3>Rapid-cook ovens</h3>
+          <h3>Rapid-cook&nbsp;ovens</h3>
           <p>High-speed ovens for pizza, sandwiches and baked items in minutes, plus microwaves for quick reheats.</p>
         </article>
         <article class="spec">
           <div class="spec-top">
             <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M4.9 6.5l14.2 11M19.1 6.5 4.9 17.5"/><path d="m9 3 3 3 3-3M9 21l3-3 3 3"/></svg></div>
           </div>
-          <h3>Walk-in cooler and freezer</h3>
+          <h3>Walk-in cooler and&nbsp;freezer</h3>
           <p>Walk-in cold storage in the back of house, so you can buy in bulk, prep ahead and hold product.</p>
         </article>
         <article class="spec">
           <div class="spec-top">
             <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11h18v3a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6z"/><path d="M9 11V5a2 2 0 0 1 4 0"/></svg></div>
           </div>
-          <h3>Prep and wash-up</h3>
+          <h3>Prep and&nbsp;wash-up</h3>
           <p>Stainless prep space, hand sinks and a wash-up sink for pots, pans and sheet trays.</p>
         </article>
         <article class="spec">
           <div class="spec-top">
             <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
           </div>
-          <h3>Serving counter and menu screens</h3>
+          <h3>Serving counter and menu&nbsp;screens</h3>
           <p>A glass-front heated counter faces the sales floor, with menu screens, ORDER HERE and PICK-UP HERE signs, and a sign band for your brand.</p>
         </article>
       </div>
@@ -589,7 +619,7 @@
 
   <section id="tour" class="tour">
     <div class="wrap">
-      <h2>Walk the kitchen before you visit.</h2>
+      <h2>Walk the kitchen before you&nbsp;visit.</h2>
       <p class="sub">Walk the whole store: stand at the counter like a customer, step behind the line, go through the doorway to the back room and walk-ins, then out across the sales floor. Every piece of equipment is labelled, with what it does and its size.</p>
       <div class="tour-grid">
         <button type="button" class="tour-poster" data-open-3d aria-label="Open the 3D kitchen">
@@ -606,7 +636,7 @@
       </div>
       <div class="value-tour">
         <div>
-          <h3>See what it would cost to build.</h3>
+          <h3>See what it would cost to&nbsp;build.</h3>
           <p>Take the value tour: the camera walks the kitchen piece by piece and tallies what each one costs bought new, from the hood and walk-ins to the shelving. The equipment alone tops $100,000. Here it's already in place.</p>
         </div>
         <button type="button" class="btn btn-red" data-open-3d="tour"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Start the value tour</button>
@@ -617,38 +647,38 @@
 
   <section id="uses" class="uses">
     <div class="wrap">
-      <h2>One kitchen, a lot of ways to use it.</h2>
+      <h2>One kitchen, a lot of ways to use&nbsp;it.</h2>
       <p class="sub">If you cook for customers and need commercial equipment, this kitchen can work for you.</p>
       <div class="use-grid">
         <div class="use"><h3>Caterers</h3><p>Cook large orders for events, with the space and cold storage to prep the day before.</p></div>
-        <div class="use"><h3>Food trucks and trailers</h3><p>A base to prep, store and restock between services.</p></div>
-        <div class="use"><h3>Delivery-only brands</h3><p>Run an online menu on the delivery apps without opening a dining room.</p></div>
-        <div class="use"><h3>Bakers and meal prep</h3><p>Batch-cook and package for weekly customers and farmers markets.</p></div>
-        <div class="use"><h3>Home cooks and pop-ups</h3><p>Move out of the home kitchen and onto commercial equipment.</p></div>
-        <div class="use"><h3>New restaurant concepts</h3><p>Try a menu and build a following before you sign a restaurant lease.</p></div>
+        <div class="use"><h3>Food trucks and&nbsp;trailers</h3><p>A base to prep, store and restock between services.</p></div>
+        <div class="use"><h3>Delivery-only&nbsp;brands</h3><p>Run an online menu on the delivery apps without opening a dining room.</p></div>
+        <div class="use"><h3>Bakers and meal&nbsp;prep</h3><p>Batch-cook and package for weekly customers and farmers markets.</p></div>
+        <div class="use"><h3>Home cooks and&nbsp;pop-ups</h3><p>Move out of the home kitchen and onto commercial equipment.</p></div>
+        <div class="use"><h3>New restaurant&nbsp;concepts</h3><p>Try a menu and build a following before you sign a restaurant lease.</p></div>
       </div>
     </div>
   </section>
 
   <section class="why">
     <div class="wrap">
-      <h2>A kitchen with customers already walking in.</h2>
+      <h2>A kitchen with customers already walking&nbsp;in.</h2>
       <p class="sub">Most rental kitchens sit in an industrial park. This one is inside a gas station that's open and busy.</p>
       <div class="why-grid">
-        <div class="why-card"><h3>People stop here every day</h3><p>Drivers come in for fuel, drinks and snacks, and the serving counter is right there in the store. Ask the owner about selling to them.</p></div>
-        <div class="why-card"><h3>No build-out to pay for</h3><p>A hood system, walk-ins and a cook line cost a lot to buy and install. Here they're already in place.</p></div>
-        <div class="why-card"><h3>Easy in and out</h3><p>A gas station lot makes it simple to load supplies and hand off pickup and delivery orders.</p></div>
+        <div class="why-card"><h3>People stop here every&nbsp;day</h3><p>Drivers come in for fuel, drinks and snacks, and the serving counter is right there in the store. Ask the owner about selling to them.</p></div>
+        <div class="why-card"><h3>No build-out to pay&nbsp;for</h3><p>A hood system, walk-ins and a cook line cost a lot to buy and install. Here they're already in place.</p></div>
+        <div class="why-card"><h3>Easy in and&nbsp;out</h3><p>A gas station lot makes it simple to load supplies and hand off pickup and delivery orders.</p></div>
       </div>
     </div>
   </section>
 
   <section id="rent">
     <div class="wrap">
-      <h2>Pick the schedule that fits your business.</h2>
+      <h2>Pick the schedule that fits your&nbsp;business.</h2>
       <p class="sub">Terms and rates are set directly with the owner. Tell us what you have in mind and we'll work it out.</p>
       <div class="plans">
         <article class="plan">
-          <h3>By the shift</h3>
+          <h3>By the&nbsp;shift</h3>
           <p>Book blocks of time when you need the kitchen.</p>
           <ul><li>Good for caterers and food trucks</li><li>Cook on the days you have orders</li></ul>
           <div class="rate"><span>Rate</span><b data-rate="shift">Ask the owner</b></div>
@@ -660,7 +690,7 @@
           <div class="rate"><span>Rate</span><b data-rate="monthly">Ask the owner</b></div>
         </article>
         <article class="plan">
-          <h3>Long-term lease</h3>
+          <h3>Long-term&nbsp;lease</h3>
           <p>Make it your full-time kitchen.</p>
           <ul><li>Ask about exclusive use</li><li>Ask about selling in the store</li></ul>
           <div class="rate"><span>Rate</span><b data-rate="lease">Ask the owner</b></div>
@@ -671,42 +701,42 @@
 
   <section class="steps">
     <div class="wrap">
-      <h2>From first message to first order.</h2>
+      <h2>From first message to first&nbsp;order.</h2>
       <ol class="step-list">
-        <li><h3>Send an inquiry</h3><p>Tell us what you cook and when you need the kitchen.</p></li>
-        <li><h3>Walk through it</h3><p>See the equipment, the cold storage and the space in person.</p></li>
-        <li><h3>Agree on terms</h3><p>Schedule, rate, deposit and insurance, set with the owner.</p></li>
-        <li><h3>Start cooking</h3><p>Stock the walk-in, fire up the line and take your first orders.</p></li>
+        <li><h3>Send an&nbsp;inquiry</h3><p>Tell us what you cook and when you need the kitchen.</p></li>
+        <li><h3>Walk through&nbsp;it</h3><p>See the equipment, the cold storage and the space in person.</p></li>
+        <li><h3>Agree on&nbsp;terms</h3><p>Schedule, rate, deposit and insurance, set with the owner.</p></li>
+        <li><h3>Start&nbsp;cooking</h3><p>Stock the walk-in, fire up the line and take your first orders.</p></li>
       </ol>
     </div>
   </section>
 
   <section id="faq">
     <div class="wrap">
-      <h2>Before you call.</h2>
+      <h2>Before you&nbsp;call.</h2>
       <div class="faq-list">
         <details>
-          <summary>Who do I rent from?</summary>
+          <summary>Who do I rent&nbsp;from?</summary>
           <p>The owner. The gas station and its kitchen are privately owned, and you agree on the schedule, rate and terms directly with them.</p>
         </details>
         <details>
-          <summary>Is the equipment included?</summary>
+          <summary>Is the equipment&nbsp;included?</summary>
           <p>Yes. You rent the kitchen with its installed equipment. Ask at your walkthrough which smallwares (pans, utensils, containers) come with it, and bring anything else your menu needs.</p>
         </details>
         <details>
-          <summary>What do I need to rent it?</summary>
+          <summary>What do I need to rent&nbsp;it?</summary>
           <p>Plan on your own food business permit from the local health authority and liability insurance. Ask the owner what this location needs from you before you sign.</p>
         </details>
         <details>
-          <summary>Can I see it first?</summary>
+          <summary>Can I see it&nbsp;first?</summary>
           <p>Yes. Every rental starts with a walkthrough, so you can check the equipment and the space before you commit.</p>
         </details>
         <details>
-          <summary>Can I sell my food in the store?</summary>
+          <summary>Can I sell my food in the&nbsp;store?</summary>
           <p>That's up to the owner. Bring it up at your walkthrough, especially if you're interested in a long-term lease.</p>
         </details>
         <details>
-          <summary>Where is it?</summary>
+          <summary>Where is&nbsp;it?</summary>
           <p><span data-address>Inside the Short Stop Judson gas station. The address is shared when you book a walkthrough.</span></p>
         </details>
       </div>
@@ -715,7 +745,7 @@
 
   <section id="contact" class="contact">
     <div class="wrap">
-      <h2>Come see the kitchen.</h2>
+      <h2>Come see the&nbsp;kitchen.</h2>
       <p class="sub" id="contact-sub">Walkthroughs are set up directly with the owner.</p>
       <div class="contact-grid" id="contact-grid">
         <div class="info">
@@ -792,26 +822,11 @@
 
 <nav class="mbar" aria-label="Quick actions">
   <a class="btn btn-red" href="#contact" data-book-on>Book a walkthrough</a>
-  <button type="button" class="btn btn-red" data-open-3d data-book-off hidden>Explore in 3D</button>
+  <button type="button" class="btn btn-red" data-open-3d data-book-off>Explore in 3D</button>
   <a class="btn btn-ghost" data-needs="phone" data-phone-link href="#" hidden>Call</a>
 </nav>
 
 <script>
-/*
-  Listing details. Fill these in and commit; the page updates itself.
-  Leave a value empty ("") to keep it off the page.
-*/
-const LISTING = {
-  phone: "",        // owner's number, e.g. "(210) 555-0123"; shows Call / Text buttons
-  email: "",        // where inquiries go; the form opens the visitor's email app addressed here
-  address: "Loop 1604 & Judson Rd, San Antonio, TX",   // shown on the page, with an "Open in maps" link
-  rates: {
-    shift: "",      // e.g. "$__ / hour"
-    monthly: "",    // e.g. "$__ / month"
-    lease: "",      // e.g. "Ask the owner"
-    summary: ""     // one line for the contact card, e.g. "Hourly, monthly or lease"
-  }
-};
 
 (function () {
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
@@ -858,13 +873,6 @@ const LISTING = {
   const hashView = /^#3d(?:-(\w+))?$/.exec(location.hash);
   if (hashView) open3d(hashView[1] || "overview", null);
 
-  // Headings and FAQ questions never end on one short word (for browsers without text-wrap:balance):
-  // the last two words are held together when they are short enough to fit any screen.
-  $$("h1,h2,h3,summary").forEach((h) => {
-    const t = [...h.childNodes].reverse().find((n) => n.nodeType === 3 && n.textContent.trim());
-    const m = t && /(\S+) (\S+)\s*$/.exec(t.textContent);
-    if (m && (m[1] + m[2]).length <= 16) t.textContent = t.textContent.slice(0, m.index) + m[1] + " " + m[2] + t.textContent.slice(m.index + m[0].length);
-  });
 
   // Keyboard focus never hides behind the phone action bar (some browsers ignore scroll-padding
   // when focus moves).
@@ -901,13 +909,6 @@ const LISTING = {
     } else {
       sub.textContent = "Walkthroughs are set up directly with the owner. Contact details are on their way.";
       document.getElementById("info-soon").hidden = false;
-      document.documentElement.classList.add("booking-off");
-      $$("[data-book-on]").forEach((el) => { el.hidden = true; });
-      $$("[data-book-off]").forEach((el) => { el.hidden = false; });
-      $$("[data-book-label]").forEach((el) => { el.textContent = el.dataset.bookLabel; });
-      // in the hero, exploring in 3D becomes the main button
-      const cta = document.querySelector(".hero-cta"), go3d = cta.querySelector("[data-open-3d]"), book = cta.querySelector("a");
-      go3d.classList.replace("btn-ghost", "btn-red"); book.classList.replace("btn-red", "btn-ghost"); cta.prepend(go3d);
     }
   }
 

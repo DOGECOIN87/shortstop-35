@@ -117,7 +117,7 @@ const PAGE_CHECKS = () => {
     const cs = getComputedStyle(img);
     out.imgs.push({ src: img.getAttribute('src'), alt: img.getAttribute('alt'), wh: !!(img.getAttribute('width') && img.getAttribute('height')), loaded: img.complete && img.naturalWidth > 0, ar: cs.aspectRatio });
   }
-  const h1 = document.querySelector('h1'), cta = document.querySelector('.hero-cta .btn-red'), mbar = document.querySelector('.mbar');
+  const h1 = document.querySelector('h1'), cta = [...document.querySelectorAll('.hero-cta .btn-red')].find((e) => e.offsetParent), mbar = document.querySelector('.mbar');
   const mb = mbar && getComputedStyle(mbar).display !== 'none' ? mbar.getBoundingClientRect().height : 0;
   const header = document.querySelector('header'), hb = getComputedStyle(header).position === 'sticky' ? header.getBoundingClientRect().height : 0;
   out.hero = { h1Bottom: Math.round(h1.getBoundingClientRect().bottom + scrollY), ctaBottom: cta ? Math.round(cta.getBoundingClientRect().bottom + scrollY) : null, fold: vh - mb, mbar: Math.round(mb), header: Math.round(hb) };

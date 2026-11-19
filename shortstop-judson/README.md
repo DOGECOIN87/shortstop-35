@@ -4,7 +4,7 @@
 site) offering the built-in commercial kitchen at Short Stop Judson for rent.
 Once on `main` it is served at https://shortstop35.store/shortstop-judson/.
 
-The page does not mention 7-Eleven (owner's instruction). Sections: hero with a drawn kitchen line (an illustration, not
+The page does not name the store's former franchise brand (owner's instruction). Sections: hero with a drawn kitchen line (an illustration, not
 a photo), equipment, 3D tour, who it's for, why here, ways to rent (by the
 shift, monthly, long-term lease), how it works, FAQ, and an inquiry form.
 
@@ -214,7 +214,8 @@ the top of `kitchen3d.js`; positions are in `buildKitchen()`.
 
 ## Filling in the listing
 
-Listing details live in one `LISTING` object near the bottom of `index.html`.
+Listing details live in one `LISTING` object at the top of `index.html` (in the
+head, so the page knows before it draws whether booking is open).
 Each is empty until the owner supplies it, and the page hides what is missing:
 
 - `phone`: shows Call and Text buttons (contact card and the phone bar).
@@ -333,37 +334,38 @@ iOS behaviour from the CSS and WebKit on Linux.
 
 ## Research notes (not shown on the page)
 
-The building was a 7-Eleven, and the kitchen is the one newer 7-Eleven stores
-are built with. That history is used only to work out what equipment the
-kitchen likely has; the page itself never names the chain. Findings so far,
+The building was built for a national convenience-store franchise (named
+here as "the chain"; the owner asked that it not be named), and the kitchen is
+the one the chain's newer stores are built with. That history is used only to
+work out what equipment the kitchen likely has; the page never names the
+chain. Findings so far,
 all to be checked against the real kitchen:
 
-- Equipment package in 7-Eleven's newer kitchens: flattops, fryers,
+- Equipment package in the chain's newer kitchens: flattops, fryers,
   rapid-cook ovens, a hood, microwaves, and a walk-in freezer and
   refrigerator in the back of house (equipment dealer interview,
   Foodservice Equipment & Supplies:
   https://fesmag.com/topics/perspectives/point-of-view/20911-next-generation-convenience-store-food-and-beverage).
 - Rapid-cook ovens: the chain's hot-food rollout was built on TurboChef
   high-speed ovens (pizza in about 90 s); it is not confirmed that newer
-  stores still use them (C-Store Decisions, 2009:
-  https://cstoredecisions.com/2009/10/14/7-eleven-moves-deeper-into-foodservice/).
+  stores still use them (C-Store Decisions, 14 October 2009, on the chain's
+  move deeper into foodservice).
 - Texas "new standard" stores are about 4,800 sq ft (vs about 2,900 for a
-  traditional store) and include a Laredo Taco Company restaurant, pizza,
-  fried chicken, wings and other hot food (CSP). Laredo Taco kitchens make
+  traditional store) and include the chain's own taqueria restaurant, pizza,
+  fried chicken, wings and other hot food (CSP). Those taqueria kitchens make
   flour tortillas from scratch on site every day. Recent Texas permit filings
-  (TDLR) list new 7-Eleven stores at about 4,800-5,100 sq ft.
+  (TDLR) list the chain's new stores at about 4,800-5,100 sq ft.
 - Fryer, hood and walk-in makes and models were not found in public sources.
   Nameplate photos from the owner are the reliable way to get them; with
   model numbers the exact sizes come from the makers' spec sheets.
 - Texas TDLR building filings (TABS) give each store's address, size, build
-  dates and design firm. 7-Eleven sites on Judson Rd in San Antonio include
+  dates and design firm. The chain's sites on Judson Rd in San Antonio include
   13340 Judson Rd (new construction, 2017) and 17460 and 17510 Judson Rd; the
   owner's address decides which record applies.
 - Store layout: the preliminary floor plan in a 2025 planning submission for a
   new 4,761 sq ft store of this format (Medford, OR, file AC-25-168, sheet
-  "Preliminary Floor Plan", 93 x 50 ft):
-  https://www.medfordoregon.gov/files/assets/public/v/1/planning/agendas-minutes/ld/2025-ld-agendas/07-16-2025/ac-25-168-7-eleven-store.pdf
-  It shows restrooms, walk-in freezer and cooler, back room and manager's
+  "Preliminary Floor Plan", 93 x 50 ft; City of Medford planning, Land
+  Development Committee agenda of 16 July 2025, medfordoregon.gov). It shows restrooms, walk-in freezer and cooler, back room and manager's
   office at one end; the kitchen and checkout next to them; the beverage bar
   on the back wall; gondolas; a cooler vault and beer cave on the far wall;
   and seating along the storefront. Trade press describes the same format
@@ -378,7 +380,7 @@ all to be checked against the real kitchen:
     canopy; a second 4,320 sq ft service-station canopy; five underground
     fuel tanks; 63,380 sq ft of concrete paving
     (https://bexar.trueautomation.com/clientdb/Property.aspx?cid=110&prop_id=1360519).
-  - TDLR TABS2020011238, "7-Eleven in San Antonio (41142)": new construction
+  - TDLR TABS2020011238, the chain's "San Antonio (41142)" project: new construction
     of a one-story convenience store with taqueria and fuel canopy, 4,755 sq
     ft, May to November 2020, designed by The Dimension Group (Dallas)
     (https://www.tdlr.texas.gov/TABS/Search/Print/TABS2020011238). The filing
