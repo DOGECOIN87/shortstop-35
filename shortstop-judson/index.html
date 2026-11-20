@@ -382,6 +382,24 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   /* booking buttons: with the owner's phone or email, "Book a walkthrough"; without (class set in
      the head), "Explore in 3D" and "Walkthrough details" */
   .booking-off [data-book-on],html:not(.booking-off) [data-book-off]{display:none!important}
+  /* Typography pass: sizes on the scale, tracking and leading that follow the size, spacing on the
+     8 px grid, and compound words that never split at their hyphen ("wash- / up"). */
+  .nw{white-space:nowrap}
+  .hero h1{line-height:1.06;margin-bottom:clamp(16px,1.6vw,24px)}
+  /* phones: three balanced lines ("A full commercial / kitchen, ready / for your menu.") at every
+     width from 320 px up (the 600 px rule above lost to the base rule that follows it) */
+  @media(max-width:600px){.hero h1{font-size:clamp(1.75rem,calc(10vw - 3.5px),var(--s4))}}
+  h2{line-height:1.12}
+  h3{letter-spacing:-.005em}
+  .lead{line-height:1.55}
+  .lead strong{font-weight:600}
+  .hero-note,.note,.fine,.form-foot p{font-size:.8125rem;line-height:1.5}
+  .note,.fine{margin-top:16px}
+  .info-row .k,.plan .rate span{font-size:.75rem;letter-spacing:.12em}
+  .brand-sub{letter-spacing:.18em}
+  .brand-sub b{letter-spacing:.2em}
+  .strip-item .v{font-size:1.125rem}
+  .faq-list{margin-top:32px}
   [hidden]{display:none !important}
 </style>
 </head>
@@ -421,7 +439,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
     <div class="wrap hero-inner">
       <div>
         <h1>A full commercial kitchen, <em>ready for your&nbsp;menu.</em></h1>
-        <p class="lead">Rent the built-in kitchen inside our gas station: <strong>an open cook line under the hood, a glass serving counter facing the store, and a back room with prep, wash-up and walk-ins</strong>. It was built to run a full hot-food program for a busy store. The station is privately owned, and the kitchen is open to anyone with food to cook.</p>
+        <p class="lead">Rent the <span class="nw">built-in</span> kitchen inside our gas station: <strong>an open cook line under the hood, a glass serving counter facing the store, and a back room with prep, <span class="nw">wash-up</span> and <span class="nw">walk-ins</span></strong>. It was built to run a full <span class="nw">hot-food</span> program for a busy store. The station is privately owned, and the kitchen is open to anyone with food to cook.</p>
         <div class="hero-cta">
           <a class="btn btn-red" href="#contact" data-book-on>Book a walkthrough</a>
           <button type="button" class="btn btn-red" data-open-3d data-book-off>Explore in 3D</button>
@@ -431,7 +449,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
         <ul class="hero-facts">
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>1604 &amp; Judson, San Antonio</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Hood over the cook line</li>
-          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Walk-in cooler and freezer</li>
+          <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg><span><span class="nw">Walk-in</span> cooler and freezer</span></li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Serving counter facing the store</li>
         </ul>
         <p class="hero-note">3D model, not a photo. See the real kitchen and its layout at your walkthrough.</p>
@@ -444,21 +462,21 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
     <div class="wrap strip-grid">
       <div class="strip-item"><div class="v">Commercial exhaust hood</div></div>
       <div class="strip-item"><div class="v">Fryers and a flattop</div></div>
-      <div class="strip-item"><div class="v">Rapid-cook ovens</div></div>
-      <div class="strip-item"><div class="v">Walk-in cooler and freezer</div></div>
+      <div class="strip-item"><div class="v"><span class="nw">Rapid-cook</span> ovens</div></div>
+      <div class="strip-item"><div class="v"><span class="nw">Walk-in</span> cooler and freezer</div></div>
     </div>
   </div>
 
   <section id="kitchen">
     <div class="wrap">
       <h2>Built for real volume, not a home&nbsp;stove.</h2>
-      <p class="sub">A fast-casual style kitchen in two parts: an open line and serving counter in the store, and a back room through a doorway behind it. Everything is built in, so there's no build-out to pay for before your first order.</p>
+      <p class="sub">A <span class="nw">fast-casual</span> style kitchen in two parts: an open line and serving counter in the store, and a back room through a doorway behind it. Everything is built in, so there's no <span class="nw">build-out</span> to pay for before your first order.</p>
 
       <div class="spec-grid">
         <article class="spec">
           <picture class="spec-media"><source type="image/webp" srcset="renders/eq-hood-480.webp 480w, renders/eq-hood-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-hood-800.jpg" width="800" height="500" alt="3D model of the exhaust hood over the cook line" loading="lazy" decoding="async"></picture>
           <h3>Ventilation and fire&nbsp;safety</h3>
-          <p>A commercial exhaust hood with grease baffle filters over the cook line, with a fire-suppression system.</p>
+          <p>A commercial exhaust hood with grease baffle filters over the cook line, with a <span class="nw">fire-suppression</span> system.</p>
         </article>
         <article class="spec">
           <picture class="spec-media"><source type="image/webp" srcset="renders/eq-line-480.webp 480w, renders/eq-line-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-line-800.jpg" width="800" height="500" alt="3D model of the cook line: flattop, burners and two fryers under the hood" loading="lazy" decoding="async"></picture>
@@ -467,23 +485,23 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
         </article>
         <article class="spec">
           <picture class="spec-media"><source type="image/webp" srcset="renders/eq-ovens-480.webp 480w, renders/eq-ovens-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-ovens-800.jpg" width="800" height="500" alt="3D model of the two rapid-cook ovens on their stand in the back room" loading="lazy" decoding="async"></picture>
-          <h3>Rapid-cook&nbsp;ovens</h3>
-          <p>High-speed ovens for pizza, sandwiches and baked items in minutes, plus microwaves for quick reheats.</p>
+          <h3><span class="nw">Rapid-cook</span>&nbsp;ovens</h3>
+          <p><span class="nw">High-speed</span> ovens for pizza, sandwiches and baked items in minutes, plus microwaves for quick reheats.</p>
         </article>
         <article class="spec">
           <picture class="spec-media"><source type="image/webp" srcset="renders/eq-walkin-480.webp 480w, renders/eq-walkin-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-walkin-800.jpg" width="800" height="500" alt="3D model of the walk-in cooler in the back room, with its strip curtain" loading="lazy" decoding="async"></picture>
-          <h3>Walk-in cooler and&nbsp;freezer</h3>
-          <p>Walk-in cold storage in the back of house, so you can buy in bulk, prep ahead and hold product.</p>
+          <h3><span class="nw">Walk-in</span> cooler and&nbsp;freezer</h3>
+          <p><span class="nw">Walk-in</span> cold storage in the back of house, so you can buy in bulk, prep ahead and hold product.</p>
         </article>
         <article class="spec">
           <picture class="spec-media"><source type="image/webp" srcset="renders/eq-washup-480.webp 480w, renders/eq-washup-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-washup-800.jpg" width="800" height="500" alt="3D model of the 3-compartment sink and wash-up area in the back room" loading="lazy" decoding="async"></picture>
           <h3>Prep and&nbsp;wash-up</h3>
-          <p>Stainless prep space, hand sinks and a wash-up sink for pots, pans and sheet trays.</p>
+          <p>Stainless prep space, hand sinks and a <span class="nw">wash-up</span> sink for pots, pans and sheet trays.</p>
         </article>
         <article class="spec">
           <picture class="spec-media"><source type="image/webp" srcset="renders/eq-counter-480.webp 480w, renders/eq-counter-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-counter-800.jpg" width="800" height="500" alt="3D model of the glass serving counter, with the ORDER HERE sign and menu screens above it" loading="lazy" decoding="async"></picture>
           <h3>Serving counter and menu&nbsp;screens</h3>
-          <p>A glass-front heated counter faces the sales floor, with menu screens, ORDER HERE and PICK-UP HERE signs, and a sign band for your brand.</p>
+          <p>A <span class="nw">glass-front</span> heated counter faces the sales floor, with menu screens, ORDER HERE and <span class="nw">PICK-UP</span> HERE signs, and a sign band for your brand.</p>
         </article>
       </div>
       <p class="note">Pictures are views of the 3D model, not photos. Exact pieces, sizes and condition are confirmed with you at the walkthrough.</p>
@@ -493,16 +511,16 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   <section id="tour" class="tour">
     <div class="wrap">
       <h2>Walk the kitchen before you&nbsp;visit.</h2>
-      <p class="sub">Walk the whole store: stand at the counter like a customer, step behind the line, go through the doorway to the back room and walk-ins, then out across the sales floor. Every piece of equipment is labelled, with what it does and its size.</p>
+      <p class="sub">Walk the whole store: stand at the counter like a customer, step behind the line, go through the doorway to the back room and <span class="nw">walk-ins</span>, then out across the sales floor. Every piece of equipment is labelled, with what it does and its size.</p>
       <div class="tour-grid">
         <button type="button" class="tour-poster" data-open-3d aria-label="Open the 3D kitchen">
           <img src="kitchen-3d-poster.jpg" width="1600" height="900" alt="3D model of the whole store seen from above: the restaurant counter and kitchen, the back room, checkout, coffee bar, aisles, cold vault and beer cave" loading="lazy">
           <span class="play"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Open the 3D kitchen</span>
         </button>
         <ol class="tour-list">
-          <li><i>01</i><span><b>Restaurant counter</b>Glass serving counter, menu screens, order and pick-up signs.</span></li>
+          <li><i>01</i><span><b>Restaurant counter</b>Glass serving counter, menu screens, order and <span class="nw">pick-up</span> signs.</span></li>
           <li><i>02</i><span><b>Kitchen line</b>Flattop, burners and fryers under the hood.</span></li>
-          <li><i>03</i><span><b>Back room</b>Prep, dough station, ovens, 3-compartment sink and walk-ins.</span></li>
+          <li><i>03</i><span><b>Back room</b>Prep, dough station, ovens, <span class="nw">3-compartment</span> sink and <span class="nw">walk-ins</span>.</span></li>
           <li><i>04</i><span><b>The store</b>Checkout, coffee bar, food islands, cold vault and beer cave.</span></li>
           <li><i>05</i><span><b>Seating and restrooms</b>Window seating and customer restrooms.</span></li>
         </ol>
@@ -510,11 +528,11 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
       <div class="value-tour">
         <div>
           <h3>See what it would cost to&nbsp;build.</h3>
-          <p>Take the value tour: the camera walks the kitchen piece by piece and tallies what each one costs bought new, from the hood and walk-ins to the shelving. The equipment alone tops $100,000. Here it's already in place.</p>
+          <p>Take the value tour: the camera walks the kitchen piece by piece and tallies what each one costs bought new, from the hood and <span class="nw">walk-ins</span> to the shelving. The equipment alone tops $100,000. Here it's already in place.</p>
         </div>
         <button type="button" class="btn btn-red" data-open-3d="tour"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>Start the value tour</button>
       </div>
-      <p class="note">The 3D model is laid out the way the owner describes the store (kitchen and checkout on the left, cooler doors on the right, beer cave in the front-right corner) at the building's real size, about 4,600 sq ft, and the kitchen line follows a photo of the real one. Exact positions are confirmed at your walkthrough. Value-tour prices are typical new prices from public dealer listings and installer cost guides, shown as estimates.</p>
+      <p class="note">The 3D model is laid out the way the owner describes the store (kitchen and checkout on the left, cooler doors on the right, beer cave in the <span class="nw">front-right</span> corner) at the building's real size, about 4,600 sq ft, and the kitchen line follows a photo of the real one. Exact positions are confirmed at your walkthrough. <span class="nw">Value-tour</span> prices are typical new prices from public dealer listings and installer cost guides, shown as estimates.</p>
     </div>
   </section>
 
@@ -525,8 +543,8 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
       <div class="use-grid">
         <div class="use"><h3>Caterers</h3><p>Cook large orders for events, with the space and cold storage to prep the day before.</p></div>
         <div class="use"><h3>Food trucks and&nbsp;trailers</h3><p>A base to prep, store and restock between services.</p></div>
-        <div class="use"><h3>Delivery-only&nbsp;brands</h3><p>Run an online menu on the delivery apps without opening a dining room.</p></div>
-        <div class="use"><h3>Bakers and meal&nbsp;prep</h3><p>Batch-cook and package for weekly customers and farmers markets.</p></div>
+        <div class="use"><h3><span class="nw">Delivery-only</span>&nbsp;brands</h3><p>Run an online menu on the delivery apps without opening a dining room.</p></div>
+        <div class="use"><h3>Bakers and meal&nbsp;prep</h3><p><span class="nw">Batch-cook</span> and package for weekly customers and farmers markets.</p></div>
         <div class="use"><h3>Home cooks and&nbsp;pop-ups</h3><p>Move out of the home kitchen and onto commercial equipment.</p></div>
         <div class="use"><h3>New restaurant&nbsp;concepts</h3><p>Try a menu and build a following before you sign a restaurant lease.</p></div>
       </div>
@@ -540,7 +558,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
       <p class="sub">Most rental kitchens sit in an industrial park. This one is inside a gas station that's open and busy.</p>
       <div class="why-grid">
         <div class="why-card"><h3>People stop here every&nbsp;day</h3><p>Drivers come in for fuel, drinks and snacks, and the serving counter is right there in the store. Ask the owner about selling to them.</p></div>
-        <div class="why-card"><h3>No build-out to pay&nbsp;for</h3><p>A hood system, walk-ins and a cook line cost a lot to buy and install. Here they're already in place.</p></div>
+        <div class="why-card"><h3>No <span class="nw">build-out</span> to pay&nbsp;for</h3><p>A hood system, <span class="nw">walk-ins</span> and a cook line cost a lot to buy and install. Here they're already in place.</p></div>
         <div class="why-card"><h3>Easy in and&nbsp;out</h3><p>A gas station lot makes it simple to load supplies and hand off pickup and delivery orders.</p></div>
       </div>
     </div>
@@ -564,8 +582,8 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
           <div class="rate"><span>Rate</span><b data-rate="monthly">Ask the owner</b></div>
         </article>
         <article class="plan">
-          <h3>Long-term&nbsp;lease</h3>
-          <p>Make it your full-time kitchen.</p>
+          <h3><span class="nw">Long-term</span>&nbsp;lease</h3>
+          <p>Make it your <span class="nw">full-time</span> kitchen.</p>
           <ul><li>Ask about exclusive use</li><li>Ask about selling in the store</li></ul>
           <div class="rate"><span>Rate</span><b data-rate="lease">Ask the owner</b></div>
         </article>
@@ -580,7 +598,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
         <li><h3>Send an&nbsp;inquiry</h3><p>Tell us what you cook and when you need the kitchen.</p></li>
         <li><h3>Walk through&nbsp;it</h3><p>See the equipment, the cold storage and the space in person.</p></li>
         <li><h3>Agree on&nbsp;terms</h3><p>Schedule, rate, deposit and insurance, set with the owner.</p></li>
-        <li><h3>Start&nbsp;cooking</h3><p>Stock the walk-in, fire up the line and take your first orders.</p></li>
+        <li><h3>Start&nbsp;cooking</h3><p>Stock the <span class="nw">walk-in</span>, fire up the line and take your first orders.</p></li>
       </ol>
     </div>
   </section>
@@ -607,7 +625,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
         </details>
         <details>
           <summary>Can I sell my food in the&nbsp;store?</summary>
-          <p>That's up to the owner. Bring it up at your walkthrough, especially if you're interested in a long-term lease.</p>
+          <p>That's up to the owner. Bring it up at your walkthrough, especially if you're interested in a <span class="nw">long-term</span> lease.</p>
         </details>
         <details>
           <summary>Where is&nbsp;it?</summary>
@@ -659,7 +677,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
             <select id="f-use" name="use">
               <option>A few shifts a week</option>
               <option>Regular weekly hours (monthly)</option>
-              <option>Long-term lease</option>
+              <option><span class="nw">Long-term</span> lease</option>
               <option>Not sure yet</option>
             </select>
           </div>

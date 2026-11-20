@@ -353,6 +353,20 @@ Not covered here: a real screen reader (VoiceOver, NVDA) and a real iPhone;
 the accessibility tree and the dialog's roles were checked in Chromium, and
 iOS behaviour from the CSS and WebKit on Linux.
 
+### Typography pass
+
+- the phone headline is sized to set in three balanced lines ("A full commercial / kitchen, ready /
+  for your menu.") at every width from 320 px (28.5 px at 320, 35.5 px at 390, 39 px from 430);
+  an earlier phone rule had been losing to the base rule, which left it at 39 px and 4-5 lines;
+- headline leading 1.06 (was 1.02), section headings 1.12, the lead 1.55, with a little more room
+  under the hero headline;
+- hyphenated compounds in the copy (wash-up, walk-ins, 3-compartment, fire-suppression, ...) never
+  split across lines (`.nw`);
+- small print is one size, 13 px with 1.5 leading (it was 12 and 13 px); the mono labels are 12 px,
+  tracked in em; the strip under the hero sits on the 18 px subtitle size; stray 18 and 34 px gaps
+  are back on the 8 px grid;
+- the long run of bold in the hero lead is semibold, so it reads as emphasis rather than a block.
+
 ## What still needs the owner
 
 - The street address at Loop 1604 & Judson, so the building's public records
