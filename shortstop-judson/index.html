@@ -19,6 +19,7 @@
 <link rel="icon" type="image/png" sizes="64x64" href="favicon-64.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preload" as="image" href="logo-256.webp" type="image/webp">
+<link rel="preload" as="font" href="fonts/archivo-var.woff2" type="font/woff2" crossorigin>
 <script>
 /*
   Listing details. Fill these in and commit; the page updates itself.
@@ -41,6 +42,11 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
 </script>
 <script type="importmap">{ "imports": { "three": "./vendor/three.module.js" } }</script>
 <style>
+  /* Archivo (headings: a sturdy grotesk with a width axis, like shop signage) and Inter (text), both
+     self-hosted and cut to the characters the page uses. "optional": a font that isn't there by first
+     paint is skipped for that visit, so text never jumps when it arrives. */
+  @font-face{font-family:"Archivo";src:url(fonts/archivo-var.woff2) format("woff2");font-weight:600 900;font-stretch:100% 125%;font-style:normal;font-display:optional}
+  @font-face{font-family:"Inter";src:url(fonts/inter-var.woff2) format("woff2");font-weight:400 800;font-style:normal;font-display:optional}
   :root{
     /* from the Short Stop logo: teal ring, cream lettering, red car, sage ground, gold headlights */
     --ink:#143236; --ink-2:#1c4044; --ink-3:#26504f; --teal:#204649;
@@ -64,11 +70,13 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
     --s-1:.8rem; --s0:1rem; --s1:1.25rem; --s2:1.5625rem; --s3:1.953rem; --s4:2.441rem; --s6:3.815rem;
     --gap:24px; /* card gutters, on the 8 px spacing grid; two-column splits use the golden ratio (1.618fr 1fr) */
     --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+    --text:"Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --display:"Archivo","Inter",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
   *{margin:0;padding:0;box-sizing:border-box}
   html{scroll-behavior:smooth;-webkit-text-size-adjust:100%}
   @media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
-  body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,Helvetica,Arial,sans-serif;color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;overflow-wrap:break-word}
+  body{font-family:var(--text);color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden;overflow-wrap:break-word}
   @supports (overflow:clip){body{overflow-x:clip}}
   a{color:inherit}
   img,svg{display:block;max-width:100%}
@@ -104,39 +112,53 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   .btn-sm{padding:10px 16px;font-size:14px}
 
   /* Hero */
-  .hero{background:radial-gradient(1000px 520px at 85% 0%,rgba(238,190,84,.15),transparent 60%),radial-gradient(700px 420px at 0% 100%,rgba(204,221,209,.08),transparent 70%),linear-gradient(180deg,#1d4346 0%,var(--ink) 100%);color:#fff;overflow:hidden}
-  .hero-inner{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(0,.92fr);gap:48px;align-items:center;padding-top:68px;padding-bottom:76px}
-  @media(max-width:960px){.hero-inner{grid-template-columns:minmax(0,1fr);gap:36px;padding-top:44px;padding-bottom:56px}}
+  .hero{position:relative;isolation:isolate;background:linear-gradient(180deg,#1d4346 0%,var(--ink) 100%);color:#fff;overflow:hidden}
+  .hero-inner{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,600px);align-items:start;min-height:clamp(480px,calc(100vh - 90px),720px);padding-top:clamp(40px,7vh,96px);padding-bottom:56px;pointer-events:none}
+  .hero-inner > *{pointer-events:auto}
+  /* a still from the 3D model fills the right of the hero and fades into the teal behind the text;
+     the whole picture opens the live model at the same view */
+  .hero-art{position:absolute;top:0;right:0;bottom:0;left:40%;z-index:0;margin:0}
+  .hero-art > picture:first-child,.hero-art > picture:first-child img{display:block;width:100%;height:100%}
+  .hero-art > picture:first-child img{object-fit:cover;object-position:60% 45%}
+  /* the picture itself fades out towards the text, so the hero's own colour shows through (no seam) */
+  .hero-art > picture:first-child{-webkit-mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.3) 16%,rgba(0,0,0,.8) 38%,#000 58%);mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.3) 16%,rgba(0,0,0,.8) 38%,#000 58%)}
+  .hero-art::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(0deg,rgba(20,50,54,.8) 0%,rgba(20,50,54,0) 24%),radial-gradient(90% 70% at 80% 0%,rgba(238,190,84,.14),transparent 60%)}
+  .hero-open{position:absolute;inset:0;z-index:1;display:flex;align-items:flex-end;justify-content:flex-end;padding:0 calc(max(24px,4vw) + 132px) 40px 0;border:0;background:none;color:#fff;font:inherit;cursor:pointer}
+  .hero-open span{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.4);background:rgba(13,35,38,.66);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);font-size:14px;font-weight:800;box-shadow:0 10px 24px -8px rgba(0,0,0,.55);transition:background .2s,border-color .2s}
+  .hero-open svg{width:14px;height:14px;flex:0 0 14px}
+  .hero-open:hover span{background:var(--red);border-color:var(--red)}
+  .hero-art .sticker{position:absolute;z-index:2;right:max(24px,4vw);bottom:24px;width:116px;height:116px;border-radius:50%;transform:rotate(8deg);box-shadow:0 0 0 5px var(--paper),var(--e3);background:var(--teal);pointer-events:none}
+  .hero-note{margin-top:16px;font-size:12px;color:var(--muted-dark)}
+  /* narrower desktops: the picture starts past the text column, so the text keeps a clean teal ground */
+  @media(min-width:961px) and (max-width:1279px){.hero-art{left:52%}.hero-inner{grid-template-columns:minmax(0,500px)}}
+  /* phones on their side: side by side as on desktop, so the headline isn't pushed off a short screen */
+  @media(min-width:540px) and (max-width:960px) and (max-height:500px) and (orientation:landscape){
+    .hero .hero-art{position:absolute;top:0;right:0;bottom:0;left:55%;width:auto;aspect-ratio:auto;max-height:none}
+    .hero .hero-art > picture:first-child{-webkit-mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.5) 25%,#000 55%);mask-image:linear-gradient(90deg,transparent 0%,rgba(0,0,0,.5) 25%,#000 55%)}
+    .hero .hero-open{justify-content:flex-end;padding:0 104px 20px 0}
+    .hero .hero-art .sticker{right:16px;bottom:16px}
+    .hero .hero-inner{margin-top:0;padding-top:28px;padding-bottom:36px;grid-template-columns:minmax(0,56%)}
+  }
+  /* phones: a shallower picture band and a headline whose first line fits, so the buttons stay in view */
+  @media(max-width:600px){.hero h1{font-stretch:100%;font-size:clamp(2rem,8.8vw,var(--s4))}.hero .hero-art{aspect-ratio:2/1}}
+  @media(max-width:960px){
+    .hero-art{position:relative;top:auto;right:auto;bottom:auto;left:auto;width:100%;aspect-ratio:16/10;max-height:58vh}
+    .hero-art > picture:first-child{-webkit-mask-image:linear-gradient(180deg,#000 50%,rgba(0,0,0,.5) 75%,transparent 100%);mask-image:linear-gradient(180deg,#000 50%,rgba(0,0,0,.5) 75%,transparent 100%)}
+    .hero-art::after{background:radial-gradient(90% 70% at 80% 0%,rgba(238,190,84,.12),transparent 60%)}
+    .hero-open{justify-content:flex-start;padding:0 0 40px max(16px,env(safe-area-inset-left))}
+    .hero-art .sticker{width:76px;height:76px;right:16px;bottom:36px;box-shadow:0 0 0 4px var(--paper),0 10px 20px rgba(0,0,0,.4)}
+    .hero-inner{min-height:0;margin-top:-24px;padding-top:0;padding-bottom:56px}
+  }
   .hero h1{font-size:clamp(var(--s4),5.2vw,var(--s6));line-height:1.02;font-weight:900;letter-spacing:-1.6px;margin:0 0 16px}
   .hero h1 em{font-style:normal;color:var(--amber)}
-  @media(min-width:961px) and (max-height:760px){.hero-inner{padding-top:40px;padding-bottom:52px}.hero h1{font-size:clamp(var(--s4),min(5.2vw,8vh),var(--s6));margin:0 0 14px}.hero-cta{margin:22px 0 24px}}
-  .lead{font-size:clamp(1.125rem,1.6vw,var(--s1));color:#d3e0dd;max-width:560px}
+  @media(min-width:961px) and (max-height:760px){.hero-inner{padding-top:40px;padding-bottom:52px;min-height:0}.hero h1{font-size:clamp(var(--s4),min(5.2vw,8vh),var(--s6));margin:0 0 14px}.hero-cta{margin:22px 0 24px}}
+  .lead{font-size:1.125rem;color:#d3e0dd;max-width:560px}
   .lead strong{color:#fff}
-  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin:32px 0}
+  .hero-cta{display:flex;gap:12px;flex-wrap:wrap;margin:28px 0}
   .hero-facts{list-style:none;display:flex;flex-wrap:wrap;gap:10px 22px;font-size:14px;color:#d3e0dd}
   .hero-facts li{display:flex;align-items:center;gap:8px}
   .hero-facts svg{width:18px;height:18px;color:var(--amber);flex:0 0 18px}
 
-  /* hero: a still from the 3D model in a frame; the chip (and the whole picture) opens the live
-     model at the same view */
-  .scene{position:relative;background:linear-gradient(180deg,#24494c,#1a3c3f);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),var(--e3)}
-  .scene{display:flex;flex-direction:column}
-  .scene::before{content:"";order:1;width:100%;aspect-ratio:4/3}   /* the picture's place, from the first paint */
-  .scene figcaption{order:2}
-  .scene-media{position:absolute;top:12px;left:12px;right:12px;border-radius:10px;overflow:hidden;background:var(--ink-2)}
-  .scene-media img{display:block;width:100%;height:auto;transition:transform .6s ease}
-  .scene-media::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 58%,rgba(13,35,38,.6))}
-  .scene-open{position:absolute;inset:0;z-index:1;display:flex;align-items:flex-end;padding:14px;border:0;border-radius:10px;background:none;color:#fff;font:inherit;cursor:pointer}
-  .scene-open:focus-visible{outline-offset:-4px}
-  .scene-open span{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.38);background:rgba(13,35,38,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);font-size:14px;font-weight:800;box-shadow:0 8px 20px -6px rgba(0,0,0,.5);transition:background .2s,border-color .2s}
-  .scene-open svg{width:14px;height:14px;flex:0 0 14px}
-  .scene-media:hover img{transform:scale(1.03)}
-  .scene-open:hover span{background:var(--red);border-color:var(--red)}
-  .scene figcaption{font-size:12px;color:var(--muted-dark);padding:10px 4px 0}
-  @media (prefers-reduced-motion:reduce){.scene-media img{transition:none}.scene-media:hover img{transform:none}}
-  .sticker{position:absolute;z-index:2;top:-30px;right:-26px;width:116px;height:116px;border-radius:50%;transform:rotate(8deg);box-shadow:0 0 0 5px var(--paper),0 14px 28px rgba(0,0,0,.4);background:var(--teal)}
-  @media(max-width:960px){.sticker{right:10px}.scene{max-width:640px}}
-  @media(max-width:600px){.sticker{width:84px;height:84px;top:-24px;right:6px;box-shadow:0 0 0 4px var(--paper),0 10px 20px rgba(0,0,0,.4)}}
 
   /* Spec strip */
   .strip{background:var(--red);color:#fff}
@@ -151,9 +173,13 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   @media(max-width:600px){section{padding:64px 0}}
   h2{font-size:clamp(var(--s3),3.6vw,var(--s4));font-weight:900;letter-spacing:-.8px;line-height:1.1;margin-bottom:16px;max-width:760px}
   .sub{color:var(--muted);font-size:1.125rem;max-width:var(--measure)}
-  main p,.scene figcaption{max-width:var(--measure)}
+  main p{max-width:var(--measure)}
   h3{font-size:var(--s1);line-height:1.3;margin-bottom:8px}
   h1,h2,h3,summary{text-wrap:balance}
+  h1,h2,h3,.strip-item .v{font-family:var(--display)}
+  .hero h1{font-stretch:108%;letter-spacing:-.025em}
+  h2{font-stretch:106%;font-weight:800;letter-spacing:-.02em}
+  h3{font-weight:700}
   .sub,.lead,p{text-wrap:pretty}
 
   .spec-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:40px}
@@ -161,6 +187,10 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   @media(max-width:600px){.spec-grid{grid-template-columns:minmax(0,1fr)}}
   .spec{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:0 0 24px;overflow:hidden;box-shadow:var(--e1)}
   .spec-media img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;background:var(--steel-2);border-bottom:1px solid var(--line)}
+  .spec-media{display:block;overflow:hidden}
+  .spec-media img{transition:transform .6s ease}
+  .spec:hover .spec-media img{transform:scale(1.04)}
+  @media (prefers-reduced-motion:reduce){.spec-media img{transition:none}.spec:hover .spec-media img{transform:none}}
   .spec h3{margin:20px 24px 8px}
   .spec p{color:var(--muted);font-size:var(--s0);padding:0 24px}
   .note{font-size:13px;color:var(--muted);margin-top:18px;max-width:var(--measure)}
@@ -197,12 +227,15 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   .use h3{margin-top:6px}
   .use p{color:var(--muted);font-size:var(--s0)}
 
-  .why{background:var(--ink);color:#fff}
+  .why{position:relative;isolation:isolate;overflow:hidden;background:var(--ink);color:#fff}
+  .why-bg{position:absolute;inset:0;z-index:-1}
+  .why-bg img{display:block;width:100%;height:100%;object-fit:cover;opacity:.5}
+  .why::after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(180deg,rgba(20,50,54,.93) 0%,rgba(20,50,54,.7) 42%,rgba(20,50,54,.84) 100%)}
   .why h2{color:#fff}
   .why .sub{color:#b5cac9}
   .why-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:40px}
   @media(max-width:860px){.why-grid{grid-template-columns:minmax(0,1fr)}}
-  .why-card{background:var(--ink-2);border:1px solid rgba(255,255,255,.08);border-radius:var(--radius);padding:24px;box-shadow:var(--lift-dark)}
+  .why-card{background:rgba(28,64,68,.7);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:24px;box-shadow:var(--lift-dark)}
   .why-card p{color:#b5cac9;font-size:var(--s0)}
 
   .plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:40px}
@@ -326,9 +359,10 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
     body{background:#fff;color:#000;padding:0}
     .hero,.why,.contact,.strip,footer,.uses,.tour,.steps{background:#fff!important;color:#000!important}
     .hero *,.why *,.contact *,.strip *,footer *{color:#000!important}
-    /* dark cards and the hero picture's frame print on white, with a hairline */
-    .scene,.why-card,.info{background:#fff!important;border:1px solid #999!important;box-shadow:none!important}
-    .sticker{box-shadow:none}
+    /* dark cards print on white, with a hairline; the background pictures are left off */
+    .hero-art,.why-bg{display:none!important}
+    .hero-inner{min-height:0;margin:0}
+    .why-card,.info{background:#fff!important;border:1px solid #999!important;box-shadow:none!important}
     .strip-item{border-color:#999!important}
     section{padding:28px 0}
     .spec,.plan,.why-card,.step-list li,.info,.faq-list details,.use{break-inside:avoid;box-shadow:none}
@@ -374,6 +408,16 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
 
 <main id="main" tabindex="-1">
   <div class="hero" id="top">
+    <figure class="hero-art">
+      <picture>
+        <source media="(min-width: 961px)" type="image/webp" srcset="renders/hero-wide-1280.webp 1280w, renders/hero-wide-1920.webp 1920w" sizes="60vw">
+        <source media="(min-width: 961px)" srcset="renders/hero-wide-1280.jpg">
+        <source type="image/webp" srcset="renders/hero-band-800.webp 800w, renders/hero-band-1200.webp 1200w" sizes="100vw">
+        <img src="renders/hero-band-800.jpg" width="1200" height="750" alt="3D model of the restaurant counter seen from the store floor: a long glass serving counter with menu screens and a red sign band that reads YOUR BRAND HERE, with the kitchen line and its hood behind it" fetchpriority="high">
+      </picture>
+      <button type="button" class="hero-open" data-open-3d="front" tabindex="-1" aria-hidden="true"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>View in 3D</span></button>
+      <picture><source srcset="logo-256.webp" type="image/webp"><img class="sticker" src="logo-256.png" width="116" height="116" alt="Short Stop logo"></picture>
+    </figure>
     <div class="wrap hero-inner">
       <div>
         <h1>A full commercial kitchen, <em>ready for your&nbsp;menu.</em></h1>
@@ -390,16 +434,9 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Walk-in cooler and freezer</li>
           <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"/></svg>Serving counter facing the store</li>
         </ul>
+        <p class="hero-note">3D model, not a photo. See the real kitchen and its layout at your walkthrough.</p>
       </div>
 
-      <figure class="scene">
-        <figcaption>3D model, not a photo. See the real kitchen and its layout at your walkthrough.</figcaption>
-        <picture><source srcset="logo-256.webp" type="image/webp"><img class="sticker" src="logo-256.png" width="116" height="116" alt="Short Stop logo"></picture>
-        <div class="scene-media">
-          <picture><source type="image/webp" srcset="renders/hero-counter-700.webp 700w, renders/hero-counter-1200.webp 1200w" sizes="(max-width: 960px) calc(100vw - 56px), 560px"><img src="renders/hero-counter-1200.jpg" width="1200" height="900" alt="3D model of the restaurant counter: a long glass serving counter with menu screens and a red sign band that reads YOUR BRAND HERE, with the kitchen line and its hood behind it" fetchpriority="high"></picture>
-          <button type="button" class="scene-open" data-open-3d="front"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>View in 3D</span></button>
-        </div>
-      </figure>
     </div>
   </div>
 
@@ -497,6 +534,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   </section>
 
   <section class="why">
+    <picture class="why-bg"><source type="image/webp" srcset="renders/store-floor-1600.webp"><img src="renders/store-floor-1600.jpg" width="1600" height="900" alt="" loading="lazy" decoding="async"></picture>
     <div class="wrap">
       <h2>A kitchen with customers already walking&nbsp;in.</h2>
       <p class="sub">Most rental kitchens sit in an industrial park. This one is inside a gas station that's open and busy.</p>

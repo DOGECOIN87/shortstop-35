@@ -5,8 +5,9 @@ site) offering the built-in commercial kitchen at Short Stop Judson for rent.
 Once on `main` it is served at https://shortstop35.store/shortstop-judson/.
 
 The page does not name the store's former franchise brand (owner's instruction).
-Sections: hero with a still from the 3D model (the restaurant counter, which
-opens the live model at the same view), equipment (each card shows that
+Sections: hero with a full-bleed still from the 3D model (the restaurant
+counter from the store floor; it fades into the teal behind the headline, and
+clicking it opens the live model at the same view), equipment (each card shows that
 equipment in the 3D model), 3D tour, who it's for, why here, ways to rent (by
 the shift, monthly, long-term lease), how it works, FAQ, and an inquiry form.
 Every picture is a view of the 3D model and is labelled as such, never a
@@ -14,8 +15,12 @@ photo.
 
 ## Pictures from the 3D model (`renders/`)
 
-- `hero-counter-*`: the restaurant counter from the store floor (4:3,
-  700 and 1200 px WebP, 1200 px JPEG fallback);
+- `hero-wide-*`: the restaurant counter from the store floor, framed with the
+  counter on the right for wide screens (16:9, 1280 and 1920 px WebP, 1280 px
+  JPEG); `hero-band-*`: the same counter centred, for the band above the
+  headline on phones and tablets (16:10, 800 and 1200 px WebP, 800 px JPEG);
+- `store-floor-*`: the sales floor, dimmed behind the Why here section
+  (1600 px WebP and JPEG);
 - `eq-hood`, `eq-line`, `eq-ovens`, `eq-walkin`, `eq-washup`, `eq-counter`:
   the six equipment cards (16:10, 480 and 800 px WebP, 800 px JPEG).
 
@@ -23,6 +28,16 @@ They are rendered from `kitchen3d.js` with `audit/render.js` (desktop
 quality, the viewer's UI hidden), so they change only when the model does.
 Every image has fixed dimensions, so nothing moves as they load; the hero is
 fetched first and the cards lazily.
+
+## Type
+
+Headings are set in Archivo (a grotesk with a width axis; headlines run
+slightly expanded, like shop signage) and text in Inter. Both are
+self-hosted in `fonts/` (OFL, licences beside them), cut to the characters
+the page uses and to the weights and widths it uses (36 KB and 26 KB).
+They load with `font-display: optional`, and Archivo is preloaded: a font
+that isn't there by first paint is skipped for that visit, so text never
+jumps when it arrives. The system sans is the fallback.
 
 ## Logo and colours
 
