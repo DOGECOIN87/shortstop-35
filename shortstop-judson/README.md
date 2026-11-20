@@ -4,14 +4,30 @@
 site) offering the built-in commercial kitchen at Short Stop Judson for rent.
 Once on `main` it is served at https://shortstop35.store/shortstop-judson/.
 
-The page does not name the store's former franchise brand (owner's instruction). Sections: hero with a drawn kitchen line (an illustration, not
-a photo), equipment, 3D tour, who it's for, why here, ways to rent (by the
-shift, monthly, long-term lease), how it works, FAQ, and an inquiry form.
+The page does not name the store's former franchise brand (owner's instruction).
+Sections: hero with a still from the 3D model (the restaurant counter, which
+opens the live model at the same view), equipment (each card shows that
+equipment in the 3D model), 3D tour, who it's for, why here, ways to rent (by
+the shift, monthly, long-term lease), how it works, FAQ, and an inquiry form.
+Every picture is a view of the 3D model and is labelled as such, never a
+photo.
+
+## Pictures from the 3D model (`renders/`)
+
+- `hero-counter-*`: the restaurant counter from the store floor (4:3,
+  700 and 1200 px WebP, 1200 px JPEG fallback);
+- `eq-hood`, `eq-line`, `eq-ovens`, `eq-walkin`, `eq-washup`, `eq-counter`:
+  the six equipment cards (16:10, 480 and 800 px WebP, 800 px JPEG).
+
+They are rendered from `kitchen3d.js` with `audit/render.js` (desktop
+quality, the viewer's UI hidden), so they change only when the model does.
+Every image has fixed dimensions, so nothing moves as they load; the hero is
+fetched first and the cards lazily.
 
 ## Logo and colours
 
 The owner's logo (round teal badge, cream "SHORT STOP" lettering, red car) is
-in the header, on the hero illustration, on the contact card, in the footer,
+in the header, on the hero picture, on the contact card, in the footer,
 as the browser icon and in the link-preview image. The page colours come from
 it: teal `#204649`, cream `#F5F3E6`, sage `#CCDDD1`, car red `#E93F24` (buttons
 use a deeper `#D0341B` so white text passes contrast) and headlight gold
@@ -205,7 +221,7 @@ Post-processing and area-light modules (`vendor/jsm/`) are copied unmodified
 from three.js 0.160.0, the same version as `vendor/three.module.js`. 32 labelled items; tap one for what it is and its typical size. Walls
 between the camera and the room are cut away automatically. Menu screens and
 signs show generic "your menu / your brand here" designs, no chain branding.
-`kitchen-3d-poster.jpg` is a render of the overview used on the page.
+`kitchen-3d-poster.jpg` is a render of the overview used in the 3D tour section.
 
 Still estimated: exact positions and sizes inside (the arrangement above is
 owner-confirmed; the kitchen line order is from the owner's photo). The plan
@@ -271,13 +287,13 @@ What the page does now:
 - body text runs about 60 to 72 characters a line; headings, FAQ questions
   and contact values never end on one short word;
 - cards share one corner radius; depth comes from three elevation levels lit
-  from above (content cards, featured or interactive pieces, the hero drawing
+  from above (content cards, featured or interactive pieces, the hero picture
   and form), with lighter surfaces and a top highlight on the dark sections;
 - composition: type on a 1.25 scale from 16 px (61 / 39 / 25 / 20 / 16 /
   12.8, subtitles 18), spacing on an 8 px grid, golden-ratio splits for the
   3D poster and its list and for the contact card and form, every section on
   one left edge; on a 1366 x 768 screen the headline sits on the upper third,
-  the drawing near the right third, and the text and drawing share a centre;
+  the picture near the right third, and the text and picture share a centre;
 - no eyebrows: no small labels above headings (section kickers, the hero
   pill, card tags, the tour card's zone line); the hero's location moved into
   its list of facts;
@@ -296,7 +312,7 @@ What the page does now:
   height, viewer panels use `dvh`, and the footer leaves room for the action
   bar and the home indicator;
 - images have fixed sizes, so nothing shifts as they load (layout shift 0 on
-  a fast connection, 0.02 on slow 3G as the hero drawing streams in).
+  a fast connection, and 0 on slow 3G: the hero picture's box is reserved from the first paint).
 
 The 3D viewer:
 

@@ -51,7 +51,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
     --radius:16px;
     /* depth: one light source above, so shadows fall downward; each level pairs a tight contact
        shadow with a softer ambient one. e1 = content cards at rest, e2 = featured or interactive
-       pieces (and a card being hovered), e3 = the hero drawing, fixed bars and overlays */
+       pieces (and a card being hovered), e3 = the hero picture, fixed bars and overlays */
     --e1:0 1px 1px rgba(20,50,54,.05),0 2px 4px rgba(20,50,54,.05),0 10px 20px -8px rgba(20,50,54,.14);
     --e2:0 1px 2px rgba(20,50,54,.07),0 6px 12px -2px rgba(20,50,54,.09),0 22px 40px -14px rgba(20,50,54,.28);
     --e3:0 2px 4px rgba(0,0,0,.14),0 18px 36px -8px rgba(0,0,0,.34),0 46px 90px -24px rgba(0,0,0,.5);
@@ -117,27 +117,26 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   .hero-facts li{display:flex;align-items:center;gap:8px}
   .hero-facts svg{width:18px;height:18px;color:var(--amber);flex:0 0 18px}
 
-  .scene{position:relative;background:linear-gradient(180deg,#24494c,#1a3c3f);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:14px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),var(--e3)}
-  /* the key and caption come first in the source, so they arrive before the long drawing and the
-     figure never grows as the page streams in; on screen they sit under it */
+  /* hero: a still from the 3D model in a frame; the chip (and the whole picture) opens the live
+     model at the same view */
+  .scene{position:relative;background:linear-gradient(180deg,#24494c,#1a3c3f);border:1px solid rgba(255,255,255,.1);border-radius:var(--radius);padding:12px;box-shadow:inset 0 1px 0 rgba(255,255,255,.08),var(--e3)}
   .scene{display:flex;flex-direction:column}
-  .scene::before{content:"";order:1;width:100%;aspect-ratio:600/440}  /* the drawing's place, from the first paint */
-  .scene svg{position:absolute;top:14px;left:14px;width:calc(100% - 28px);height:auto;border-radius:12px}
-  .scene .legend{order:2}
-  .scene figcaption{order:3}
+  .scene::before{content:"";order:1;width:100%;aspect-ratio:4/3}   /* the picture's place, from the first paint */
+  .scene figcaption{order:2}
+  .scene-media{position:absolute;top:12px;left:12px;right:12px;border-radius:10px;overflow:hidden;background:var(--ink-2)}
+  .scene-media img{display:block;width:100%;height:auto;transition:transform .6s ease}
+  .scene-media::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(180deg,transparent 58%,rgba(13,35,38,.6))}
+  .scene-open{position:absolute;inset:0;z-index:1;display:flex;align-items:flex-end;padding:14px;border:0;border-radius:10px;background:none;color:#fff;font:inherit;cursor:pointer}
+  .scene-open:focus-visible{outline-offset:-4px}
+  .scene-open span{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:10px 16px;border-radius:999px;border:1px solid rgba(255,255,255,.38);background:rgba(13,35,38,.72);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);font-size:14px;font-weight:800;box-shadow:0 8px 20px -6px rgba(0,0,0,.5);transition:background .2s,border-color .2s}
+  .scene-open svg{width:14px;height:14px;flex:0 0 14px}
+  .scene-media:hover img{transform:scale(1.03)}
+  .scene-open:hover span{background:var(--red);border-color:var(--red)}
+  .scene figcaption{font-size:12px;color:var(--muted-dark);padding:10px 4px 0}
+  @media (prefers-reduced-motion:reduce){.scene-media img{transition:none}.scene-media:hover img{transform:none}}
   .sticker{position:absolute;z-index:2;top:-30px;right:-26px;width:116px;height:116px;border-radius:50%;transform:rotate(8deg);box-shadow:0 0 0 5px var(--paper),0 14px 28px rgba(0,0,0,.4);background:var(--teal)}
   @media(max-width:960px){.sticker{right:10px}.scene{max-width:640px}}
   @media(max-width:600px){.sticker{width:84px;height:84px;top:-24px;right:6px;box-shadow:0 0 0 4px var(--paper),0 10px 20px rgba(0,0,0,.4)}}
-  .legend{list-style:none;display:flex;flex-wrap:wrap;gap:6px 14px;padding:12px 6px 2px;font-size:13px;color:#d3e0dd}
-  .legend li{display:flex;align-items:center;gap:7px}
-  .legend b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:var(--red);color:#fff;font-size:11px;font-family:var(--mono)}
-  .scene figcaption{font-size:12px;color:var(--muted-dark);padding:8px 6px 2px}
-  .steam{animation:rise 3.6s ease-in-out infinite;opacity:0}
-  .steam.d2{animation-delay:1.2s}.steam.d3{animation-delay:2.4s}
-  @keyframes rise{0%{opacity:0;transform:translateY(16px)}35%{opacity:.55}100%{opacity:0;transform:translateY(-26px)}}
-  .flicker{animation:flick 2.8s ease-in-out infinite}
-  @keyframes flick{0%,100%{opacity:.85}50%{opacity:1}}
-  @media (prefers-reduced-motion:reduce){.steam{animation:none;opacity:.35}.flicker{animation:none}}
 
   /* Spec strip */
   .strip{background:var(--red);color:#fff}
@@ -160,12 +159,10 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
   .spec-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:var(--gap);margin-top:40px}
   @media(max-width:960px){.spec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
   @media(max-width:600px){.spec-grid{grid-template-columns:minmax(0,1fr)}}
-  .spec{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:24px;position:relative;overflow:hidden;box-shadow:var(--e1)}
-  .spec::before{content:"";position:absolute;inset:0 0 auto 0;height:4px;background:repeating-linear-gradient(90deg,var(--steel) 0 6px,var(--steel-2) 6px 12px)}
-  .spec-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px}
-  .spec .ic{width:46px;height:46px;border-radius:12px;background:var(--ink);color:var(--amber);display:grid;place-items:center}
-  .spec .ic svg{width:24px;height:24px}
-  .spec p{color:var(--muted);font-size:var(--s0)}
+  .spec{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:0 0 24px;overflow:hidden;box-shadow:var(--e1)}
+  .spec-media img{display:block;width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;background:var(--steel-2);border-bottom:1px solid var(--line)}
+  .spec h3{margin:20px 24px 8px}
+  .spec p{color:var(--muted);font-size:var(--s0);padding:0 24px}
   .note{font-size:13px;color:var(--muted);margin-top:18px;max-width:var(--measure)}
 
   .tour{background:#fff;border-top:1px solid var(--line)}
@@ -329,9 +326,8 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
     body{background:#fff;color:#000;padding:0}
     .hero,.why,.contact,.strip,footer,.uses,.tour,.steps{background:#fff!important;color:#000!important}
     .hero *,.why *,.contact *,.strip *,footer *{color:#000!important}
-    /* dark cards and the drawing's frame print on white, with a hairline */
+    /* dark cards and the hero picture's frame print on white, with a hairline */
     .scene,.why-card,.info{background:#fff!important;border:1px solid #999!important;box-shadow:none!important}
-    .legend b{background:#d0341b!important;color:#fff!important;print-color-adjust:exact;-webkit-print-color-adjust:exact}
     .sticker{box-shadow:none}
     .strip-item{border-color:#999!important}
     section{padding:28px 0}
@@ -397,161 +393,12 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
       </div>
 
       <figure class="scene">
-        <figcaption>Illustration, not a photo. See the real kitchen and its layout at your walkthrough.</figcaption>
-        <ul class="legend" aria-label="Kitchen line key">
-          <li><b>1</b>Exhaust hood</li>
-          <li><b>2</b>Fryers</li>
-          <li><b>3</b>Flattop</li>
-          <li><b>4</b>Rapid-cook oven</li>
-          <li><b>5</b>Prep station</li>
-        </ul>
+        <figcaption>3D model, not a photo. See the real kitchen and its layout at your walkthrough.</figcaption>
         <picture><source srcset="logo-256.webp" type="image/webp"><img class="sticker" src="logo-256.png" width="116" height="116" alt="Short Stop logo"></picture>
-        <svg viewBox="0 0 600 440" role="img" aria-labelledby="scene-title scene-desc">
-          <title id="scene-title">Illustration of the kitchen line</title>
-          <desc id="scene-desc">A stainless exhaust hood spans a cook line of fryers, a flattop griddle, a rapid-cook oven and a stainless prep table.</desc>
-          <defs>
-            <pattern id="tile" width="40" height="20" patternUnits="userSpaceOnUse">
-              <rect width="40" height="20" fill="#1f4245"/>
-              <path d="M0 19.5H40M19.5 0V10M39.5 10V20M0 10H40" stroke="#2a5154" stroke-width="1"/>
-            </pattern>
-            <pattern id="baffle" width="10" height="14" patternUnits="userSpaceOnUse">
-              <rect width="10" height="14" fill="#6f7882"/>
-              <path d="M0 14 10 0" stroke="#8d969f" stroke-width="3"/>
-            </pattern>
-            <pattern id="quarry" width="48" height="24" patternUnits="userSpaceOnUse">
-              <rect width="48" height="24" fill="#5a3a2c"/>
-              <path d="M0 .5H48M.5 0V24" stroke="#47291e" stroke-width="1.5"/>
-            </pattern>
-            <linearGradient id="steelV" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#eef1f3"/><stop offset=".55" stop-color="#c3cad1"/><stop offset="1" stop-color="#9aa3ac"/>
-            </linearGradient>
-            <linearGradient id="steelH" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0" stop-color="#b8c0c7"/><stop offset=".5" stop-color="#e3e7ea"/><stop offset="1" stop-color="#aeb6be"/>
-            </linearGradient>
-            <linearGradient id="cone" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#ffd58a" stop-opacity=".30"/><stop offset="1" stop-color="#ffd58a" stop-opacity="0"/>
-            </linearGradient>
-            <radialGradient id="ovenGlow" cx=".5" cy=".55" r=".7">
-              <stop offset="0" stop-color="#ffcf6b"/><stop offset=".6" stop-color="#f08c1f"/><stop offset="1" stop-color="#8a3d0a"/>
-            </radialGradient>
-            <linearGradient id="oil" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stop-color="#ffcb5c"/><stop offset="1" stop-color="#c7781b"/>
-            </linearGradient>
-          </defs>
-
-          <!-- wall and floor -->
-          <rect width="600" height="400" fill="url(#tile)"/>
-          <rect y="400" width="600" height="40" fill="url(#quarry)"/>
-          <rect y="396" width="600" height="6" fill="#3b2318"/>
-
-          <!-- duct and hood -->
-          <rect x="268" y="0" width="64" height="30" fill="url(#steelH)"/>
-          <rect x="268" y="0" width="64" height="30" fill="none" stroke="#8b949d"/>
-          <path d="M36 30H564L552 112H48Z" fill="url(#steelV)"/>
-          <path d="M36 30H564" stroke="#ffffff" stroke-opacity=".7" stroke-width="2"/>
-          <path d="M48 112H552" stroke="#7e8790" stroke-width="2"/>
-          <g stroke="#ffffff" stroke-opacity=".12">
-            <path d="M60 50H540M58 66H542M56 82H544M54 98H546"/>
-          </g>
-          <rect x="230" y="56" width="140" height="26" rx="4" fill="#143236"/>
-          <text x="300" y="74" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" font-weight="700" fill="#ffd58a" letter-spacing="2">EXHAUST HOOD</text>
-          <rect x="52" y="112" width="496" height="14" fill="url(#baffle)"/>
-          <rect x="52" y="125" width="496" height="4" fill="#5d666f"/>
-          <!-- lights + light cones -->
-          <g class="flicker">
-            <path d="M118 129H162L214 396H66Z" fill="url(#cone)"/>
-            <path d="M278 129H322L374 396H226Z" fill="url(#cone)"/>
-            <path d="M438 129H482L534 396H386Z" fill="url(#cone)"/>
-          </g>
-          <rect x="118" y="127" width="44" height="5" rx="2" fill="#fff4d2"/>
-          <rect x="278" y="127" width="44" height="5" rx="2" fill="#fff4d2"/>
-          <rect x="438" y="127" width="44" height="5" rx="2" fill="#fff4d2"/>
-          <!-- fire suppression pipe and nozzles -->
-          <path d="M64 146H536" stroke="#a7b0b8" stroke-width="3" stroke-linecap="round"/>
-          <path d="M64 129V146M536 129V146" stroke="#a7b0b8" stroke-width="3"/>
-          <g fill="#c9d0d6">
-            <path d="M98 146h8l-2 8h-4z"/><path d="M218 146h8l-2 8h-4z"/><path d="M338 146h8l-2 8h-4z"/><path d="M458 146h8l-2 8h-4z"/>
-          </g>
-
-          <!-- steam -->
-          <g fill="none" stroke="#ffffff" stroke-width="3" stroke-linecap="round">
-            <path class="steam" d="M84 236c-8-10 8-18 0-30s8-18 0-30"/>
-            <path class="steam d2" d="M118 236c-8-10 8-18 0-30s8-18 0-30"/>
-            <path class="steam d3" d="M206 240c-8-10 8-18 0-30s8-18 0-30"/>
-            <path class="steam" d="M252 240c-8-10 8-18 0-30s8-18 0-30" style="animation-delay:1.8s"/>
-          </g>
-
-          <!-- fryers -->
-          <rect x="50" y="222" width="100" height="28" fill="#8e979f"/>
-          <rect x="50" y="250" width="100" height="142" fill="url(#steelV)"/>
-          <rect x="56" y="250" width="88" height="10" fill="#26292d"/>
-          <rect x="59" y="251" width="82" height="6" fill="url(#oil)"/>
-          <path d="M74 252 68 214M126 252 132 214" stroke="#30353a" stroke-width="3"/>
-          <rect x="62" y="206" width="12" height="10" rx="2" fill="#1c1f22"/>
-          <rect x="126" y="206" width="12" height="10" rx="2" fill="#1c1f22"/>
-          <rect x="60" y="268" width="80" height="22" rx="3" fill="#2a2f35"/>
-          <text x="80" y="283" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="10" fill="#ffb347">350°</text>
-          <text x="120" y="283" text-anchor="middle" font-family="ui-monospace,Menlo,Consolas,monospace" font-size="10" fill="#ffb347">350°</text>
-          <rect x="60" y="298" width="38" height="86" rx="2" fill="none" stroke="#8b949d"/>
-          <rect x="102" y="298" width="38" height="86" rx="2" fill="none" stroke="#8b949d"/>
-          <rect x="91" y="330" width="3" height="20" rx="1" fill="#6f7882"/>
-          <rect x="106" y="330" width="3" height="20" rx="1" fill="#6f7882"/>
-          <rect x="54" y="392" width="8" height="6" fill="#30353a"/><rect x="138" y="392" width="8" height="6" fill="#30353a"/>
-
-          <!-- flattop -->
-          <rect x="160" y="236" width="140" height="22" fill="#8e979f"/>
-          <path d="M164 258H296L300 268H160Z" fill="#2c3035"/>
-          <ellipse cx="192" cy="263" rx="15" ry="3" fill="#c98a45"/>
-          <ellipse cx="230" cy="263" rx="15" ry="3" fill="#d9a35c"/>
-          <ellipse cx="268" cy="263" rx="15" ry="3" fill="#c98a45"/>
-          <rect x="160" y="268" width="140" height="24" fill="url(#steelV)"/>
-          <g fill="#2a2f35"><circle cx="184" cy="280" r="6"/><circle cx="214" cy="280" r="6"/><circle cx="246" cy="280" r="6"/><circle cx="276" cy="280" r="6"/></g>
-          <rect x="160" y="292" width="140" height="100" fill="url(#steelV)"/>
-          <rect x="168" y="300" width="124" height="40" rx="2" fill="none" stroke="#8b949d"/>
-          <rect x="168" y="346" width="124" height="40" rx="2" fill="none" stroke="#8b949d"/>
-          <rect x="210" y="316" width="40" height="4" rx="2" fill="#6f7882"/>
-          <rect x="210" y="362" width="40" height="4" rx="2" fill="#6f7882"/>
-          <rect x="164" y="392" width="8" height="6" fill="#30353a"/><rect x="288" y="392" width="8" height="6" fill="#30353a"/>
-
-          <!-- rapid-cook oven on stand -->
-          <rect x="314" y="224" width="92" height="74" rx="4" fill="#24282d"/>
-          <rect x="314" y="224" width="92" height="8" rx="3" fill="#8e979f"/>
-          <rect x="322" y="240" width="54" height="48" rx="4" fill="url(#ovenGlow)"/>
-          <rect x="322" y="240" width="54" height="48" rx="4" fill="none" stroke="#5a6068" stroke-width="2"/>
-          <rect x="330" y="270" width="38" height="4" rx="1" fill="#7b3a10" opacity=".6"/>
-          <rect x="383" y="242" width="16" height="22" rx="2" fill="#123447"/>
-          <rect x="386" y="246" width="10" height="3" fill="#6fd3ff"/>
-          <rect x="386" y="252" width="7" height="3" fill="#6fd3ff" opacity=".7"/>
-          <circle cx="391" cy="277" r="5" fill="#5a6068"/>
-          <rect x="310" y="298" width="100" height="7" fill="url(#steelH)"/>
-          <rect x="314" y="305" width="6" height="91" fill="#9aa3ac"/><rect x="400" y="305" width="6" height="91" fill="#9aa3ac"/>
-          <rect x="314" y="360" width="92" height="5" fill="#b3bbc2"/>
-          <rect x="326" y="342" width="30" height="18" rx="2" fill="#d7dce0"/>
-          <rect x="360" y="346" width="32" height="14" rx="2" fill="#c3cad1"/>
-
-          <!-- prep table -->
-          <rect x="420" y="262" width="140" height="26" fill="#8e979f"/>
-          <rect x="440" y="280" width="54" height="8" rx="1" fill="#efe2c6"/>
-          <path d="M452 279l26-6 2 3-26 5z" fill="#d8dde1"/>
-          <rect x="502" y="272" width="14" height="16" fill="#cfd5da"/><rect x="503" y="274" width="12" height="5" fill="#d9473b"/>
-          <rect x="519" y="272" width="14" height="16" fill="#cfd5da"/><rect x="520" y="274" width="12" height="5" fill="#7cb342"/>
-          <rect x="536" y="272" width="14" height="16" fill="#cfd5da"/><rect x="537" y="274" width="12" height="5" fill="#f1e3c8"/>
-          <rect x="416" y="288" width="148" height="8" fill="url(#steelH)"/>
-          <rect x="422" y="296" width="6" height="100" fill="#9aa3ac"/><rect x="552" y="296" width="6" height="100" fill="#9aa3ac"/>
-          <rect x="422" y="364" width="136" height="5" fill="#b3bbc2"/>
-          <rect x="436" y="332" width="42" height="32" rx="3" fill="url(#steelH)"/>
-          <rect x="430" y="338" width="6" height="4" fill="#9aa3ac"/><rect x="478" y="338" width="6" height="4" fill="#9aa3ac"/>
-          <rect x="492" y="348" width="54" height="5" fill="#d7dce0"/><rect x="492" y="354" width="54" height="5" fill="#c3cad1"/><rect x="492" y="342" width="54" height="5" fill="#e6e9ec"/>
-
-          <!-- callouts -->
-          <g font-family="ui-monospace,Menlo,Consolas,monospace" font-size="12" font-weight="700" text-anchor="middle">
-            <circle cx="76" cy="70" r="12" fill="#d0341b"/><text x="76" y="74" fill="#fff">1</text>
-            <circle cx="100" cy="226" r="12" fill="#d0341b"/><text x="100" y="230" fill="#fff">2</text>
-            <circle cx="230" cy="226" r="12" fill="#d0341b"/><text x="230" y="230" fill="#fff">3</text>
-            <circle cx="360" cy="208" r="12" fill="#d0341b"/><text x="360" y="212" fill="#fff">4</text>
-            <circle cx="490" cy="244" r="12" fill="#d0341b"/><text x="490" y="248" fill="#fff">5</text>
-          </g>
-        </svg>
+        <div class="scene-media">
+          <picture><source type="image/webp" srcset="renders/hero-counter-700.webp 700w, renders/hero-counter-1200.webp 1200w" sizes="(max-width: 960px) calc(100vw - 56px), 560px"><img src="renders/hero-counter-1200.jpg" width="1200" height="900" alt="3D model of the restaurant counter: a long glass serving counter with menu screens and a red sign band that reads YOUR BRAND HERE, with the kitchen line and its hood behind it" fetchpriority="high"></picture>
+          <button type="button" class="scene-open" data-open-3d="front"><span><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg>View in 3D</span></button>
+        </div>
       </figure>
     </div>
   </div>
@@ -572,49 +419,37 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
 
       <div class="spec-grid">
         <article class="spec">
-          <div class="spec-top">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3h4v4"/><path d="M3 13 6 7h12l3 6z"/><path d="M6 17v.01M10 17v.01M14 17v.01M18 17v.01M8 20v.01M12 20v.01M16 20v.01"/></svg></div>
-          </div>
+          <picture class="spec-media"><source type="image/webp" srcset="renders/eq-hood-480.webp 480w, renders/eq-hood-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-hood-800.jpg" width="800" height="500" alt="3D model of the exhaust hood over the cook line" loading="lazy" decoding="async"></picture>
           <h3>Ventilation and fire&nbsp;safety</h3>
           <p>A commercial exhaust hood with grease baffle filters over the cook line, with a fire-suppression system.</p>
         </article>
         <article class="spec">
-          <div class="spec-top">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="10" width="16" height="10" rx="1"/><path d="M8 10 7 4M16 10l1-6"/><path d="M4 14h16"/></svg></div>
-          </div>
+          <picture class="spec-media"><source type="image/webp" srcset="renders/eq-line-480.webp 480w, renders/eq-line-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-line-800.jpg" width="800" height="500" alt="3D model of the cook line: flattop, burners and two fryers under the hood" loading="lazy" decoding="async"></picture>
           <h3>Fryers and&nbsp;flattop</h3>
           <p>Commercial fryers and a flattop griddle for breakfast, tacos, burgers, wings and anything fried.</p>
         </article>
         <article class="spec">
-          <div class="spec-top">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><rect x="6" y="8" width="9" height="8" rx="1"/><path d="M18 9v.01M18 13v.01"/></svg></div>
-          </div>
+          <picture class="spec-media"><source type="image/webp" srcset="renders/eq-ovens-480.webp 480w, renders/eq-ovens-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-ovens-800.jpg" width="800" height="500" alt="3D model of the two rapid-cook ovens on their stand in the back room" loading="lazy" decoding="async"></picture>
           <h3>Rapid-cook&nbsp;ovens</h3>
           <p>High-speed ovens for pizza, sandwiches and baked items in minutes, plus microwaves for quick reheats.</p>
         </article>
         <article class="spec">
-          <div class="spec-top">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2v20M4.9 6.5l14.2 11M19.1 6.5 4.9 17.5"/><path d="m9 3 3 3 3-3M9 21l3-3 3 3"/></svg></div>
-          </div>
+          <picture class="spec-media"><source type="image/webp" srcset="renders/eq-walkin-480.webp 480w, renders/eq-walkin-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-walkin-800.jpg" width="800" height="500" alt="3D model of the walk-in cooler in the back room, with its strip curtain" loading="lazy" decoding="async"></picture>
           <h3>Walk-in cooler and&nbsp;freezer</h3>
           <p>Walk-in cold storage in the back of house, so you can buy in bulk, prep ahead and hold product.</p>
         </article>
         <article class="spec">
-          <div class="spec-top">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11h18v3a6 6 0 0 1-6 6H9a6 6 0 0 1-6-6z"/><path d="M9 11V5a2 2 0 0 1 4 0"/></svg></div>
-          </div>
+          <picture class="spec-media"><source type="image/webp" srcset="renders/eq-washup-480.webp 480w, renders/eq-washup-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-washup-800.jpg" width="800" height="500" alt="3D model of the 3-compartment sink and wash-up area in the back room" loading="lazy" decoding="async"></picture>
           <h3>Prep and&nbsp;wash-up</h3>
           <p>Stainless prep space, hand sinks and a wash-up sink for pots, pans and sheet trays.</p>
         </article>
         <article class="spec">
-          <div class="spec-top">
-            <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M13 2 4 14h7l-1 8 9-12h-7z"/></svg></div>
-          </div>
+          <picture class="spec-media"><source type="image/webp" srcset="renders/eq-counter-480.webp 480w, renders/eq-counter-800.webp 800w" sizes="(max-width: 600px) calc(100vw - 32px), (max-width: 960px) calc(50vw - 36px), 380px"><img src="renders/eq-counter-800.jpg" width="800" height="500" alt="3D model of the glass serving counter, with the ORDER HERE sign and menu screens above it" loading="lazy" decoding="async"></picture>
           <h3>Serving counter and menu&nbsp;screens</h3>
           <p>A glass-front heated counter faces the sales floor, with menu screens, ORDER HERE and PICK-UP HERE signs, and a sign band for your brand.</p>
         </article>
       </div>
-      <p class="note">Exact pieces, sizes and condition are confirmed with you at the walkthrough.</p>
+      <p class="note">Pictures are views of the 3D model, not photos. Exact pieces, sizes and condition are confirmed with you at the walkthrough.</p>
     </div>
   </section>
 
@@ -815,7 +650,7 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
       <div class="foot-brand"><picture><source srcset="logo-256.webp" type="image/webp"><img src="logo-256.png" width="52" height="52" alt="Short Stop logo" loading="lazy"></picture><div><strong>Short Stop Judson</strong><br>Full commercial kitchen for rent</div></div>
       <div><a href="#top">Back to top ↑</a></div>
     </div>
-    <p class="fine">The kitchen illustration is a drawing, not a photo; equipment is confirmed at the walkthrough. ©&nbsp;<span id="year">2026</span> Short Stop Judson.</p>
+    <p class="fine">Pictures on this page are views of a 3D model, not photos; equipment is confirmed at the walkthrough. ©&nbsp;<span id="year">2026</span> Short Stop Judson.</p>
   </div>
 </footer>
 
@@ -867,7 +702,8 @@ if (!LISTING.phone && !LISTING.email) document.documentElement.classList.add("bo
     });
   };
   document.querySelectorAll("[data-open-3d]").forEach((b) => b.addEventListener("click", () => {
-    const view = b.dataset.open3d || "overview";
+    // (read the attribute itself: the browser files data-open-3d under dataset["open-3d"], not open3d)
+    const view = b.getAttribute("data-open-3d") || "overview";
     history.replaceState(null, "", view === "overview" ? "#3d" : "#3d-" + view);
     open3d(view, b);
   }));
